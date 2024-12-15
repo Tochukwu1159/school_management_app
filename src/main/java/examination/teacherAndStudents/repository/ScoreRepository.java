@@ -4,15 +4,14 @@ import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
-
+@Repository
 public interface ScoreRepository extends JpaRepository<Score, Long> {
 
 
     List<Score> findScoreByUserProfile(Profile student);
-
-    List<Score> findAllByUserProfileAndClassBlockAndTerm(Profile user, ClassBlock userClass, StudentTerm term);
 
     Score findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndTerm(Profile userProfile, Long classBlock_id, @NotBlank String subjectName, AcademicSession academicYear, StudentTerm term);
 

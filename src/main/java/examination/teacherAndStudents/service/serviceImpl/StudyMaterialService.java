@@ -7,26 +7,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-@Service
-public class StudyMaterialService {
-    @Autowired
-    private StudyMaterialRepository studyMaterialRepository;
 
-    public List<StudyMaterial> getAllMaterials() {
-        return studyMaterialRepository.findAll();
-    }
+public interface StudyMaterialService {
+    List<StudyMaterial> getAllMaterials();
+    void deleteMaterial(Long id);
+    StudyMaterial getMaterialById(Long id);
+    void saveMaterial(StudyMaterial material);
 
-    public StudyMaterial getMaterialById(Long id) {
-        return studyMaterialRepository.findById(id).orElse(null);
-    }
-
-    public void saveMaterial(StudyMaterial material) {
-        studyMaterialRepository.save(material);
-    }
-
-    public void deleteMaterial(Long id) {
-        studyMaterialRepository.deleteById(id);
-    }
 
 
 }

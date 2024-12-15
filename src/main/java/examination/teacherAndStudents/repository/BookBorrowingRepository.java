@@ -6,7 +6,9 @@ import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.utils.BorrowingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
+@Repository
 public interface BookBorrowingRepository extends JpaRepository<BookBorrowing, Long> {
     BookBorrowing findByStudentProfileAndBookAndStatusNot(Profile user, Book book, BorrowingStatus returned);
 }
