@@ -14,5 +14,4 @@ public class SubjectRequest {
     private Long subClassId;
     private String name;
     private StudentTerm term;
-
 }

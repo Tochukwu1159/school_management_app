@@ -10,8 +10,10 @@ import examination.teacherAndStudents.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Contract;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -20,7 +22,7 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+@Component
 public class AccountUtils {
     public static final String PAGENO = "0";
     public static final String PAGESIZE = "10";
@@ -40,13 +42,16 @@ public class AccountUtils {
     private static ProfileRepository profileRepository;
     private static LibraryMemberRepository libraryMemberRepository;
 
-    // Constructor to initialize userRepository
-    public AccountUtils(UserRepository userRepository, ProfileRepository profileRepository, LibraryMemberRepository libraryMemberRepository)
-    {
+    // Constructor-based injection
+    @Autowired
+    public AccountUtils(UserRepository userRepository, ProfileRepository profileRepository, LibraryMemberRepository libraryMemberRepository) {
+        AccountUtils.userRepository = userRepository;
         AccountUtils.profileRepository = profileRepository;
         AccountUtils.libraryMemberRepository = libraryMemberRepository;
-        AccountUtils.userRepository = userRepository;
     }
+
+
+
 
     public static final String generateStudentId() {
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);

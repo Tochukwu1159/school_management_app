@@ -5,11 +5,13 @@ import examination.teacherAndStudents.dto.EmailDetailsToMultipleEmails;
 import examination.teacherAndStudents.dto.TransportRequest;
 import examination.teacherAndStudents.dto.TransportResponse;
 import examination.teacherAndStudents.dto.UserRequestDto;
+import examination.teacherAndStudents.entity.BusRoute;
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.Transport;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.repository.BusRouteRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.TransportRepository;
 import examination.teacherAndStudents.repository.UserRepository;
@@ -37,6 +39,7 @@ public class TransportServiceImpl implements TransportService {
     private final EmailService emailService;
 
     private final ProfileRepository profileRepository;
+    private final BusRouteRepository busRouteRepository;
 
     @Override
     public TransportResponse createTransport(TransportRequest transportRequest) {
@@ -46,14 +49,17 @@ public class TransportServiceImpl implements TransportService {
             if (admin == null) {
                 throw new CustomNotFoundException("Please login as an Admin");
             }
+            Optional<BusRoute> busRoute = busRouteRepository.findById(transportRequest.getBusRouteId());
+
+            Optional<Profile> driver = profileRepository.findById(transportRequest.getDriverId());
 
             Transport transport = new Transport();
-            transport.setRouteName(transportRequest.getRouteName());
             transport.setVehicleNumber(transportRequest.getVehicleNumber());
-            transport.setDriverName(transportRequest.getDriverName());
+            transport.setAvailable(true);
+            transport.setCapacity(transportRequest.getCapacity());
+            transport.setDriver(driver.get());
             transport.setLicenceNumber(transportRequest.getLicenceNumber());
-            transport.setPhoneNumber(transportRequest.getPhoneNumber());
-            transport.setDriverAddress(transportRequest.getDriverAddress());
+            transport.setBusRoute(busRoute.get());
 
             transport = transportRepository.save(transport);
             return mapToTransportResponse(transport);
@@ -74,13 +80,10 @@ public class TransportServiceImpl implements TransportService {
             Transport transport = transportRepository.findById(transportId)
                     .orElseThrow(() -> new CustomInternalServerException("Transport not found with ID: " + transportId));
 
-            transport.setRouteName(updatedTransport.getRouteName());
-            transport.setVehicleNumber(updatedTransport.getVehicleNumber());
-            transport.setDriverName(updatedTransport.getDriverName());
-            transport.setLicenceNumber(updatedTransport.getLicenceNumber());
-            transport.setPhoneNumber(updatedTransport.getPhoneNumber());
-            transport.setDriverAddress(updatedTransport.getDriverAddress());
 
+            transport.setVehicleNumber(updatedTransport.getVehicleNumber());
+            transport.setCapacity(updatedTransport.getCapacity());
+            transport.setLicenceNumber(updatedTransport.getLicenceNumber());
             transport = transportRepository.save(transport);
             return mapToTransportResponse(transport);
         } catch (Exception e) {

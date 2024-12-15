@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/academic-sessions")
+@RequestMapping("/api/v1/academic-sessions")
 @RequiredArgsConstructor
 public class AcademicSessionController {
 

@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Table(name = "class_subject")
 @Entity
 @Builder
-public class ClassSubject {
+public class    ClassSubject {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

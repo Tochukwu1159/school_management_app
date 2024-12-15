@@ -61,6 +61,8 @@ public class UserServiceImpl implements UserService {
     private final ModelMapper modelMapper;
     private final AcademicSessionRepository academicSessionRepository;
 
+    private  final  AccountUtils accountUtils;
+
     @Override
     public UserResponse createStudent(UserRequestDto userRequest) throws MessagingException {
         if (userRepository.existsByEmail(userRequest.getEmail())) {
@@ -141,7 +143,14 @@ public class UserServiceImpl implements UserService {
                 .build();
         emailService.sendHtmlEmail(emailDetails);
 
-        return modelMapper.map(savedUser, UserResponse.class);
+        AccountInfo accountInfo = AccountInfo.builder().
+                firstName(savedUser.getFirstName())
+                .lastName(savedUser.getLastName())
+                .email(savedUser.getEmail())
+                .gender(savedUser.getEmail()).build();
+
+
+        return new  UserResponse("200", "Student Successfully Created", accountInfo);
     }
 
 
@@ -228,7 +237,14 @@ public class UserServiceImpl implements UserService {
                 .build();
         emailService.sendHtmlEmail(emailDetails);
 
-        return modelMapper.map(savedUser, UserResponse.class);
+        AccountInfo accountInfo = AccountInfo.builder().
+                firstName(savedUser.getFirstName())
+                .lastName(savedUser.getLastName())
+                .email(savedUser.getEmail())
+                .gender(savedUser.getEmail()).build();
+
+
+        return new  UserResponse("200", "Admin Successfully Created", accountInfo);
     }
 
 
@@ -275,7 +291,7 @@ public class UserServiceImpl implements UserService {
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .religion(userRequest.getReligion())
                 .admissionDate(userRequest.getAdmissionDate())
-                .uniqueRegistrationNumber(AccountUtils.generateTeacherId())
+                .uniqueRegistrationNumber(AccountUtils.generateStudentId())
                 .address(userRequest.getAddress())
                 .dateOfBirth(userRequest.getDateOfBirth())
 //                .profilePicture(imageUrl)
@@ -291,7 +307,7 @@ public class UserServiceImpl implements UserService {
         }
 
         ClassLevel studentClass = classLevelRepository.findByClassName(userRequest.getFormTeacher());
-        classBlock.get().setFormTeacher(savedUser);
+        classBlock.get().setFormTeacher(userProfile);
         classLevelRepository.save(studentClass);
 
         //create wallet
@@ -309,7 +325,15 @@ public class UserServiceImpl implements UserService {
                 .build();
         emailService.sendHtmlEmail(emailDetails);
 
-        return modelMapper.map(savedUser, UserResponse.class);
+       AccountInfo accountInfo = AccountInfo.builder().
+        firstName(savedUser.getFirstName())
+                .lastName(savedUser.getLastName())
+                        .email(savedUser.getEmail())
+                                .gender(savedUser.getEmail()).build();
+
+
+return new  UserResponse("200", "Teacher Successfully Created", accountInfo);
+
     }
 
     public LoginResponse loginUser(LoginRequest loginRequest) {

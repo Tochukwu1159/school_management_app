@@ -3,11 +3,13 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.ClassLevelRequest;
 import examination.teacherAndStudents.dto.ClassLevelRequestUrl;
+import examination.teacherAndStudents.entity.AcademicSession;
 import examination.teacherAndStudents.entity.ClassLevel;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
+import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.ClassLevelRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.ClassLevelService;
@@ -23,12 +25,14 @@ public class ClassLevelServiceImpl implements ClassLevelService {
 
     private final ClassLevelRepository classLevelRepository;
     private final UserRepository userRepository;
+    private final AcademicSessionRepository academicSessionRepository;
 
     @Autowired
     public ClassLevelServiceImpl(ClassLevelRepository classLevelRepository,
-                                 UserRepository userRepository) {
+                                 UserRepository userRepository, AcademicSessionRepository academicSessionRepository) {
         this.classLevelRepository = classLevelRepository;
         this.userRepository = userRepository;
+        this.academicSessionRepository = academicSessionRepository;
     }
 
     public List<ClassLevel> getAllClassLevels() {
@@ -77,9 +81,12 @@ public class ClassLevelServiceImpl implements ClassLevelService {
             if (admin == null) {
                 throw new AuthenticationFailedException("Please login as an Admin");
             }
+            Optional<AcademicSession> academicSession = academicSessionRepository.findById(classLevel.getAcademicSessionId());
+
 
             ClassLevel newClass = new ClassLevel();
             newClass.setClassName(classLevel.getClassName());
+            newClass.setAcademicYear(academicSession.get());
             return classLevelRepository.save(newClass);
 
         } catch (Exception e) {

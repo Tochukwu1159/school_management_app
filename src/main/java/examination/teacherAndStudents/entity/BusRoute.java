@@ -1,10 +1,12 @@
 package examination.teacherAndStudents.entity;
-import examination.teacherAndStudents.utils.BorrowingStatus;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -14,11 +16,19 @@ import java.time.LocalDateTime;
 @Table(name = "bus_route")
 @Entity
 @Builder
-public class BusRoute extends BaseEntity{
+public class BusRoute {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     private String routeName;
     private String startPoint;
     private String endPoint;
-    @OneToOne(mappedBy = "busRoute", cascade = CascadeType.ALL)
-    private Transport transport;
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
     // other fields, constructors, getters, setters
 }

@@ -8,10 +8,16 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class UserResponse {
     private  String responseCode;
     private  String responseMessage;
     private  AccountInfo accountInfo;
+
+    public UserResponse(String responseCode, String responseMessage, AccountInfo accountInfo) {
+       this.responseCode = responseCode;
+       this.responseMessage = responseMessage;
+       this.accountInfo = accountInfo;
+
+    }
 }
+

@@ -3,7 +3,6 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.dto.RouteRequest;
 import examination.teacherAndStudents.dto.RouteResponse;
 import examination.teacherAndStudents.entity.BusRoute;
-import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.repository.BusRouteRepository;
 import examination.teacherAndStudents.service.BusRouteService;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +11,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

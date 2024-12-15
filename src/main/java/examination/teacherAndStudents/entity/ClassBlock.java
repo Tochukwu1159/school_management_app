@@ -30,21 +30,14 @@ public class ClassBlock {
 
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "teacher_id", nullable = false)
-    private User formTeacher;
+    @JoinColumn(name = "teacher_id")
+    private Profile formTeacher;
 
     @Column(nullable = false, unique = true, length = 255)
     private String classUniqueUrl;
 
     @Column(columnDefinition = "int default 0")
     private int numberOfStudents;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "academic_year_id", nullable = false)
-    private AcademicSession academicYear;
-
-    @Enumerated(EnumType.STRING)
-    private StudentTerm term;
 
     @OneToMany(mappedBy = "classBlock", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Profile> studentList; // Many profiles belong to a class block

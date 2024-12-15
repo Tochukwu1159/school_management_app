@@ -20,23 +20,21 @@ public class Transport {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "route_name", nullable = false, length = 100)
-    private String routeName;
-
     @Column(name = "vehicle_number", nullable = false, unique = true, length = 50)
     private String vehicleNumber;
 
-    @Column(name = "driver_name", nullable = false, length = 100)
-    private String driverName;
+    @Column(nullable = false)
+    private int capacity;
 
-    @Column(name = "driver_address", length = 255)
-    private String driverAddress;
+    @Column(nullable = false)
+    private boolean available;
+
+    @Column(name = "vehicle_name", nullable = false, length = 100)
+    private String vehicleName;
+
 
     @Column(name = "licence_number", nullable = false, unique = true, length = 50)
     private String licenceNumber;
-
-    @Column(name = "phone_number", nullable = false, length = 15)
-    private String phoneNumber;
 
 
     @CreationTimestamp
@@ -47,8 +45,19 @@ public class Transport {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @ElementCollection
+    private List<String> maintenanceHistory;
+
+    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
+    @JoinColumn(name = "driver_id", unique = true)
+    private Profile driver;
+
     @OneToMany(mappedBy = "transport", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Profile> userProfiles;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "route_id", nullable = false)
+    private BusRoute busRoute;
 }
 
 

@@ -12,11 +12,12 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TransportRequest {
-    private String routeName;
+    private Long   busRouteId;;
     private String driverAddress;
     private String vehicleNumber;
-    private String driverName;
+    private Long driverId;
     private String licenceNumber;
     private String phoneNumber;
+    private int capacity;
     // getters and setters
 }
