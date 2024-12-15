@@ -15,8 +15,7 @@ public class TransportResponse {
     private Long id;
     private String routeName;
     private String vehicleNumber;
-    private String driverName;
-    private String driverAddress;
+    private String vehicleName;
     private String licenceNumber;
     private String phoneNumber;
 

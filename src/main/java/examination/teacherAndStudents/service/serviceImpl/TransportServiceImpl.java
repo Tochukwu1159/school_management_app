@@ -56,11 +56,11 @@ public class TransportServiceImpl implements TransportService {
             Transport transport = new Transport();
             transport.setVehicleNumber(transportRequest.getVehicleNumber());
             transport.setAvailable(true);
+            transport.setVehicleName(transportRequest.getVehicleName());
             transport.setCapacity(transportRequest.getCapacity());
             transport.setDriver(driver.get());
             transport.setLicenceNumber(transportRequest.getLicenceNumber());
             transport.setBusRoute(busRoute.get());
-
             transport = transportRepository.save(transport);
             return mapToTransportResponse(transport);
         } catch (Exception e) {
@@ -247,6 +247,7 @@ public class TransportServiceImpl implements TransportService {
     private TransportResponse mapToTransportResponse(Transport transport) {
         TransportResponse transportResponse = new TransportResponse();
         transportResponse.setId(transport.getId());
+        transportResponse.setVehicleName(transport.getVehicleName());
         transportResponse.setVehicleNumber(transport.getVehicleNumber());
         transportResponse.setLicenceNumber(transport.getLicenceNumber());
         return transportResponse;

@@ -24,9 +24,13 @@ public class Maintenance {
 
     private double amountSpent;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "transport_id", nullable = false)
     private Transport transport;
+
+    @ManyToOne
+    @JoinColumn(name = "profile_id", nullable = false)
+    private Profile maintainedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime maintenanceDate;

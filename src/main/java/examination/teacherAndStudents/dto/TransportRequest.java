@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 public class TransportRequest {
     private Long   busRouteId;;
-    private String driverAddress;
+    private String vehicleName;
     private String vehicleNumber;
     private Long driverId;
     private String licenceNumber;

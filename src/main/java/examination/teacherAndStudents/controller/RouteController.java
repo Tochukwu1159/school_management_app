@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/routes")
 public class RouteController {
 
-    private BusRouteService routeService;
+    private final BusRouteService routeService;
 
     @PostMapping
     public ResponseEntity<RouteResponse> addRoute(@RequestBody RouteRequest routeRequest) {
