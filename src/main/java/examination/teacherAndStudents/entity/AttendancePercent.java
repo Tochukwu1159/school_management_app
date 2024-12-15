@@ -1,0 +1,61 @@
+package examination.teacherAndStudents.entity;
+import examination.teacherAndStudents.utils.AttendanceStatus;
+import examination.teacherAndStudents.utils.StudentTerm;
+import jakarta.persistence.*;
+        import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+//@Table(name = "attendance_percent", indexes = {
+//        @Index(name = "idx_user_class_year", columnList = "user_id, classlevel_id, academic_year_id")
+//})
+@Entity
+@Builder
+@Table(name = "attendance_percent")
+public class AttendancePercent {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @NotNull
+    @Min(0)
+    private Double attendancePercentage;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    private StudentTerm studentTerm;
+
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @ManyToOne
+    @JoinColumn(name = "classblock_id", nullable = false)
+    private ClassBlock classBlock;
+
+    @NotNull
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "academic_year_id", nullable = false)
+    private AcademicSession academicYear;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PreUpdate
+    private void setLastUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+}

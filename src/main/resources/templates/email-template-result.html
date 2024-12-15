@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      background-color: #f5f5f5;
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: #fff;
+      max-width: 600px;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #80B918;
+      font-size: 24px;
+      margin: 0;
+    }
+
+    p {
+      font-size: 16px;
+      line-height: 1.5;
+      color: #0b0c0c;
+      margin: 20px 0;
+    }
+
+    blockquote {
+      border-left: 5px solid #b1b4b6;
+      padding: 10px 0 0.1px 15px;
+    }
+
+    a {
+      display: inline-block;
+      padding: 10px 20px;
+      background-color: #80B918;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    a:hover {
+      background-color: #68A216;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1 th:text="'Result Summary for ' + ${name}"></h1>
+  <p>This is your result summary for the term. Thank you for your hard work!</p>
+  <blockquote>
+    <p>Let's continue working together to achieve success.</p>
+  </blockquote>
+  <a th:href="${attachmentUrl}" download="Result_Summary.pdf">Download Result Summary</a>
+</div>
+</body>
+</html>

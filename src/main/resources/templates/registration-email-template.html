@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>MINISTERS CONFERENCE</title>
+    <style>
+        body {
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #80B918;
+            margin-bottom: 20px;
+        }
+
+        p {
+            font-size: 18px;
+            color: #0b0c0c;
+            margin: 0 0 20px;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        li strong {
+            font-weight: bold;
+        }
+
+        a {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #80B918;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+            transition: background-color 0.3s;
+        }
+
+        a:hover {
+            background-color: #5f8d14;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 th:text="'Welcome, ' + ${name}"></h1>
+    <p>Thank you for registering for the event. We look forward to seeing you there.</p>
+    <p>Event Details:</p>
+    <ul>
+        <li><strong>Title:</strong> <span th:text="${eventTitle}"></span></li>
+        <li><strong>Date:</strong> <span th:text="${eventStartDate}"></span></li>
+        <li><strong>Time:</strong> <span th:text="${eventStartTime}"></span></li>
+    </ul>
+    <p>Please log in to join the event using the link below:</p>
+    <a th:href="${uniqueUrl}">Join the Event</a>
+</div>
+</body>
+</html>
