@@ -88,7 +88,6 @@ public class ClassBlockServiceImpl implements ClassBlockService {
                 .classLevelId(classBlock.getClassLevel().getId())
                 .classUniqueUrl(classBlock.getClassUniqueUrl())
                 .numberOfStudents(classBlock.getNumberOfStudents())
-                .term(classBlock.getTerm())
                 .build();
     }
 }

@@ -247,12 +247,8 @@ public class TransportServiceImpl implements TransportService {
     private TransportResponse mapToTransportResponse(Transport transport) {
         TransportResponse transportResponse = new TransportResponse();
         transportResponse.setId(transport.getId());
-        transportResponse.setRouteName(transport.getRouteName());
         transportResponse.setVehicleNumber(transport.getVehicleNumber());
-        transportResponse.setDriverName(transport.getDriverName());
-        transportResponse.setDriverAddress(transport.getDriverAddress());
         transportResponse.setLicenceNumber(transport.getLicenceNumber());
-        transportResponse.setPhoneNumber(transport.getPhoneNumber());
         return transportResponse;
     }
 }
