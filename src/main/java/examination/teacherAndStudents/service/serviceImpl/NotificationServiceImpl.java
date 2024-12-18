@@ -3,12 +3,14 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.TransactionRequest;
 import examination.teacherAndStudents.entity.Notification;
+import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.Transaction;
 
 import examination.teacherAndStudents.dto.NotificationResponse;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.NotificationRepository;
+import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.TransactionRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.NotificationService;
@@ -29,6 +31,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
+    private final ProfileRepository profileRepository;
 
     @Override
     public Notification studentSendMoneyNotification(TransactionRequest transactionRequest) {
@@ -37,6 +40,8 @@ public class NotificationServiceImpl implements NotificationService {
         if (student == null) {
             throw new CustomNotFoundException("Student with Id " + studentId + " is not valid");
         }
+        Optional<Profile> profile = profileRepository.findByUser(student.get());
+
         Notification notification = new Notification();
 
         try {
@@ -47,7 +52,7 @@ public class NotificationServiceImpl implements NotificationService {
             String message = "Successfully transferred ₦" + transactionRequest.getAmount() + " to " + student.get().getFirstName();
             notification.setCreatedAt(LocalDateTime.now());
             notification.setMessage(message);
-            notification.setUser(student.get());
+            notification.setUser(profile.get());
             notificationRepository.save(notification);
             return notification;
         } catch (CustomNotFoundException e) {
@@ -62,6 +67,8 @@ public class NotificationServiceImpl implements NotificationService {
     public Notification walletFundingNotification(TransactionRequest transactionRequest) {
         Long studentId = transactionRequest.getStudentId();
         Optional<User> student = userRepository.findById(studentId);
+        Optional<Profile> profile = profileRepository.findByUser(student.get());
+
         if (student == null) {
             throw new CustomNotFoundException("Student with Id " + studentId + " is not valid");
         }
@@ -70,7 +77,7 @@ public class NotificationServiceImpl implements NotificationService {
         String message = "You have successfully funded your wallet with ₦" + transactionRequest.getAmount();
         notification.setCreatedAt(transactionRequest.getCreatedAt());
         notification.setMessage(message);
-        notification.setUser(student.get());
+        notification.setUser(profile.get());
         notification.setNotificationStatus(NotificationStatus.UNREAD); // Set initial status to UNREAD
         return notificationRepository.save(notification);
     }

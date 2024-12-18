@@ -22,9 +22,8 @@ public class VisitorsRequest {
     @Size(max = 100, message = "Name must not exceed 100 characters")
     private String name;
 
-    @NotBlank(message = "Host name is required")
-    @Size(max = 100, message = "Name must not exceed 100 characters")
-    private String hostName;
+    @NotBlank(message = "profile id is required")
+    private Long profileId;
 
     @NotNull(message = "Visitor type is required")
     private VisitorType visitorType;

@@ -16,5 +16,4 @@ public class ClassBlockResponse {
     private Long formTeacherId;
     private String classUniqueUrl;
     private int numberOfStudents;
-    private StudentTerm term;
 }

@@ -27,8 +27,9 @@ public class Complaint{
 
     private String replyText;
 
+    private String photo;
+
     private LocalDateTime replyTime;
-    private String reply;
 
     @ManyToOne
     @JoinColumn(name = "complained_user_id")

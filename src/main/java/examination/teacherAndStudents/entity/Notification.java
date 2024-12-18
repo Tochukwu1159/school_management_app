@@ -52,7 +52,7 @@ public class Notification {
     @JsonBackReference
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private Profile user;
 
     @ManyToOne
     @JoinColumn(name = "transaction_id")

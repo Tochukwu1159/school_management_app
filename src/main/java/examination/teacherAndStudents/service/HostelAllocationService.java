@@ -11,6 +11,7 @@ import java.util.Optional;
 
 public interface HostelAllocationService {
     HostelAllocationResponse allocateStudentToHostel(HostelAllocationRequest request);
+    HostelAllocationResponse payHotelAllocation(Long dueId, Long sessionId);
     List<HostelAllocationResponse> getAllHostelAllocations();
     Optional<HostelAllocationResponse> getHostelAllocationById(Long id);
     void deleteHostelAllocation(Long id);

@@ -66,7 +66,7 @@ public class AdminController {
     }
 
     @GetMapping("/calculate-teacher-percentage/{userId}/{term}")
-    public ResponseEntity<Double> calculateAttendancePercentage(@PathVariable Long userId,@PathVariable StudentTerm term ) {
+    public ResponseEntity<Double> calculateAttendancePercentage(@PathVariable Long userId,@PathVariable Long term ) {
         try {
             double attendancePercentage = teacherAttendanceService.calculateAttendancePercentage(userId, term);
             return ResponseEntity.ok(attendancePercentage);

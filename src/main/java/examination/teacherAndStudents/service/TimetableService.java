@@ -18,8 +18,8 @@ import java.util.List;
 @Service
 public interface TimetableService {
 
-    Timetable createTimetable(Long schoolClassId, Long teacherId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, TimetableType timetableType, StudentTerm term, Long sessionId);
-    Timetable updateTimetable(Long timetableId, Long teacherId, Long schoolClassId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, StudentTerm term, Long sessionId);
+    Timetable createTimetable(Long schoolClassId, Long teacherId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, TimetableType timetableType, Long termId, Long sessionId);
+    Timetable updateTimetable(Long timetableId, Long teacherId, Long schoolClassId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, Long termId, Long sessionId);
     List<Timetable> getAllTimetables();
 
     ResponseEntity<Timetable> getTimetableById(Long timetableId);

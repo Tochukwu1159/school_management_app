@@ -20,7 +20,7 @@ public class ResultController {
     private PositionService positionService;
 
     @GetMapping("/calculate/{classLevelId}/{studentId}/{term}/{subjectName}")
-    public ResponseEntity<Result> calculateResult(@PathVariable Long classLevelId,@PathVariable Long studentId, @PathVariable String subjectName,@PathVariable Long sessionId,  @PathVariable StudentTerm term) {
+    public ResponseEntity<Result> calculateResult(@PathVariable Long classLevelId,@PathVariable Long studentId, @PathVariable String subjectName,@PathVariable Long sessionId,  @PathVariable Long term) {
         try {
             // Assuming you have a method in the service to calculate the result
             Result result = resultService.calculateResult(classLevelId, studentId, subjectName,sessionId, term);
@@ -31,9 +31,9 @@ public class ResultController {
     }
 
     @PostMapping("/update-average/{userId}/{classLevelId}/{term}")
-    public ResponseEntity<String> calculateAverageResult(@PathVariable Long userId,@PathVariable Long classLevelId,@PathVariable Long sessionId, @PathVariable StudentTerm term) {
+    public ResponseEntity<String> calculateAverageResult(@PathVariable Long userId,@PathVariable Long classLevelId,@PathVariable Long sessionId, @PathVariable Long termId) {
         try {
-            resultService.calculateAverageResult(userId, classLevelId,sessionId,term);
+            resultService.calculateAverageResult(userId, classLevelId,sessionId,termId);
             return ResponseEntity.ok("Average score updated successfully.");
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found with id: " + userId);

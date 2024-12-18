@@ -12,12 +12,17 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/hostel-allocations")
+@RequestMapping("/api/v1/hostel-allocations")
 @RequiredArgsConstructor
 public class HostelAllocationController {
 
     private final HostelAllocationService hostelAllocationService;
 
+    @PostMapping("/pay")
+    public ResponseEntity<HostelAllocationResponse> payHotelAllocation(@RequestParam Long dueId, @RequestParam Long sessionId) {
+        HostelAllocationResponse response = hostelAllocationService.payHotelAllocation(dueId, sessionId);
+        return ResponseEntity.ok(response);
+    }
     @PostMapping("/allocate")
     public ResponseEntity<HostelAllocationResponse> allocateStudentToHostel(@RequestBody HostelAllocationRequest request) {
         HostelAllocationResponse response = hostelAllocationService.allocateStudentToHostel(request);

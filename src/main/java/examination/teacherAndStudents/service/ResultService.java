@@ -1,10 +1,9 @@
 package examination.teacherAndStudents.service;
 
-import examination.teacherAndStudents.entity.Result;
-import examination.teacherAndStudents.utils.StudentTerm;
+import examination.teacherAndStudents.entity.*;
 
 public interface ResultService {
-    Result calculateResult(Long classLevelId, Long studentId, String subjectName, Long sessionId, StudentTerm term) ;
-   void calculateAverageResult(Long userId, Long classLevelId, Long sessionId, StudentTerm term);
+    Result calculateResult(Long classLevelId, Long studentId, String subjectName, Long sessionId, Long termId) ;
+   void calculateAverageResult(Long userId, Long classLevelId, Long sessionId, Long termId);
 
 }

@@ -47,10 +47,9 @@ public class Visitors {
     @Column(name = "purpose")
     private String purpose;
 
-    @NotBlank(message = "Host name is required")
-    @Size(max = 100, message = "Host name must be less than 100 characters")
-    @Column(name = "host_name")
-    private String hostName;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private Profile host;
 
     @CreationTimestamp
     @Column(name = "signIn", updatable = false, nullable = false)

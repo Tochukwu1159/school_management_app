@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -22,7 +24,6 @@ public class    ClassSubject {
 
     @ManyToOne
     @JoinColumn(name = "subject_id", nullable = false)
-    @JsonBackReference
     private Subject subject;
 
     @ManyToOne
@@ -30,16 +31,14 @@ public class    ClassSubject {
     private ClassBlock classBlock;
 
     @ManyToOne
-    @JoinColumn(name = "term_id", nullable = false)
-    private StudentTerm studentTerm;
-
-    @OneToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }

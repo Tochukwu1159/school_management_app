@@ -7,7 +7,9 @@ import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.DuesRepository;
+import examination.teacherAndStudents.repository.StudentTermRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.DuesService;
 import examination.teacherAndStudents.service.PaymentService;
@@ -25,7 +27,8 @@ public class DuesServiceImpl implements DuesService {
 
     private final DuesRepository duesRepository;
     private final UserRepository userRepository;
-
+    private final StudentTermRepository studentTermRepository;
+    private final AcademicSessionRepository academicSessionRepository;
 
 
     public List<Dues> getAllDues() {
@@ -48,17 +51,23 @@ public class DuesServiceImpl implements DuesService {
 
     public Dues createDues(DuesRequest duesRequest) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
+
         User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
         if (admin == null) {
             throw new AuthenticationFailedException("Please login as an Admin");
         }
+        Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(duesRequest.getStudentTerm());
+        Optional<examination.teacherAndStudents.entity.AcademicSession> academicSession = academicSessionRepository.findById(duesRequest.getAcademicYear());
+
+
         // Validate duesRequest fields
         validateDuesRequest(duesRequest);
 
         Dues studentDues = new Dues();
-        studentDues.setTerm(duesRequest.getTerm());
+        studentDues.setStudentTerm(studentTerm.get());
         studentDues.setPurpose(duesRequest.getPurpose());
         studentDues.setAmount(duesRequest.getAmount());
+        studentDues.setAcademicYear(academicSession.get());
         return duesRepository.save(studentDues);
     }
     private void validateDuesRequest(DuesRequest duesRequest) {
@@ -75,6 +84,10 @@ public class DuesServiceImpl implements DuesService {
         if (admin == null) {
             throw new AuthenticationFailedException("Please login as an Admin");
         }
+        Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(updatedDues.getStudentTerm());
+        Optional<examination.teacherAndStudents.entity.AcademicSession> academicSession  = academicSessionRepository.findById(updatedDues.getAcademicYear());
+
+
         // Validate updatedDues fields
         validateDuesRequest(updatedDues);
         Dues existingDues = duesRepository.findById(id)
@@ -82,7 +95,8 @@ public class DuesServiceImpl implements DuesService {
 
         existingDues.setPurpose(updatedDues.getPurpose());
         existingDues.setAmount(updatedDues.getAmount());
-        existingDues.setTerm(updatedDues.getTerm());
+        existingDues.setAcademicYear(academicSession.get());
+        existingDues.setStudentTerm(studentTerm.get());
         return duesRepository.save(existingDues);
     }
     public boolean deleteDues(Long id) {

@@ -19,7 +19,7 @@ public class TimetableCreationRequest {
     private Long  teacherId;
     private Long schoolClassId;
 
-    private StudentTerm term;
+    private Long term;
     private Long yearId;
     private DayOfWeek dayOfWeek;
     private TimetableType timetableType;

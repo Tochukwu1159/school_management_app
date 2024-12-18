@@ -9,6 +9,6 @@ import java.util.Optional;
 
 @Repository
 public interface HostelAllocationRepository extends JpaRepository<HostelAllocation, Long> {
-    Optional<HostelAllocation> findByIdAndUserId(Long allocationId, Long userId);
+    HostelAllocation findByDuesId(Long dueId);
     // You can add custom query methods if needed
 }

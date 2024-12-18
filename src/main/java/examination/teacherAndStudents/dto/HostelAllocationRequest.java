@@ -10,4 +10,5 @@ public class HostelAllocationRequest {
     private Long hostelId;  // Hostel ID
     private int bedNumber;  // Bed number within the hostel
     private Long allocationId;  // Payment status of the allocation
+    private Long academicYearId;
 }

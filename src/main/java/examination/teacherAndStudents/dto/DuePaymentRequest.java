@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 public class DuePaymentRequest {
     private Long dueId;
     private Long sessionId;
-    private StudentTerm term;
+    private Long term;
 
     // Getters and Setters
 }

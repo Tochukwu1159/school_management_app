@@ -40,10 +40,6 @@ public class SubjectServiceImpl implements SubjectService {
                 throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
             }
 
-            ClassBlock subClass = subClassRepository.findById(subjectRequest.getSubClassId()).orElse(null);
-            if (subClass == null) {
-                throw new CustomNotFoundException("Class not found");
-            }
             Subject subject = subjectMapper.mapToSubject(subjectRequest);
             subject.setName(subjectRequest.getName());
             subjectRepository.save(subject);

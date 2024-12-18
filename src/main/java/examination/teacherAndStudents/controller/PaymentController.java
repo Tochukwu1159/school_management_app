@@ -15,8 +15,8 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @PostMapping("/pay")
-    public ResponseEntity<String> payDue(@RequestParam Long dueId, @RequestParam StudentTerm studentTerm, @RequestParam Long sessionId) {
-        paymentService.payDue(dueId,studentTerm,sessionId);
+    public ResponseEntity<String> payDue(@RequestParam Long dueId, @RequestParam Long termId , @RequestParam Long sessionId) {
+        paymentService.payDue(dueId,termId,sessionId);
         return ResponseEntity.ok("Payment successful");
     }
 

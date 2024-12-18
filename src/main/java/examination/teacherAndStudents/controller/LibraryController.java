@@ -63,7 +63,7 @@ public class LibraryController {
     }
 
     @PostMapping("/borrow_book")
-    public ResponseEntity<BookBorrowing> borrowBook(@RequestParam String memberId, @RequestParam Long bookId) {
+    public ResponseEntity<BookBorrowing> borrowBook(@RequestParam("studentId") Long memberId, @RequestParam Long bookId) {
         try {
             BookBorrowing borrowing = libraryService.borrowBook(memberId, bookId);
             return ResponseEntity.ok(borrowing);

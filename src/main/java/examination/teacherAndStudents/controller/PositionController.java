@@ -21,7 +21,7 @@ public class PositionController {
 
 
     @GetMapping("/update-all/{classLevelId}/{term}")
-    public ResponseEntity<String> updateAllPositionsForAClass(@PathVariable Long classLevelId, @PathVariable Long sessionId, @PathVariable StudentTerm term) {
+    public ResponseEntity<String> updateAllPositionsForAClass(@PathVariable Long classLevelId, @PathVariable Long sessionId, @PathVariable Long term) {
         try {
             positionService.updateAllPositionsForAClass(classLevelId,sessionId, term);
             return ResponseEntity.ok("Positions updated successfully");
@@ -32,7 +32,7 @@ public class PositionController {
     }
 
     @PostMapping("/generateResultSummaryPdf/{studentId}/{classLevelId}/{term}")
-    public ResponseEntity<String> generateResultSummaryPdf(@PathVariable Long studentId, @PathVariable Long classLevelId,@PathVariable Long sessionId, @PathVariable StudentTerm term) {
+    public ResponseEntity<String> generateResultSummaryPdf(@PathVariable Long studentId, @PathVariable Long classLevelId,@PathVariable Long sessionId, @PathVariable Long term) {
         try {
             positionService.generateResultSummaryPdf(studentId,classLevelId, sessionId, term);
             return ResponseEntity.ok("Result summary PDF generation initiated successfully.");

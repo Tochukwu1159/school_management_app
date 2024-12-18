@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.entity;
 
+import examination.teacherAndStudents.utils.AllocationStatus;
 import examination.teacherAndStudents.utils.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -22,18 +23,22 @@ public class HostelAllocation {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "hostel_id", nullable = false)
+    @JoinColumn(name = "hostel_id")
     private Hostel hostel; // Reference to the Hostel entity
 
     private int bedNumber;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user; // Reference to the student or user
+    private Profile profile; // Reference to the student or user
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "allocation_status", nullable = false)
+    private AllocationStatus allocationStatus;
 
     @Lob
     @Column(name = "receipt_photo")
@@ -42,9 +47,13 @@ public class HostelAllocation {
     @Column(name = "datestamp", nullable = false)
     private LocalDateTime datestamp;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
+
+    @ManyToOne
+    @JoinColumn(name = "due_id", nullable = false)
+    private Dues dues;
 
     @PrePersist
     protected void onCreate() {

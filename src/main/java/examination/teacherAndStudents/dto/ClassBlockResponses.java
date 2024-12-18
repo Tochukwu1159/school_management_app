@@ -1,2 +1,16 @@
-package examination.teacherAndStudents.dto;public class ClassBlockResponses {
+package examination.teacherAndStudents.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class ClassBlockResponses {
+    private Long id;
+    private String currentStudentClassName;
+    private ClassLevelResponse classLevel;
 }

@@ -1,4 +1,4 @@
-package examination.teacherAndStudents.service;
+package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.HostelAllocationRequest;
@@ -6,9 +6,13 @@ import examination.teacherAndStudents.dto.HostelAllocationResponse;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
+import examination.teacherAndStudents.service.HostelAllocationService;
+import examination.teacherAndStudents.service.PaymentService;
+import examination.teacherAndStudents.utils.AllocationStatus;
 import examination.teacherAndStudents.utils.PaymentStatus;
 import examination.teacherAndStudents.utils.Roles;
 import examination.teacherAndStudents.utils.TransactionType;
+import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,12 +33,14 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
     private final PaymentService paymentService;
     private final DuesRepository duesRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final HostelBedTrackerRepository hostelBedTrackerRepository;
+    private final ProfileRepository profileRepository;
 
     @Transactional
     public HostelAllocationResponse payHotelAllocation(Long dueId, Long sessionId) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User user = userRepository.findByEmailAndRoles(email, Roles.STUDENT);
+            Optional<User> user = userRepository.findByEmail(email);
             if (user == null) {
                 throw new CustomNotFoundException("Please login as a Student");
             }
@@ -42,15 +48,23 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
             AcademicSession academicSession = academicSessionRepository.findById(sessionId)
                     .orElseThrow(() -> new EntityNotFoundException("Academic session not found with id: " + sessionId));
 
+            Profile profile = profileRepository.findByUser(user.get())
+                    .orElseThrow(() -> new EntityNotFoundException("User profile not found for ID : " + sessionId));
 
-            Dues hostelFee = duesRepository.findById(dueId)
-                    .orElseThrow(() -> new EntityNotFoundException("Hostel Allocation not found"));
+            HostelAllocation existingAllocation = hostelAllocationRepository.findByDuesId(dueId);
+            if (existingAllocation != null) {
+                throw new EntityExistsException("Hostel payment already made, please wait until hostel allocation finished");
 
-           paymentService.payDue(dueId, null, academicSession.getId() );
+            }
+
+            paymentService.payDue(dueId, null, academicSession.getId() );
             // Step 3: Update payment status and save the allocation
             HostelAllocation hostelAllocation = new HostelAllocation();
             hostelAllocation.setPaymentStatus(PaymentStatus.SUCCESS);
-            hostelAllocation.setUser(user);
+            hostelAllocation.setAllocationStatus(AllocationStatus.PENDING);
+            hostelAllocation.setDues(duesRepository.findById(dueId).get());
+            hostelAllocation.setAcademicYear(academicSession);
+            hostelAllocation.setProfile(profile);
             hostelAllocationRepository.save(hostelAllocation);
 
             // Step 4: Return updated response
@@ -67,25 +81,52 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
     @Transactional
     public HostelAllocationResponse allocateStudentToHostel(HostelAllocationRequest request) {
         User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
-        HostelAllocation hostelAllocation = hostelAllocationRepository.findByIdAndUserId(request.getAllocationId(), user.getId())
-                .orElseThrow(() -> new RuntimeException("Hostel allocation not found"));
-
-        if(hostelAllocation.getPaymentStatus() != PaymentStatus.SUCCESS){
-            throw new EntityNotFoundException("Student has not paid yet");
-        }
         Hostel hostel = hostelRepository.findById(request.getHostelId())
-                .orElseThrow(() -> new RuntimeException("Hostel not found"));
+                .orElseThrow(() -> new NotFoundException("Hostel not found"));
+
+        HostelAllocation hostelAllocation = hostelAllocationRepository.findById(request.getAllocationId())
+                .orElseThrow(() -> new NotFoundException("Hostel allocation not found"));
+
+        AcademicSession academicYear = academicSessionRepository.findById(request.getAcademicYearId())
+                .orElseThrow(() -> new NotFoundException("Academic year not found"));
+
+        Profile userProfile = profileRepository.findByUser(user)
+                .orElseThrow(() -> new NotFoundException("User profile not found"));
+
+        if (request.getAllocationId() != null) {
+            HostelAllocation existingAllocation = hostelAllocationRepository.findById(request.getAllocationId())
+                    .orElseThrow(() -> new NotFoundException("Hostel allocation not found"));
+            if (existingAllocation.getPaymentStatus() != PaymentStatus.SUCCESS) {
+                throw new RuntimeException("Payment not made for the allocation");
+            }
+        }
+
+        HostelBedTracker bedTracker = hostelBedTrackerRepository.findByHostelAndAcademicYear(hostel, academicYear)
+                .orElseGet(() -> hostelBedTrackerRepository.save(
+                        HostelBedTracker.builder()
+                                .hostel(hostel)
+                                .academicYear(academicYear)
+                                .bedsAllocated(0)
+                                .build()
+                ));
+
+        if (bedTracker.getBedsAllocated() >= hostel.getNumberOfBed()) {
+            throw new RuntimeException("No beds available in this hostel for the selected academic year");
+        }
 
         hostelAllocation.setHostel(hostel);
-        hostelAllocation.setBedNumber(request.getBedNumber());
+        hostelAllocation.setBedNumber(bedTracker.getBedsAllocated() + 1);
+        hostelAllocation.setAllocationStatus(AllocationStatus.SUCCESS);
+        hostelAllocationRepository.save(hostelAllocation);
 
-
-        hostelAllocation = hostelAllocationRepository.save(hostelAllocation);
+        bedTracker.setBedsAllocated(bedTracker.getBedsAllocated() + 1);
+        hostelBedTrackerRepository.save(bedTracker);
 
         return convertToResponse(hostelAllocation);
     }
+
 
     public List<HostelAllocationResponse> getAllHostelAllocations() {
         return hostelAllocationRepository.findAll().stream()
@@ -110,20 +151,46 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
         HostelAllocation hostelAllocation = hostelAllocationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Hostel allocation not found"));
 
+        PaymentStatus previousStatus = hostelAllocation.getPaymentStatus();
+
+        if (previousStatus == PaymentStatus.SUCCESS && paymentStatus != PaymentStatus.SUCCESS) {
+            // Decrease the allocated beds count if payment is revoked
+            HostelBedTracker bedTracker = hostelBedTrackerRepository.findByHostelAndAcademicYear(
+                            hostelAllocation.getHostel(), hostelAllocation.getAcademicYear())
+                    .orElseThrow(() -> new RuntimeException("Bed tracker not found"));
+
+            if (bedTracker.getBedsAllocated() > 0) {
+                bedTracker.setBedsAllocated(bedTracker.getBedsAllocated() - 1);
+                hostelBedTrackerRepository.save(bedTracker);
+            }
+        } else if (previousStatus != PaymentStatus.SUCCESS && paymentStatus == PaymentStatus.SUCCESS) {
+            // Increase allocated beds if payment is successful
+            HostelBedTracker bedTracker = hostelBedTrackerRepository.findByHostelAndAcademicYear(
+                            hostelAllocation.getHostel(), hostelAllocation.getAcademicYear())
+                    .orElseThrow(() -> new RuntimeException("Bed tracker not found"));
+
+            if (bedTracker.getBedsAllocated() >= hostelAllocation.getHostel().getNumberOfBed()) {
+                throw new RuntimeException("No beds available in this hostel for the selected academic year");
+            }
+            bedTracker.setBedsAllocated(bedTracker.getBedsAllocated() + 1);
+            hostelBedTrackerRepository.save(bedTracker);
+        }
+
         hostelAllocation.setPaymentStatus(paymentStatus);
         hostelAllocation = hostelAllocationRepository.save(hostelAllocation);
 
         return convertToResponse(hostelAllocation);
     }
 
+
     // Utility method to convert HostelAllocation to HostelAllocationResponse
     private HostelAllocationResponse convertToResponse(HostelAllocation hostelAllocation) {
         HostelAllocationResponse response = new HostelAllocationResponse();
         response.setId(hostelAllocation.getId());
-        response.setUser(hostelAllocation.getUser());
-        response.setHostel(hostelAllocation.getHostel());
-        response.setBedNumber(hostelAllocation.getBedNumber());
-        response.setPaymentStatus(hostelAllocation.getPaymentStatus());
+//        response.setUser(hostelAllocation.getUser());
+//        response.setHostel(hostelAllocation.getHostel());
+//        response.setBedNumber(hostelAllocation.getBedNumber());
+//        response.setPaymentStatus(hostelAllocation.getPaymentStatus());
         response.setDatestamp(hostelAllocation.getDatestamp());
         return response;
     }

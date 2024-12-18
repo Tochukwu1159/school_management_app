@@ -2,9 +2,11 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.dto.VisitorsRequest;
 import examination.teacherAndStudents.dto.VisitorsResponse;
+import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.Visitors;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
+import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.VisitorsRepository;
 import examination.teacherAndStudents.service.VisitorsService;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +24,12 @@ import static examination.teacherAndStudents.utils.VisitorStatus.CHECKED_IN;
 public class VisitorsServiceImpl implements VisitorsService {
 
     private final VisitorsRepository visitorsRepository;
+    private final ProfileRepository profileRepository;
 
     @Override
     public VisitorsResponse addVisitor(VisitorsRequest request) {
+        Profile profile = profileRepository.findById(request.getProfileId())
+                .orElseThrow(() -> new NotFoundException("Visitor not found"));
         try {
             Visitors visitor = new Visitors();
             visitor.setName(request.getName());
@@ -32,7 +37,7 @@ public class VisitorsServiceImpl implements VisitorsService {
             visitor.setPhoneNumber(request.getPhoneNumber());
             visitor.setEmail(request.getEmail());
             visitor.setStatus(CHECKED_IN);
-            visitor.setHostName(request.getHostName());
+            visitor.setHost(profile);
             visitor.setVisitorType(request.getVisitorType());
             Visitors savedVisitor = visitorsRepository.save(visitor);
             return mapToResponse(savedVisitor);
@@ -44,13 +49,15 @@ public class VisitorsServiceImpl implements VisitorsService {
     @Override
     public VisitorsResponse editVisitor(Long id, VisitorsRequest request) {
         try {
+            Profile profile = profileRepository.findById(request.getProfileId())
+                    .orElseThrow(() -> new NotFoundException("Visitor not found"));
             Visitors visitor = visitorsRepository.findById(id)
                     .orElseThrow(() -> new NotFoundException("Visitor not found"));
             visitor.setName(request.getName());
             visitor.setPhoneNumber(request.getPhoneNumber());
            visitor.setEmail(request.getEmail());
            visitor.setVisitorType(request.getVisitorType());
-            visitor.setHostName(request.getHostName());
+            visitor.setHost(profile);
             visitor.setPurpose(request.getPurpose());
             Visitors updatedVisitor = visitorsRepository.save(visitor);
             return mapToResponse(updatedVisitor);
@@ -85,7 +92,6 @@ public class VisitorsServiceImpl implements VisitorsService {
         VisitorsResponse response = new VisitorsResponse();
         response.setId(visitor.getId());
         response.setName(visitor.getName());
-        response.setHostName(visitor.getHostName());
         response.setVisitorType(visitor.getVisitorType());
         response.setEmail(visitor.getEmail());
         response.setStatus(visitor.getStatus());

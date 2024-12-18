@@ -16,7 +16,8 @@ public interface LibraryService {
     void deleteBook(Long bookId);
 
     Page<Book> getAllBooks(int pageNo, int pageSize, String sortBy);
-    BookBorrowing borrowBook(String memberId, Long bookId);
+
+    BookBorrowing borrowBook(Long memberId, Long bookId);
 
 
 

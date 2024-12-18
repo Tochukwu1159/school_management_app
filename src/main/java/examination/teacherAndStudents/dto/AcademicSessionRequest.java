@@ -12,10 +12,19 @@ public class AcademicSessionRequest {
     @NotBlank(message = "Name is required")
     private String name;
 
-    @NotNull(message = "Start date is required")
+    @NotNull(message = "Academic Start date is required")
     private LocalDate startDate;
 
-    @NotNull(message = "End date is required")
+    @NotNull(message = "Academic End date is required")
     private LocalDate endDate;
+
+    private LocalDate firstTermStartDate;
+    private LocalDate firstTermEndDate;
+
+    private LocalDate secondTermStartDate;
+    private LocalDate secondTermEndDate;
+
+    private LocalDate thirdTermStartDate;
+    private LocalDate thirdTermEndDate;
 }
 

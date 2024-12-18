@@ -8,7 +8,7 @@ import java.io.IOException;
 
 public interface PositionService {
 //    void generateAndSaveRanks();
-    void updateAllPositionsForAClass(Long classLevelId, Long sessionId, StudentTerm term);
+    void updateAllPositionsForAClass(Long classLevelId, Long sessionId, Long term);
 
-    void generateResultSummaryPdf(Long studentId, Long classLevelId, Long sessionId,StudentTerm term) throws IOException, DocumentException;
+    void generateResultSummaryPdf(Long studentId, Long classLevelId, Long sessionId,Long term) throws IOException, DocumentException;
 }

@@ -36,7 +36,7 @@ public class DuePayment {
     private PaymentStatus paymentStatus;
 
     @ManyToOne
-    @JoinColumn(name = "term_id", nullable = false)
+    @JoinColumn(name = "term_id")
     private StudentTerm studentTerm;
 
     @Column(name = "created_at", nullable = false, updatable = false)

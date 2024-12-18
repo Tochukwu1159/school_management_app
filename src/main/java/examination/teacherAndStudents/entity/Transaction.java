@@ -36,10 +36,14 @@ public class Transaction {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private Profile user;
 
     @ManyToOne
-    @JoinColumn(name = "term_id", nullable = false)
+    @JoinColumn(name = "session_id")
+    private AcademicSession session;
+
+    @ManyToOne
+    @JoinColumn(name = "term_id")
     private StudentTerm studentTerm;
 
 

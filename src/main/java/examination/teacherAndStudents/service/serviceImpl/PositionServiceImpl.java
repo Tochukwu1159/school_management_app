@@ -57,14 +57,17 @@ public class PositionServiceImpl implements PositionService {
     private ProfileRepository profileRepository;
     @Autowired
     private AcademicSessionRepository academicSessionRepository;
+    @Autowired
+    private StudentTermRepository studentTermRepository;
 
 
     @Transactional
-    public void updateAllPositionsForAClass(Long classLevelId,Long  sessionId,  StudentTerm term) {
+    public void updateAllPositionsForAClass(Long classLevelId,Long  sessionId,  Long termId) {
 
         AcademicSession academicSession = academicSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + classLevelId));
 
+        Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(termId);
 
         // Get all users in the specified ClassLevel
         ClassBlock studentClass = classBlockRepository.findById(classLevelId)
@@ -81,7 +84,7 @@ public class PositionServiceImpl implements PositionService {
         }
 
         // Fetch all positions for the given class level and term in a single query
-        List<Position> positions = positionRepository.findAllByClassBlockAndAcademicYearAndTerm(studentClass,academicSession, term);
+        List<Position> positions = positionRepository.findAllByClassBlockAndAcademicYearAndStudentTerm(studentClass,academicSession, studentTerm.get());
 
         // Create a map for quick access to positions by user
         Map<Profile, Position> positionMap = positions.stream()
@@ -99,7 +102,7 @@ public class PositionServiceImpl implements PositionService {
             Position position = positionMap.getOrDefault(user, new Position());
             position.setClassBlock(studentClass);
             position.setUserProfile(user);
-            position.setTerm(term);
+            position.setStudentTerm(studentTerm.get());
             position.setPositionRank(rank++);
             positionRepository.save(position);
         }
@@ -128,11 +131,13 @@ public class PositionServiceImpl implements PositionService {
         }
     }
 
-    public void generateResultSummaryPdf(Long studentId, Long classLevelId,Long sessionId, StudentTerm term) throws IOException, DocumentException {
+    public void generateResultSummaryPdf(Long studentId, Long classLevelId,Long sessionId, Long term) throws IOException, DocumentException {
         // Fetch user's scores, average, and position for the specific class
         try{
             AcademicSession session = academicSessionRepository.findById(sessionId)
                     .orElseThrow(() -> new ResourceNotFoundException("Student academic session not found with ID: " + sessionId));
+
+            Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(term);
 
             ClassBlock userClass = classBlockRepository.findById(classLevelId)
                 .orElseThrow(() -> new ResourceNotFoundException("student class not found with ID: " + classLevelId));
@@ -147,12 +152,12 @@ public class PositionServiceImpl implements PositionService {
                     .orElseThrow(() -> new ResourceNotFoundException("Student profile not found with ID: " + user.getId()));
 
 
-        List<Score> scores = scoreRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndTerm(userProfile, userClass, session, term);
+        List<Score> scores = scoreRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(userProfile, userClass, session, studentTerm.get());
 //            System.out.println(scores);
             System.out.println(scores.stream().collect(Collectors.toList()));
 //            System.out.println(scores.stream().toArray());
-        Position position = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndTerm(userProfile, userClass,session, term);
-        List<Result> results = resultRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndTerm(userProfile, userClass,session,  term);
+        Position position = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(userProfile, userClass,session, studentTerm.get());
+        List<Result> results = resultRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(userProfile, userClass,session,  studentTerm.get());
         if (results.isEmpty()) {
             throw new NotFoundException("No results found for the user with ID: " + user.getId());
         }

@@ -3,6 +3,7 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.SubjectScheduleRequest;
 import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.entity.StudentTerm;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
@@ -41,10 +42,12 @@ public class TimetableServiceImpl implements TimetableService {
     private ClassSubjectRepository classSubjectRepository;
     @Autowired
     private AcademicSessionRepository academicSessionRepository;
+    @Autowired
+    private StudentTermRepository studentTermRepository;
 
     @Transactional
         @Override
-    public Timetable createTimetable(Long schoolClassId, Long teacherId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, TimetableType timetableType, StudentTerm term, Long sessionId) {
+    public Timetable createTimetable(Long schoolClassId, Long teacherId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, TimetableType timetableType, Long termId, Long sessionId) {
         try {
             // Ensure the user has admin role
             String email = SecurityConfig.getAuthenticatedUserEmail();
@@ -64,6 +67,11 @@ public class TimetableServiceImpl implements TimetableService {
                 throw new CustomNotFoundException("Class block with ID: " + schoolClassId + " not found");
             }
 
+            Optional<StudentTerm> studentTerm = studentTermRepository.findById(termId);
+            if (studentTerm.isEmpty()) {
+                throw new CustomNotFoundException("Student with ID " + termId + " not found");
+            }
+
             // Perform any validation or processing if needed
             Optional<ClassLevel> classLevel = classLevelRepository.findById(classBlock.get().getClassLevel().getId());
             if (classLevel.isEmpty()) {
@@ -78,7 +86,7 @@ public class TimetableServiceImpl implements TimetableService {
             Timetable timetable = new Timetable();
             timetable.setClassBlock(classBlock.get());
             timetable.setDayOfWeek(dayOfWeek);
-            timetable.setTerm(term);
+            timetable.setTerm(studentTerm.get());
             timetable.setAcademicYear(academicYear);
             timetable.setTimetableType(timetableType); // Set the timetable type
 
@@ -128,7 +136,7 @@ public class TimetableServiceImpl implements TimetableService {
 
 
    @Override
-    public Timetable updateTimetable(Long timetableId, Long teacherId, Long schoolClassId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, StudentTerm term, Long sessionId) {
+    public Timetable updateTimetable(Long timetableId, Long teacherId, Long schoolClassId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, Long termId, Long sessionId) {
         try {
             // Ensure the user has admin role
             String email = SecurityConfig.getAuthenticatedUserEmail();
@@ -156,6 +164,10 @@ public class TimetableServiceImpl implements TimetableService {
             if (classBlock.isEmpty()) {
                 throw new CustomNotFoundException("Class block with ID: " + schoolClassId + " not found");
             }
+            Optional<StudentTerm> studentTerm = studentTermRepository.findById(termId);
+            if (studentTerm.isEmpty()) {
+                throw new CustomNotFoundException("Student with ID " + termId + " not found");
+            }
 
 
             // Perform any validation or processing if needed
@@ -166,7 +178,7 @@ public class TimetableServiceImpl implements TimetableService {
             // Update existingTimetable properties
             existingTimetable.setClassBlock(classBlock.get());
             existingTimetable.setDayOfWeek(dayOfWeek);
-            existingTimetable.setTerm(term);
+            existingTimetable.setTerm(studentTerm.get());
             existingTimetable.setAcademicYear(academicYear);
             // Update SubjectSchedule entities and associate them with the timetable
             List<SubjectSchedule> schedules = new ArrayList<>();

@@ -1,2 +1,5 @@
-package examination.teacherAndStudents.utils;public enum AllocationStatus {
+package examination.teacherAndStudents.utils;
+
+public enum AllocationStatus {
+    PENDING, SUCCESS
 }

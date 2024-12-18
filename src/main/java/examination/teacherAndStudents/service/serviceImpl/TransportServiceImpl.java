@@ -11,6 +11,7 @@ import examination.teacherAndStudents.entity.Transport;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.BusRouteRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.TransportRepository;
@@ -155,14 +156,14 @@ public class TransportServiceImpl implements TransportService {
 
             // Find the transport by ID
             Transport transport = transportRepository.findById(transportId)
-                    .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
+                    .orElseThrow(() -> new NotFoundException("Transport not found with ID: " + transportId));
 
             // Find the student by ID
             User user = userRepository.findById(studentId)
-                    .orElseThrow(() -> new CustomNotFoundException("Student not found with ID: " + studentId));
+                    .orElseThrow(() -> new NotFoundException("Student not found with ID: " + studentId));
 
             Profile student = profileRepository.findById(studentId)
-                    .orElseThrow(() -> new CustomNotFoundException("Student Profile not found with ID: " + studentId));
+                    .orElseThrow(() -> new NotFoundException("Student Profile not found with ID: " + studentId));
 
             // Set the transport for the student
             student.setTransport(transport);

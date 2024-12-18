@@ -17,5 +17,5 @@ public class ScoreRequest {
     private Long subjectId;
     private int examScore;
     private int assessmentScore;
-    private StudentTerm term;
+    private Long termId;
 }

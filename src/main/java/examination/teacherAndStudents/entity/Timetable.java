@@ -31,7 +31,7 @@ public class Timetable {
 
     @ManyToOne
     @JoinColumn(name = "term_id", nullable = false)
-    private StudentTerm studentTerm;
+    private StudentTerm term;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "academic_year_id", nullable = false)

@@ -1,15 +1,11 @@
-package examination.teacherAndStudents.service;
+package examination.teacherAndStudents.service.serviceImpl;
 
-import examination.teacherAndStudents.dto.ClassSubjectRequest;
-import examination.teacherAndStudents.dto.ClassSubjectResponse;
-import examination.teacherAndStudents.entity.ClassSubject;
-import examination.teacherAndStudents.entity.Subject;
-import examination.teacherAndStudents.entity.ClassBlock;
-import examination.teacherAndStudents.entity.AcademicSession;
-import examination.teacherAndStudents.repository.ClassSubjectRepository;
-import examination.teacherAndStudents.repository.SubjectRepository;
-import examination.teacherAndStudents.repository.ClassBlockRepository;
-import examination.teacherAndStudents.repository.AcademicSessionRepository;
+import examination.teacherAndStudents.dto.*;
+import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.error_handler.EntityAlreadyExistException;
+import examination.teacherAndStudents.error_handler.NotFoundException;
+import examination.teacherAndStudents.repository.*;
+import examination.teacherAndStudents.service.ClassSubjectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,44 +23,44 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     private final SubjectRepository subjectRepository;
     private final ClassBlockRepository classBlockRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final StudentTermRepository studentTermRepository;
 
     public ClassSubjectResponse saveClassSubject(ClassSubjectRequest request) {
         // Fetch the required entities from the repositories
         Subject subject = subjectRepository.findById(request.getSubjectId())
-                .orElseThrow(() -> new RuntimeException("Subject with id " + request.getSubjectId() + " not found"));
+                .orElseThrow(() -> new NotFoundException("Subject with id " + request.getSubjectId() + " not found"));
 
         ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
-                .orElseThrow(() -> new RuntimeException("ClassBlock with id " + request.getClassBlockId() + " not found"));
+                .orElseThrow(() -> new NotFoundException("ClassBlock with id " + request.getClassBlockId() + " not found"));
 
         AcademicSession academicSession = academicSessionRepository.findById(request.getAcademicYearId())
-                .orElseThrow(() -> new RuntimeException("AcademicSession with id " + request.getAcademicYearId() + " not found"));
+                .orElseThrow(() -> new NotFoundException("AcademicSession with id " + request.getAcademicYearId() + " not found"));
+
+        // Check if the subject already exists for the class block and academic year
+        boolean exists = classSubjectRepository.existsBySubjectAndClassBlockAndAcademicYear(
+                subject, classBlock, academicSession
+        );
+        if (exists) {
+            throw new EntityAlreadyExistException("Subject already added for this class and academic year");
+        }
 
         // Create or update the ClassSubject entity
         ClassSubject classSubject = new ClassSubject();
         classSubject.setSubject(subject);
         classSubject.setClassBlock(classBlock);
-        classSubject.setTerm(request.getTerm());
         classSubject.setAcademicYear(academicSession);
         classSubject.setCreatedAt(LocalDateTime.now());
         classSubject.setUpdatedAt(LocalDateTime.now());
 
         classSubject = classSubjectRepository.save(classSubject);
-        ClassSubjectResponse response = new ClassSubjectResponse();
-        response.setId(classSubject.getId());
-        response.setSubject(classSubject.getSubject());
-        response.setClassBlock(classSubject.getClassBlock());
-        response.setTerm(classSubject.getTerm());
-        response.setAcademicYear(classSubject.getAcademicYear());
-        response.setCreatedAt(classSubject.getCreatedAt());
-        response.setUpdatedAt(classSubject.getUpdatedAt());
 
-        return response;
+        return toResponse(classSubject);
     }
     public ClassSubjectResponse getClassSubjectById(Long id) {
         Optional<ClassSubject> classSubjectOptional = classSubjectRepository.findById(id);
         if (classSubjectOptional.isPresent()) {
             ClassSubject classSubject = classSubjectOptional.get();
-            return convertToClassSubjectResponse(classSubject);
+            return toResponse(classSubject);
         } else {
             throw new RuntimeException("ClassSubject with id " + id + " not found");
         }
@@ -73,7 +69,7 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     public List<ClassSubjectResponse> getAllClassSubjects() {
         List<ClassSubject> classSubjects = classSubjectRepository.findAll();
         return classSubjects.stream()
-                .map(this::convertToClassSubjectResponse)
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -86,17 +82,28 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
         }
     }
 
-    // Helper method to convert ClassSubject entity to ClassSubjectResponse DTO
-    private ClassSubjectResponse convertToClassSubjectResponse(ClassSubject classSubject) {
-        ClassSubjectResponse response = new ClassSubjectResponse();
-        response.setId(classSubject.getId());
-        response.setSubject(classSubject.getSubject());
-        response.setClassBlock(classSubject.getClassBlock());
-        response.setTerm(classSubject.getTerm());
-        response.setAcademicYear(classSubject.getAcademicYear());
-        response.setCreatedAt(classSubject.getCreatedAt());
-        response.setUpdatedAt(classSubject.getUpdatedAt());
-        return response;
+    public ClassSubjectResponse toResponse(ClassSubject classSubject) {
+        return ClassSubjectResponse.builder()
+                .id(classSubject.getId())
+                .subject(new SubjectResponse(
+                classSubject.getSubject().getId(),
+                classSubject.getSubject().getName()
+        ))
+                .classBlock(new ClassBlockResponses(
+                        classSubject.getClassBlock().getId(),
+                        classSubject.getClassBlock().getCurrentStudentClassName(),
+                        new ClassLevelResponse(
+                                classSubject.getClassBlock().getClassLevel().getId(),
+                                classSubject.getClassBlock().getClassLevel().getClassName()
+                        )
+                ))
+                .academicYear(new AcademicSessionResponse(
+                        classSubject.getAcademicYear().getId(),
+                        classSubject.getAcademicYear().getName()
+                ))
+                .createdAt(classSubject.getCreatedAt())
+                .updatedAt(classSubject.getUpdatedAt())
+                .build();
     }
 }
 

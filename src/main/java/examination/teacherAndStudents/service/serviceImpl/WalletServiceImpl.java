@@ -71,17 +71,22 @@ public class WalletServiceImpl implements WalletService {
                     .email(email)
                     .amount(new BigDecimal(fundWalletRequest.getAmount()))
                     .build();
+//            PayStackTransactionResponse transactionResponse = new PayStackTransactionResponse();
 
             PayStackTransactionResponse transactionResponse = paymentService.initTransaction(payStackTransactionRequest);
+//            transactionResponse.setStatus(true);  // Default value for status (false)
+//            transactionResponse.setMessage("Default message");  // Default message
+//            transactionResponse.setStatusCode(0);
 
             if (!transactionResponse.isStatus()) {
                 throw new Exception("Payment not authorized");
             }
 
-            User student = userRepository.findByEmailAndRoles(email, Roles.STUDENT);
+            Optional<User> user = userRepository.findByEmail(email);
+            User student = user.get();
 
             if (student == null) {
-                throw new CustomNotFoundException("Student with email " + email + " is not valid");
+                throw new CustomNotFoundException("User with email " + email + " is not valid");
             }
 
             Optional<Profile> studentProfile = profileRepository.findByUser(student);
@@ -127,7 +132,7 @@ public class WalletServiceImpl implements WalletService {
 
         Transaction transaction = Transaction.builder()
                 .transactionType(TransactionType.CREDIT)
-                .user(student)
+                .user(user.get())
                 .amount(new BigDecimal(amount))
                 .description(transactionResponse.getMessage())
                 .build();
@@ -135,7 +140,7 @@ public class WalletServiceImpl implements WalletService {
 
         Notification notification = Notification.builder()
                 .notificationType(NotificationType.CREDIT_NOTIFICATION)
-                .user(student)
+                .user(user.get())
                 .notificationStatus(NotificationStatus.UNREAD)
                 .transaction(transaction)
                 .message("You funded your wallet with ₦" + formatter.format(Double.parseDouble(amount)))
@@ -145,6 +150,7 @@ public class WalletServiceImpl implements WalletService {
 
     private void updateExistingWalletAndTransaction(User student, String amount, PayStackTransactionResponse transactionResponse, DecimalFormat formatter, Wallet wallet) {
         Optional<Profile> user = profileRepository.findByUser(student);
+
 
         if (user == null) {
             throw new CustomNotFoundException("Student profile does not exist");
@@ -156,7 +162,7 @@ public class WalletServiceImpl implements WalletService {
 
         Transaction transaction = Transaction.builder()
                 .transactionType(TransactionType.CREDIT)
-                .user(student)
+                .user(user.get())
                 .amount(new BigDecimal(amount))
                 .description(transactionResponse.getMessage())
                 .build();
@@ -164,7 +170,7 @@ public class WalletServiceImpl implements WalletService {
 
         Notification notification = Notification.builder()
                 .notificationType(NotificationType.CREDIT_NOTIFICATION)
-                .user(student)
+                .user(user.get())
                 .notificationStatus(NotificationStatus.UNREAD)
                 .transaction(transaction)
                 .message("You funded your wallet with ₦" + formatter.format(Double.parseDouble(amount)))

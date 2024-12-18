@@ -9,7 +9,6 @@ import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.AttendanceService;
 import examination.teacherAndStudents.utils.AttendanceStatus;
-import examination.teacherAndStudents.utils.StudentTerm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +36,8 @@ public class AttendanceServiceImpl implements AttendanceService {
     private ClassBlockRepository classBlockRepository;
     @Autowired
     private ProfileRepository profileRepository;
+    @Autowired
+    private StudentTermRepository studentTermRepository;
 
 
     public void takeAttendance(AttendanceRequest attendanceRequest) {
@@ -57,6 +58,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
             // Check if attendance for the given date and student already exists
             Attendance existingAttendance = attendanceRepository.findByUserProfileAndDate(studentProfle, attendanceRequest.getDate());
+            Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(attendanceRequest.getStudentTermId());
 
 
             if (existingAttendance != null) {
@@ -66,7 +68,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 // Create a new attendance entry
                 Attendance attendance = new Attendance();
                 attendance.setUserProfile(studentProfle);
-                attendance.setTerm(attendanceRequest.getStudentTerm());
+                attendance.setStudentTerm(studentTerm.get());
                 attendance.setClassBlock(studentClass);
                 attendance.setDate(attendanceRequest.getDate());
                 attendance.setStatus(attendanceRequest.getStatus());
@@ -74,7 +76,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             }
 
             // After recording attendance, update the attendance percentage
-            calculateAttendancePercentage(student.getId(), studentClass.getId(), attendanceRequest.getStudentTerm());
+            calculateAttendancePercentage(student.getId(), studentClass.getId(), studentTerm.get().getId());
 
         } catch (CustomNotFoundException e) {
             // Handle not found exception
@@ -167,11 +169,12 @@ public class AttendanceServiceImpl implements AttendanceService {
         }
     }
 
-    public double calculateAttendancePercentage(Long userId, Long classLevelId, StudentTerm studentTerm) {
+    public double calculateAttendancePercentage(Long userId, Long classLevelId, Long studentTermId) {
         try {
             Optional<User> optionalStudent = userRepository.findById(userId);
 
           Optional<Profile> studentProfile = profileRepository.findByUser(optionalStudent.get());
+
 
             if (optionalStudent.isEmpty()) {
                 throw new CustomNotFoundException("Student not found");
@@ -183,15 +186,16 @@ public class AttendanceServiceImpl implements AttendanceService {
                     .orElseThrow(() -> new CustomNotFoundException("Class with ID: " + classLevelId + " not found in class level"));
 
             User student = optionalStudent.get();
+            Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(studentTermId);
 
             // Check if the attendance percentage already exists
-            Optional<AttendancePercent> existingAttendancePercent = attendancePercentRepository.findByUserAndStudentTerm(student, studentTerm);
+            Optional<AttendancePercent> existingAttendancePercent = attendancePercentRepository.findByUserAndStudentTerm(student, studentTerm.get());
 
             // Get the total number of attendance records for the user
-            long totalAttendanceRecords = attendanceRepository.countByUserProfileIdAndTerm(studentProfile.get().getId(), studentTerm);
+            long totalAttendanceRecords = attendanceRepository.countByUserProfileIdAndStudentTerm(studentProfile.get().getId(), studentTerm.get());
 
             // Get the number of days the user attended
-            long daysAttended = attendanceRepository.countByUserProfileIdAndTermAndStatus(studentProfile.get().getId(), studentTerm, AttendanceStatus.PRESENT);
+            long daysAttended = attendanceRepository.countByUserProfileIdAndStudentTermAndStatus(studentProfile.get().getId(), studentTerm.get(), AttendanceStatus.PRESENT);
 
             // Check if totalAttendanceRecords is zero to avoid division by zero
             if (totalAttendanceRecords == 0) {
@@ -208,7 +212,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             AttendancePercent attendancePercent = existingAttendancePercent.orElse(new AttendancePercent());
 
             attendancePercent.setAttendancePercentage(roundedPercentage);
-            attendancePercent.setStudentTerm(studentTerm);
+            attendancePercent.setStudentTerm(studentTerm.get());
             attendancePercent.setUser(student);
             attendancePercent.setClassBlock(classLevel);
 

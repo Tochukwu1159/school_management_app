@@ -28,12 +28,13 @@ public class ResultServiceImpl implements ResultService {
     private final ClassBlockRepository classBlockRepository;
     private final ProfileRepository profileRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final StudentTermRepository studentTermRepository;
 
     @Autowired
     public ResultServiceImpl(ScoreService scoreService, UserRepository userRepository, ScoreRepository scoreRepository,
                              ResultRepository resultRepository,
                              PositionRepository positionRepository,
-                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository) {
+                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository) {
         this.scoreService = scoreService;
         this.userRepository = userRepository;
         this.scoreRepository = scoreRepository;
@@ -43,11 +44,12 @@ public class ResultServiceImpl implements ResultService {
         this.classBlockRepository = classBlockRepository;
         this.profileRepository = profileRepository;
         this.academicSessionRepository = academicSessionRepository;
+        this.studentTermRepository = studentTermRepository;
     }
 
 
     @Override
-    public Result calculateResult(Long classLevelId, Long studentId, String subjectName,Long sessionId, StudentTerm term) {
+    public Result calculateResult(Long classLevelId, Long studentId, String subjectName,Long sessionId, Long termId) {
         try {
             User student = userRepository.findById(studentId)
                     .orElseThrow(() -> new NotFoundException("Student not found"));
@@ -63,9 +65,11 @@ public class ResultServiceImpl implements ResultService {
 
             AcademicSession academicSession = academicSessionRepository.findById(sessionId)
                     .orElseThrow(() -> new NotFoundException("Student academic session not found"));
+            Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(termId);
+
 
             // Retrieve the score for the student and subject
-            Score score = scoreRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndTerm(userProfile, studentClass.getId(), subjectName, academicSession, term);
+            Score score = scoreRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, studentClass.getId(), subjectName, academicSession, studentTerm.get());
 
             // Calculate total marks and grade based on your logic
             double totalMarks = calculateTotalMarks(score.getExamScore(), score.getAssessmentScore());
@@ -73,7 +77,7 @@ public class ResultServiceImpl implements ResultService {
             String rating =calculateRating(totalMarks);
 
             // Check if a result already exists for the student and subject
-            Result existingResult = resultRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndTerm(userProfile, studentClass.getId() ,subjectName,academicSession, term);
+            Result existingResult = resultRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, studentClass.getId() ,subjectName,academicSession, studentTerm.get());
 
             if (existingResult != null) {
                 // Update the existing result
@@ -81,7 +85,7 @@ public class ResultServiceImpl implements ResultService {
                 existingResult.setClassBlock(studentClass);
                 existingResult.setGrade(grade);
                 existingResult.setUserProfile(userProfile);
-                existingResult.setTerm(term);
+                existingResult.setStudentTerm(studentTerm.get());
                 resultRepository.save(existingResult);
                 return existingResult;
             }
@@ -92,7 +96,7 @@ public class ResultServiceImpl implements ResultService {
             result.setClassBlock(studentClass);
             result.setRating(rating);
             result.setSubjectName(subjectName);
-            result.setTerm(term);
+            result.setStudentTerm(studentTerm.get());
             result.setGrade(grade);
             resultRepository.save(result);
 
@@ -140,7 +144,7 @@ public class ResultServiceImpl implements ResultService {
     }
 
     @Transactional
-    public void calculateAverageResult(Long userId, Long classLevelId, Long sessionId, StudentTerm term) {
+    public void calculateAverageResult(Long userId, Long classLevelId, Long sessionId, Long term) {
 
         User student = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Student not found"));
@@ -153,11 +157,13 @@ public class ResultServiceImpl implements ResultService {
 
         AcademicSession acdemicYear  = academicSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("Student sesion class not found"));
+        Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(term);
+
 
         ClassLevel generalClass = classLevelRepository.findById(classLevelId)
                 .orElseThrow(() -> new NotFoundException("Student class Level not found"));
         // Fetch scores for the user
-        List<Result> results = resultRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndTerm(userProfile,studentClass, acdemicYear, term);
+        List<Result> results = resultRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(userProfile,studentClass, acdemicYear, studentTerm.get());
 
         // Calculate average score
         double totalScore = results.stream()
@@ -170,13 +176,14 @@ public class ResultServiceImpl implements ResultService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + userId));
 
+
         // Fetch the existing position or create a new one
-        Position position = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndTerm(userProfile, studentClass,acdemicYear, term);
+        Position position = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(userProfile, studentClass,acdemicYear, studentTerm.get());
         if (position == null) {
             // Create a new position
             position = new Position();
             position.setUserProfile(userProfile);
-            position.setTerm(term);
+            position.setStudentTerm(studentTerm.get());
             position.setClassBlock(studentClass);
             position.setAverageScore(averageScore);
             positionRepository.save(position);

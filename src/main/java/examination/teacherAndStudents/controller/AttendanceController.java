@@ -54,7 +54,7 @@ public class AttendanceController {
     @GetMapping("/calculate-attendance-percentage")
     public ResponseEntity<Double> calculateAttendancePercentage(@RequestBody AttendancePercentageRequest attendancePercentageRequest) {
         try {
-            double attendancePercentage = attendanceService.calculateAttendancePercentage(attendancePercentageRequest.getUserId(), attendancePercentageRequest.getClassLevelId(), attendancePercentageRequest.getStudentTerm());
+            double attendancePercentage = attendanceService.calculateAttendancePercentage(attendancePercentageRequest.getUserId(), attendancePercentageRequest.getClassLevelId(), attendancePercentageRequest.getStudentTermId());
             return ResponseEntity.ok(attendancePercentage);
         } catch (CustomNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);

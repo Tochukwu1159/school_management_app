@@ -7,5 +7,5 @@ import lombok.Data;
 public class AttendancePercentageRequest {
     private long userId;
     private long classLevelId;
-    private StudentTerm studentTerm;
+    private Long studentTermId;
 }

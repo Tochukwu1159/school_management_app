@@ -5,10 +5,7 @@ import examination.teacherAndStudents.dto.BookRequest;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.repository.BookBorrowingRepository;
-import examination.teacherAndStudents.repository.BookRepository;
-import examination.teacherAndStudents.repository.LibraryMemberRepository;
-import examination.teacherAndStudents.repository.UserRepository;
+import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.LibraryService;
 import examination.teacherAndStudents.utils.BorrowingStatus;
 import examination.teacherAndStudents.utils.Roles;
@@ -37,6 +34,8 @@ public class LibraryServiceImpl implements LibraryService {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private ProfileRepository profileRepository;
 
     @Override
     public Book addBook(BookRequest book) {
@@ -138,19 +137,20 @@ public class LibraryServiceImpl implements LibraryService {
     }
 
     @Override
-    public BookBorrowing borrowBook(String memberId, Long bookId) {
+    public BookBorrowing borrowBook(Long memberId, Long bookId) {
+
         try {
-            LibraryMembership libraryMembership = libraryMemberRepository.findByMemberId(memberId);
-            if (libraryMembership == null) {
-                throw new CustomNotFoundException("Member not found");
-            }
+            User user = userRepository.findById(memberId)
+                    .orElseThrow(() -> new CustomInternalServerException("User not found"));
+            Profile profile = profileRepository.findByUser(user)
+                    .orElseThrow(() -> new CustomInternalServerException("User profile not found"));
 
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new CustomInternalServerException("Book not found"));
 
             // Check if the student has already borrowed the book with a status other than RETURNED
             BookBorrowing existingBorrowing = bookBorrowingRepository.findByStudentProfileAndBookAndStatusNot(
-                    libraryMembership.getStudent(), book, BorrowingStatus.RETURNED);
+                   profile, book, BorrowingStatus.RETURNED);
 
             if (existingBorrowing != null) {
                 throw new CustomInternalServerException("You have already borrowed this book.");
@@ -166,7 +166,7 @@ public class LibraryServiceImpl implements LibraryService {
 
                 // Create a borrowing entry
                 BookBorrowing borrowing = new BookBorrowing();
-                borrowing.setStudentProfile(libraryMembership.getStudent());
+                borrowing.setStudentProfile(profile);
                 borrowing.setBook(book);
                 borrowing.setBorrowDate(LocalDateTime.now());
                 borrowing.setStatus(BorrowingStatus.BORROWED);

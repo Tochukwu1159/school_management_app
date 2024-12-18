@@ -3,6 +3,7 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.EmailDetails;
 import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.entity.StudentTerm;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
@@ -48,19 +49,21 @@ public class PaymentServiceImpl implements PaymentService {
     private AcademicSessionRepository academicSessionRepository;
     @Autowired
     private ProfileRepository profileRepository;
+    @Autowired
+    private StudentTermRepository studentTermRepository;
 
 
     @Transactional
-    public void payDue(Long dueId, StudentTerm term, Long sessionId) {
+    public void payDue(Long dueId, Long termId, Long sessionId) {
         try {
             // Retrieve the authenticated user's email
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User user = userRepository.findByEmailAndRoles(email, Roles.STUDENT);
+            Optional<User> user = userRepository.findByEmail(email);
 
             if (user == null) {
                 throw new CustomNotFoundException("Please login as a Student");
             }
-            Optional<Profile> userProfile = profileRepository.findByUser(user);
+            Optional<Profile> userProfile = profileRepository.findByUser(user.get());
 
             if (userProfile.isEmpty()) {
                 throw new CustomNotFoundException("Please login as a Student");
@@ -77,7 +80,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .orElseThrow(() -> new EntityNotFoundException("Due not found with id: " + dueId));
 
             // Check if a payment has already been made for this due by the user
-            DuePayment existingPayment = duePaymentRepository.findByDueIdAndUserId(dues.getId(), user.getId());
+            DuePayment existingPayment = duePaymentRepository.findByDueIdAndUserId(dues.getId(), user.get().getId());
             if (existingPayment != null) {
                 throw new DuplicateDesignationException("Due payment already made for this student");
             }
@@ -88,6 +91,10 @@ public class PaymentServiceImpl implements PaymentService {
             if (wallet.getBalance().compareTo(amountToPay) < 0) {
                 throw new InsufficientBalanceException("Insufficient funds in the wallet to pay the due");
             }
+            Optional<StudentTerm> studentTerm = Optional.empty();
+            if (termId != null) {
+                studentTerm = studentTermRepository.findById(termId);
+            }
 
             // Deduct the amount from the wallet and update the total sent amount
             wallet.setBalance(wallet.getBalance().subtract(amountToPay));
@@ -97,9 +104,9 @@ public class PaymentServiceImpl implements PaymentService {
             // Create a new due payment entry
             DuePayment duePayment = DuePayment.builder()
                     .academicYear(academicSession)
-                    .studentTerm(term)
+                    .studentTerm(studentTerm.orElse(null))
                     .due(dues)
-                    .user(user)
+                    .user(user.get())
                     .receiptPhoto(null)  // Assuming the receipt photo is handled elsewhere
                     .paymentStatus(PaymentStatus.SUCCESS)
                     .build();
@@ -110,8 +117,10 @@ public class PaymentServiceImpl implements PaymentService {
             // Create a new transaction for this payment
             Transaction transaction = Transaction.builder()
                     .transactionType(TransactionType.DEBIT)
-                    .user(user)
+                    .user(userProfile.get())
                     .amount(amountToPay)
+                    .studentTerm(studentTerm.orElse(null))
+                    .session(academicSession)
                     .description("You have successfully paid " + amountToPay + " for " + dues.getPurpose())
                     .build();
 
@@ -120,7 +129,7 @@ public class PaymentServiceImpl implements PaymentService {
             // Create a new notification for the user
             Notification notification = Notification.builder()
                     .notificationType(NotificationType.DEBIT_NOTIFICATION)
-                    .user(user)
+                    .user(userProfile.get())
                     .notificationStatus(NotificationStatus.UNREAD)
                     .transaction(transaction)
                     .message("You have paid ₦" + amountToPay + " for " + dues.getPurpose())
@@ -131,10 +140,10 @@ public class PaymentServiceImpl implements PaymentService {
             // Send an email notification about the payment
             Map<String, Object> model = new HashMap<>();
             model.put("amount", amountToPay);
-            model.put("name", user.getFirstName() + " " + user.getLastName());
+            model.put("name", user.get().getFirstName() + " " + user.get().getLastName());
 
             EmailDetails emailDetails = EmailDetails.builder()
-                    .recipient(user.getEmail())
+                    .recipient(user.get().getEmail())
                     .subject("Wallet funding status")
                     .templateName("email-template-wallet")
                     .model(model)

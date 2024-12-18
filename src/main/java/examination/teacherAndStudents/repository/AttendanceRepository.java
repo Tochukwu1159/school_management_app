@@ -4,9 +4,9 @@ import examination.teacherAndStudents.entity.Attendance;
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.utils.AttendanceStatus;
-import examination.teacherAndStudents.utils.StudentTerm;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import examination.teacherAndStudents.entity.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,7 +21,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     List<Attendance> findByUserProfileInAndDateBetween(Collection<Profile> userProfile, LocalDate date, LocalDate date2);
 
-    long countByUserProfileIdAndTerm(Long profileId, StudentTerm studentTerm);
+    long countByUserProfileIdAndStudentTerm(Long profileId, StudentTerm studentTerm);
 
-    long countByUserProfileIdAndTermAndStatus(Long profileId, StudentTerm studentTerm, AttendanceStatus attendanceStatus);
+    long countByUserProfileIdAndStudentTermAndStatus(Long profileId, StudentTerm studentTerm, AttendanceStatus attendanceStatus);
 }

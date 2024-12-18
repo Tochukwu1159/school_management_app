@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +41,8 @@ public class ScoreServiceImpl implements ScoreService {
     private ProfileRepository profileRepository;
     @Autowired
     private AcademicSessionRepository academicSessionRepository;
+    @Autowired
+    private StudentTermRepository studentTermRepository;
 //    @Autowired
 //    private  ResultService resultService;
 
@@ -63,6 +66,8 @@ public class ScoreServiceImpl implements ScoreService {
                 .getSubjects().stream()
                 .map(classSubject -> classSubject.getSubject().getName())
                 .toList();
+        Optional<StudentTerm> studentTerm = studentTermRepository.findById(scoreRequest.getTermId());
+
 
         // Check if the provided subject is in the list of subjects for the class level
         if (!classSubjects.contains(subject.getName())) {
@@ -76,13 +81,13 @@ public class ScoreServiceImpl implements ScoreService {
 
 
         // Check if a score already exists for the student and subject
-        Score existingScore = scoreRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndTerm(studentProfile, scoreRequest.getClassLevelId(), subject.getName(),academicSession, scoreRequest.getTerm());
+        Score existingScore = scoreRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndStudentTerm(studentProfile, scoreRequest.getClassLevelId(), subject.getName(),academicSession, studentTerm.get());
 
         if (existingScore != null) {
             // Update the existing score
             existingScore.setExamScore(scoreRequest.getExamScore());
             existingScore.setAssessmentScore(scoreRequest.getAssessmentScore());
-            existingScore.setTerm(scoreRequest.getTerm());
+            existingScore.setStudentTerm(studentTerm.get());
             existingScore.setClassBlock(studentClass);
             scoreRepository.save(existingScore);
         } else {
@@ -93,13 +98,13 @@ public class ScoreServiceImpl implements ScoreService {
             score.setExamScore(scoreRequest.getExamScore());
             score.setClassBlock(studentClass);
             score.setAssessmentScore(scoreRequest.getAssessmentScore());
-            score.setTerm(scoreRequest.getTerm());
+            score.setStudentTerm(studentTerm.get());
             // Save the score
             scoreRepository.save(score);
         }
 
         // After saving the score, calculate the result using a separate service method
-        resultService.calculateResult(scoreRequest.getClassLevelId(), student.getId(), subject.getName(),scoreRequest.getSessionId(), scoreRequest.getTerm());
+        resultService.calculateResult(scoreRequest.getClassLevelId(), student.getId(), subject.getName(),scoreRequest.getSessionId(), studentTerm.get().getId());
     }
 
 

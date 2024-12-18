@@ -6,8 +6,8 @@ import lombok.Data;
 import java.math.BigDecimal;
 @Data
 public class DuesRequest {
-    private Long studentId;
     private String purpose;
-    private StudentTerm term;
+    private Long studentTerm;
+    private Long academicYear;
     private BigDecimal amount;
 }

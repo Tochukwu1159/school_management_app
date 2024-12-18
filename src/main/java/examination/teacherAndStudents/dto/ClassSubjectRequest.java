@@ -7,6 +7,5 @@ import lombok.Data;
 public class ClassSubjectRequest {
     private Long subjectId;
     private Long classBlockId;
-    private StudentTerm term;
     private Long academicYearId;
 }

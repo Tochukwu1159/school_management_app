@@ -34,10 +34,6 @@ public class BookBorrowing {
     @JoinColumn(name = "profile_id", nullable = false)
     private Profile studentProfile;  // The student borrowing the book (assuming User represents student)
 
-    @ManyToOne
-    @JoinColumn(name = "classblock_id", nullable = false)
-    private ClassBlock classBlock;
-
     @NotNull
     private LocalDateTime borrowDate;  // Date and time when the book was borrowed
 
