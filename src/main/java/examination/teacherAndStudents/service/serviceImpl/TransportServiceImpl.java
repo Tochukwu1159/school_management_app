@@ -6,9 +6,7 @@ import examination.teacherAndStudents.dto.TransportRequest;
 import examination.teacherAndStudents.dto.TransportResponse;
 import examination.teacherAndStudents.dto.UserRequestDto;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.CustomInternalServerException;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.error_handler.NotFoundException;
+import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.TransportService;
@@ -36,6 +34,7 @@ public class TransportServiceImpl implements TransportService {
 
     private final ProfileRepository profileRepository;
     private final BusRouteRepository busRouteRepository;
+    private final StudentTransportTrackerRepository studentTransportTrackerRepository;
 
     @Override
     public TransportResponse createTransport(TransportRequest transportRequest) {
@@ -181,6 +180,14 @@ public class TransportServiceImpl implements TransportService {
             Profile student = profileRepository.findByUser(user)
                     .orElseThrow(() -> new NotFoundException("Student Profile not found with ID: " + studentId));
 
+            // Check if student is already added
+            boolean alreadyAdded = studentTransportTrackerRepository.existsByStudentAndTransportAndStatus(
+                    student, transport, StudentTransportTracker.Status.ADDED);
+
+            if (alreadyAdded) {
+                throw new EntityNotFoundException("Student with ID " + studentId + " is already assigned to this transport");
+            }
+
             // Set the transport for the student
             student.setTransport(transport);
 
@@ -189,6 +196,13 @@ public class TransportServiceImpl implements TransportService {
 
             tracker.assignStudent();
             transportTrackerRepository.save(tracker);
+
+            // Create StudentTransportTracker entry for added student
+            StudentTransportTracker transportTracker = new StudentTransportTracker();
+            transportTracker.setTransport(transport);
+            transportTracker.setStudent(student);
+            transportTracker.setStatus(StudentTransportTracker.Status.ADDED);
+            studentTransportTrackerRepository.save(transportTracker );
 
             // Return the transport response
             return mapToTransportResponse(transport);
@@ -224,8 +238,23 @@ public class TransportServiceImpl implements TransportService {
                 Profile student = profileRepository.findByUserId(studentId)
                         .orElseThrow(() -> new CustomNotFoundException("Student not found with ID: " + studentId));
 
+                // Check if student is already added
+                boolean alreadyAdded = studentTransportTrackerRepository.existsByStudentAndTransportAndStatus(
+                        student, transport, StudentTransportTracker.Status.ADDED);
+
+                if (alreadyAdded) {
+                    throw new EntityAlreadyExistException("Student with ID " + studentId + " is already assigned to this transport");
+                }
+
                 // Set the transport for the student
                 student.setTransport(transport);
+
+                // Create StudentTransportTracker entry for added student
+                StudentTransportTracker transportTracker = new StudentTransportTracker();
+                transportTracker.setTransport(transport);
+                transportTracker.setStudent(student);
+                transportTracker.setStatus(StudentTransportTracker.Status.ADDED);
+                studentTransportTrackerRepository.save(transportTracker );
 
                 // Add student to the list
                 tracker.assignStudent();
@@ -242,6 +271,8 @@ public class TransportServiceImpl implements TransportService {
             transportTrackerRepository.save(tracker);
             transport.getUserProfiles().addAll(students);
             transport = transportRepository.save(transport);
+
+
 
             // Return the transport response
             return mapToTransportResponse(transport);
@@ -290,8 +321,16 @@ public class TransportServiceImpl implements TransportService {
         Profile student = profileRepository.findById(studentId)
                 .orElseThrow(() -> new CustomNotFoundException("Student Profile not found with ID: " + studentId));
 
+        // Check if the student has already been removed
+        boolean alreadyRemoved = studentTransportTrackerRepository.existsByStudentAndTransportAndStatus(
+                student, transport, StudentTransportTracker.Status.REMOVED);
+
+        if (alreadyRemoved) {
+            throw new EntityAlreadyExistException("Student with ID " + studentId + " has already been removed from this transport");
+        }
+
         if (!student.getTransport().equals(transport)) {
-            throw new IllegalStateException("Student is not assigned to this transport");
+            throw new EntityAlreadyExistException("Student is not assigned to this transport");
         }
 
         // Unassign the student from transport
@@ -301,6 +340,13 @@ public class TransportServiceImpl implements TransportService {
         // Update the transport tracker
         tracker.removeStudent();
         transportTrackerRepository.save(tracker);
+
+        // Create StudentTransportTracker entry for added student
+        StudentTransportTracker transportTracker = new StudentTransportTracker();
+        transportTracker.setTransport(transport);
+        transportTracker.setStudent(student);
+        transportTracker.setStatus(StudentTransportTracker.Status.REMOVED);
+        studentTransportTrackerRepository.save(transportTracker );
 
         return mapToTransportResponse(transport);
     }
