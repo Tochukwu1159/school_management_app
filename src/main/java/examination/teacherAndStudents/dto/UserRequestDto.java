@@ -1,5 +1,9 @@
 package examination.teacherAndStudents.dto;
 
+import examination.teacherAndStudents.entity.ClassBlock;
+import examination.teacherAndStudents.entity.Subject;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -41,17 +45,22 @@ public class UserRequestDto {
     private String phoneNumber;
      private String registrationNumber;
     private Date dateOfBirth;
-    private String formTeacher;
     private Long classAssignedId;
     private  String address;
     private String age;
 
+    private String courseOfStudy;
+
+    private String schoolGraduatedFrom;
+
+    private String classOfDegree;
+
     private String studentGuardianName;
     private String studentGuardianPhoneNumber;
-    private String subjectAssigned;
+    private Long subjectAssignedId;
     private String academicQualification;
 
-
+    private Long classFormTeacherId;
 
 
     @NotNull(message = "Gender is required")

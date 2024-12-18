@@ -5,17 +5,11 @@ import examination.teacherAndStudents.dto.EmailDetailsToMultipleEmails;
 import examination.teacherAndStudents.dto.TransportRequest;
 import examination.teacherAndStudents.dto.TransportResponse;
 import examination.teacherAndStudents.dto.UserRequestDto;
-import examination.teacherAndStudents.entity.BusRoute;
-import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.Transport;
-import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
-import examination.teacherAndStudents.repository.BusRouteRepository;
-import examination.teacherAndStudents.repository.ProfileRepository;
-import examination.teacherAndStudents.repository.TransportRepository;
-import examination.teacherAndStudents.repository.UserRepository;
+import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.TransportService;
 import examination.teacherAndStudents.utils.Roles;
@@ -33,6 +27,7 @@ public class TransportServiceImpl implements TransportService {
 
 
     private final TransportRepository transportRepository;
+    private final TransportTrackerRepository transportTrackerRepository;
 
 
     private final UserRepository userRepository;
@@ -63,6 +58,11 @@ public class TransportServiceImpl implements TransportService {
             transport.setLicenceNumber(transportRequest.getLicenceNumber());
             transport.setBusRoute(busRoute.get());
             transport = transportRepository.save(transport);
+
+            TransportTracker transportTracker = new TransportTracker();
+            transportTracker.setTransport(transport);
+            transportTracker.setRemainingCapacity(transport.getCapacity()); // Set initial capacity
+            transportTrackerRepository.save(transportTracker);
             return mapToTransportResponse(transport);
         } catch (Exception e) {
             throw new CustomInternalServerException("Error creating transport: " + e.getMessage());
@@ -86,6 +86,14 @@ public class TransportServiceImpl implements TransportService {
             transport.setCapacity(updatedTransport.getCapacity());
             transport.setLicenceNumber(updatedTransport.getLicenceNumber());
             transport = transportRepository.save(transport);
+
+            // Update TransportTracker if capacity changes
+            TransportTracker tracker = transportTrackerRepository.findByTransport(transport)
+                    .orElseThrow(() -> new CustomInternalServerException("Transport Tracker not found"));
+            tracker.setRemainingCapacity(updatedTransport.getCapacity());
+            transportTrackerRepository.save(tracker);
+
+
             return mapToTransportResponse(transport);
         } catch (Exception e) {
             throw new CustomInternalServerException("Error updating transport: " + e.getMessage());
@@ -162,7 +170,15 @@ public class TransportServiceImpl implements TransportService {
             User user = userRepository.findById(studentId)
                     .orElseThrow(() -> new NotFoundException("Student not found with ID: " + studentId));
 
-            Profile student = profileRepository.findById(studentId)
+
+            TransportTracker tracker = transportTrackerRepository.findByTransport(transport)
+                    .orElseThrow(() -> new NotFoundException("Transport Tracker not found"));
+
+            if (tracker.getRemainingCapacity() <= 0) {
+                throw new IllegalStateException("No available capacity in transport");
+            }
+
+            Profile student = profileRepository.findByUser(user)
                     .orElseThrow(() -> new NotFoundException("Student Profile not found with ID: " + studentId));
 
             // Set the transport for the student
@@ -170,6 +186,9 @@ public class TransportServiceImpl implements TransportService {
 
             // Save the updated student
             profileRepository.save(student);
+
+            tracker.assignStudent();
+            transportTrackerRepository.save(tracker);
 
             // Return the transport response
             return mapToTransportResponse(transport);
@@ -191,10 +210,17 @@ public class TransportServiceImpl implements TransportService {
             Transport transport = transportRepository.findById(transportId)
                     .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
 
+
+            TransportTracker tracker = transportTrackerRepository.findByTransport(transport)
+                    .orElseThrow(() -> new CustomNotFoundException("Transport Tracker not found"));
+
             List<Profile> students = new ArrayList<>();
 
             // Find each student by ID and add them to the transport
             for (Long studentId : studentIds) {
+                if (tracker.getRemainingCapacity() <= 0) {
+                    throw new IllegalStateException("No available capacity in transport");
+                }
                 Profile student = profileRepository.findByUserId(studentId)
                         .orElseThrow(() -> new CustomNotFoundException("Student not found with ID: " + studentId));
 
@@ -202,6 +228,7 @@ public class TransportServiceImpl implements TransportService {
                 student.setTransport(transport);
 
                 // Add student to the list
+                tracker.assignStudent();
                 students.add(student);
             }
 
@@ -212,6 +239,8 @@ public class TransportServiceImpl implements TransportService {
             transport.getUserProfiles().addAll(students);
 
             // Save the updated transport
+            transportTrackerRepository.save(tracker);
+            transport.getUserProfiles().addAll(students);
             transport = transportRepository.save(transport);
 
             // Return the transport response
@@ -243,6 +272,39 @@ public class TransportServiceImpl implements TransportService {
             emailService.sendToMultipleEmails(emailDetailsToMultipleEmails);
         }
     }
+
+    @Override
+    public TransportResponse removeStudentFromTransport(Long transportId, Long studentId) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+        if (admin == null) {
+            throw new CustomNotFoundException("Please login as an Admin");
+        }
+
+        Transport transport = transportRepository.findById(transportId)
+                .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
+
+        TransportTracker tracker = transportTrackerRepository.findByTransport(transport)
+                .orElseThrow(() -> new CustomNotFoundException("Transport Tracker not found"));
+
+        Profile student = profileRepository.findById(studentId)
+                .orElseThrow(() -> new CustomNotFoundException("Student Profile not found with ID: " + studentId));
+
+        if (!student.getTransport().equals(transport)) {
+            throw new IllegalStateException("Student is not assigned to this transport");
+        }
+
+        // Unassign the student from transport
+        student.setTransport(null);
+        profileRepository.save(student);
+
+        // Update the transport tracker
+        tracker.removeStudent();
+        transportTrackerRepository.save(tracker);
+
+        return mapToTransportResponse(transport);
+    }
+
 
 
     private TransportResponse mapToTransportResponse(Transport transport) {

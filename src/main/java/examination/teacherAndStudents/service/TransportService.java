@@ -19,4 +19,6 @@ public interface TransportService {
     TransportResponse addStudentsToTransport(Long transportId, List<Long> studentIds);
 
     TransportResponse getTransportById(Long transportId);
+
+    TransportResponse removeStudentFromTransport(Long transportId, Long studentId);
 }

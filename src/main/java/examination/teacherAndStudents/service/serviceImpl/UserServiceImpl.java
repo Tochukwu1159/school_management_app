@@ -62,6 +62,7 @@ public class UserServiceImpl implements UserService {
     private final AcademicSessionRepository academicSessionRepository;
 
     private  final  AccountUtils accountUtils;
+    private final SubjectRepository subjectRepository;
 
     @Override
     public UserResponse createStudent(UserRequestDto userRequest) throws MessagingException {
@@ -252,11 +253,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse createTeacher(UserRequestDto userRequest) throws MessagingException {
+
+        ClassBlock assignedClass = classBlockRepository.findById(userRequest.getClassFormTeacherId())
+                .orElseThrow(() -> new NotFoundException("Transport not found with ID: " + userRequest.getClassFormTeacherId()));
+
+        Subject assignedSubject = subjectRepository.findById(userRequest.getSubjectAssignedId())
+                .orElseThrow(() -> new NotFoundException("Transport not found with ID: " + userRequest.getSubjectAssignedId()));
         if (userRepository.existsByEmail(userRequest.getEmail())) {
 
             throw new UserAlreadyExistException("User with email already exist");
 
         }
+
         if (!AccountUtils.validatePassword(userRequest.getPassword(), userRequest.getConfirmPassword())){
             throw new UserPasswordMismatchException("Password does not match");
 
@@ -291,9 +299,15 @@ public class UserServiceImpl implements UserService {
         Profile userProfile =  Profile.builder()
                 .gender(userRequest.getGender())
                 .dateOfBirth(userRequest.getDateOfBirth())
+                .courseOfStudy(userRequest.getCourseOfStudy())
+                .classFormTeacher(assignedClass)
+                .classOfDegree(userRequest.getClassOfDegree())
+                .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
+                .subjectAssigned(assignedSubject)
+                .academicQualification(userRequest.getAcademicQualification())
                 .religion(userRequest.getReligion())
                 .admissionDate(userRequest.getAdmissionDate())
-                .uniqueRegistrationNumber(AccountUtils.generateStudentId())
+                .uniqueRegistrationNumber(AccountUtils.generateTeacherId())
                 .address(userRequest.getAddress())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .user(savedUser)
@@ -301,17 +315,6 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(userRequest.getPhoneNumber())
                 .build();
         Profile saveUserProfile = profileRepository.save(userProfile);
-
-        //assign teacher to  class
-        Optional<ClassBlock> classBlock = classBlockRepository.findById(userRequest.getClassAssignedId());
-        ClassLevel classLevel = classLevelRepository.findByClassName(classBlock.get().getClassLevel().getClassName());
-        if (classLevel == null) {
-            throw new BadRequestException("Error: Class level not found for class ");
-        }
-
-        ClassLevel studentClass = classLevelRepository.findByClassName(userRequest.getFormTeacher());
-        classBlock.get().setFormTeacher(userProfile);
-        classLevelRepository.save(studentClass);
 
         //create wallet
         Wallet userWallet = new Wallet();

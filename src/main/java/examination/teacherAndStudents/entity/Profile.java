@@ -43,13 +43,17 @@ public class Profile {
     private String religion;
 
     private Boolean isVerified;
-    private String subjectAssigned;
     private String address;
     private Date dateOfBirth;
     private String age;
 
-    private String formTeacher;
     private String academicQualification;
+
+    private String courseOfStudy;
+
+    private String schoolGraduatedFrom;
+
+    private String classOfDegree;
 
     @ManyToOne
     @JoinColumn(name = "classLevel_id")
@@ -59,6 +63,13 @@ public class Profile {
     @JoinColumn(name = "transport_id")
     private Transport transport;
 
+    @ManyToOne
+    @JoinColumn(name = "formclass_id")
+    private ClassBlock classFormTeacher;
+
+    @ManyToOne
+    @JoinColumn(name = "subject_assigned_id")
+    private Subject subjectAssigned;
 
     @Enumerated(value = EnumType.STRING)
     private MaritalStatus maritalStatus;

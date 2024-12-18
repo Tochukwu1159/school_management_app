@@ -33,6 +33,11 @@ public class UserController {
         return userService.createAdmin(userRequest);
     }
 
+    @PostMapping("/teacher/create")
+    public UserResponse createTeacher(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
+        return userService.createTeacher(userRequest);
+    }
+
     @GetMapping("/findAll")
     public ResponseEntity<Page<UserResponse>> findAllStudentsFilteredAndPaginated(
             @RequestParam Long classCategoryId,
