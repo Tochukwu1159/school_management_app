@@ -42,7 +42,7 @@ public class UserRequestDto {
      private String registrationNumber;
     private Date dateOfBirth;
     private String formTeacher;
-    private Long classAssigned;
+    private Long classAssignedId;
     private  String address;
     private String age;
 

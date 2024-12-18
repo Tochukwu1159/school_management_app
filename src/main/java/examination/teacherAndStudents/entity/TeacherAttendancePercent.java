@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.entity;
 
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -31,8 +30,10 @@ import lombok.NoArgsConstructor;
         @ManyToOne
         @JoinColumn(name = "teacher_id", nullable = false)
         private Profile teacher;
-        @Enumerated(EnumType.STRING)
-        private StudentTerm studentTerm; // Enum for present or absent
+
+        @ManyToOne
+        @JoinColumn(name = "term_id", nullable = false)
+        private StudentTerm studentTerm;
 
 
     }

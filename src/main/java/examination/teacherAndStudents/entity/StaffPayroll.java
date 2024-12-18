@@ -24,6 +24,9 @@ public class StaffPayroll{
     private double baseSalary;
     private double bonuses;
     private double deductions;
+    private double tax;
+    private double hmo;
+    private double grossPay;
     private double netPay;
 
     private LocalDateTime datePayed;
@@ -37,5 +40,8 @@ public class StaffPayroll{
     @ManyToOne
     @JoinColumn(name = "staff_id", nullable = false)
     private User staff;
+
+    @Column(name = "remarks")
+    private String remarks;
 
 }

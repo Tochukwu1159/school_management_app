@@ -14,6 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import static examination.teacherAndStudents.utils.VisitorStatus.CHECKED_IN;
+
 
 @Service
 @RequiredArgsConstructor
@@ -28,8 +30,10 @@ public class VisitorsServiceImpl implements VisitorsService {
             visitor.setName(request.getName());
             visitor.setPurpose(request.getPurpose());
             visitor.setPhoneNumber(request.getPhoneNumber());
-            visitor.setSignIn(request.getSignIn());
-            visitor.setSignOut(request.getSignOut());
+            visitor.setEmail(request.getEmail());
+            visitor.setStatus(CHECKED_IN);
+            visitor.setHostName(request.getHostName());
+            visitor.setVisitorType(request.getVisitorType());
             Visitors savedVisitor = visitorsRepository.save(visitor);
             return mapToResponse(savedVisitor);
         } catch (Exception e) {
@@ -43,9 +47,10 @@ public class VisitorsServiceImpl implements VisitorsService {
             Visitors visitor = visitorsRepository.findById(id)
                     .orElseThrow(() -> new NotFoundException("Visitor not found"));
             visitor.setName(request.getName());
-            visitor.setSignIn(request.getSignIn());
             visitor.setPhoneNumber(request.getPhoneNumber());
-            visitor.setSignOut(request.getSignOut());
+           visitor.setEmail(request.getEmail());
+           visitor.setVisitorType(request.getVisitorType());
+            visitor.setHostName(request.getHostName());
             visitor.setPurpose(request.getPurpose());
             Visitors updatedVisitor = visitorsRepository.save(visitor);
             return mapToResponse(updatedVisitor);
@@ -80,6 +85,10 @@ public class VisitorsServiceImpl implements VisitorsService {
         VisitorsResponse response = new VisitorsResponse();
         response.setId(visitor.getId());
         response.setName(visitor.getName());
+        response.setHostName(visitor.getHostName());
+        response.setVisitorType(visitor.getVisitorType());
+        response.setEmail(visitor.getEmail());
+        response.setStatus(visitor.getStatus());
         response.setPhoneNumber(visitor.getPhoneNumber());
         response.setSignOut(visitor.getSignOut());
         response.setSignIn(visitor.getSignIn());

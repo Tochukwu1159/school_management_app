@@ -1,5 +1,4 @@
 package examination.teacherAndStudents.entity;
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -30,8 +29,9 @@ public class Dues {
     @Column(precision = 10, scale = 2)
     private BigDecimal amount;
 
-    @Enumerated(EnumType.STRING)
-    private StudentTerm term;
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
     @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)

@@ -1,7 +1,6 @@
 package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.AttendanceStatus;
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
@@ -40,11 +39,11 @@ public class TeacherAttendance {
     @NotNull(message = "Attendance status must not be null")
     private AttendanceStatus status; // Enum for present or absent
 
-    @Enumerated(EnumType.STRING)
-    @NotNull(message = "Term must not be null")
-    private StudentTerm term; // Enum for present or absent
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 

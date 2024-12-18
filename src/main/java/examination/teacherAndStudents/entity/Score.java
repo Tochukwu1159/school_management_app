@@ -3,7 +3,6 @@ package examination.teacherAndStudents.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.utils.ScoreType;
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -48,10 +47,11 @@ public class Score {
     @JoinColumn(name = "classblock_id", nullable = false)
     private ClassBlock classBlock;
 
-    @Enumerated(EnumType.STRING)
-    private StudentTerm term;
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 

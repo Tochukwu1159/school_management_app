@@ -86,10 +86,10 @@ public class UserServiceImpl implements UserService {
         if(userRequest.getPassword().length() < 8 || userRequest.getConfirmPassword().length() < 8 ){
             throw new BadRequestException("Password is too short, should be minimum of 8 character long");
         }
-        Optional<ClassBlock> studentClassBlock = classBlockRepository.findById(userRequest.getClassAssigned());
+        Optional<ClassBlock> studentClassBlock = classBlockRepository.findById(userRequest.getClassAssignedId());
         ClassLevel classLevel = classLevelRepository.findByClassName(studentClassBlock.get().getClassLevel().getClassName());
         if (classLevel == null) {
-            throw new BadRequestException("Error: Class level not found for class " + userRequest.getClassAssigned());
+            throw new BadRequestException("Error: Class level not found ");
         }
 //        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
 //        // Get the secure URL of the uploaded image from Cloudinary
@@ -118,6 +118,7 @@ public class UserServiceImpl implements UserService {
                 .studentGuardianPhoneNumber(userRequest.getStudentGuardianPhoneNumber())
                 .uniqueRegistrationNumber(AccountUtils.generateStudentId())
                 .address(userRequest.getAddress())
+                .user(savedUser)
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .admissionDate(userRequest.getAdmissionDate())
                 .classBlock(studentClassBlock.get())
@@ -216,7 +217,8 @@ public class UserServiceImpl implements UserService {
                 .uniqueRegistrationNumber(AccountUtils.generateTeacherId())
                 .address(userRequest.getAddress())
                 .dateOfBirth(userRequest.getDateOfBirth())
-//                .profilePicture(imageUrl)
+                .user(savedUser)
+                //                .profilePicture(imageUrl)
                 .phoneNumber(userRequest.getPhoneNumber())
                 .build();
         Profile saveUserProfile = profileRepository.save(userProfile);
@@ -294,16 +296,17 @@ public class UserServiceImpl implements UserService {
                 .uniqueRegistrationNumber(AccountUtils.generateStudentId())
                 .address(userRequest.getAddress())
                 .dateOfBirth(userRequest.getDateOfBirth())
+                .user(savedUser)
 //                .profilePicture(imageUrl)
                 .phoneNumber(userRequest.getPhoneNumber())
                 .build();
         Profile saveUserProfile = profileRepository.save(userProfile);
 
         //assign teacher to  class
-        Optional<ClassBlock> classBlock = classBlockRepository.findById(userRequest.getClassAssigned());
+        Optional<ClassBlock> classBlock = classBlockRepository.findById(userRequest.getClassAssignedId());
         ClassLevel classLevel = classLevelRepository.findByClassName(classBlock.get().getClassLevel().getClassName());
         if (classLevel == null) {
-            throw new BadRequestException("Error: Class level not found for class " + userRequest.getClassAssigned());
+            throw new BadRequestException("Error: Class level not found for class ");
         }
 
         ClassLevel studentClass = classLevelRepository.findByClassName(userRequest.getFormTeacher());

@@ -1,5 +1,7 @@
 package examination.teacherAndStudents.entity;
 
+import examination.teacherAndStudents.utils.ComplainStatus;
+import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,13 +22,35 @@ public class Complaint{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String feedbackText;
+
     private LocalDateTime submittedTime;
+
     private String replyText;
+
     private LocalDateTime replyTime;
     private String reply;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @JoinColumn(name = "complained_user_id")
+    private Profile complainedBy;
 
+    @Enumerated(EnumType.STRING)
+    private ComplainStatus complainStatus;
+
+    @ManyToOne
+    @JoinColumn(name = "replied_user_id")
+    private Profile repliedBy;
+    @PrePersist
+    private void onCreate() {
+        if (submittedTime == null) {
+            submittedTime = LocalDateTime.now();
+        }
+    }
+    public void setReplyText(String replyText) {
+        this.replyText = replyText;
+        if (replyText != null && !replyText.isEmpty()) {
+            this.replyTime = LocalDateTime.now();
+        }
+    }
 }
+

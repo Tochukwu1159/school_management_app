@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.entity;
 import examination.teacherAndStudents.utils.AttendanceStatus;
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
         import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -30,8 +29,8 @@ public class AttendancePercent {
     @Min(0)
     private Double attendancePercentage;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
     private StudentTerm studentTerm;
 
     @NotNull

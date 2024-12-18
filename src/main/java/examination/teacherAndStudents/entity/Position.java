@@ -1,7 +1,6 @@
 package examination.teacherAndStudents.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -45,12 +44,13 @@ public class Position {
     @JoinColumn(name = "classblock_id", nullable = false)
     private ClassBlock classBlock;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 
-    @Enumerated(EnumType.STRING)
-    private StudentTerm term;
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
 
     @CreationTimestamp

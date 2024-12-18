@@ -36,6 +36,10 @@ public class StaffAttendance {
     private AttendanceStatus status; // Enum for present or absent
 
     @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
+
+    @ManyToOne
     @JoinColumn(name = "profile_id")
     private Profile staff;
 

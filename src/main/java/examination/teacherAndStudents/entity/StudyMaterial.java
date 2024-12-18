@@ -28,7 +28,11 @@ public class StudyMaterial {
     @ManyToOne
     @JoinColumn(name = "teacher_id", nullable = false)
     private User teacher; // Link to the teacher (assumed to be a User entity)
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
+
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 }

@@ -32,7 +32,7 @@ public class ComplaintController {
         return ResponseEntity.ok(submittedComplaint);
     }
 
-    @PutMapping("/reply/feedbackId")
+    @PutMapping("/reply/{feedbackId}")
     public ResponseEntity<ComplaintResponse> replyToComplaint(@PathVariable  Long feedbackId, @RequestBody ReplyComplaintDto feedback) {
         ComplaintResponse submittedComplaint = feedbackService.replyToComplaint(feedbackId, feedback);
         return ResponseEntity.ok(submittedComplaint);

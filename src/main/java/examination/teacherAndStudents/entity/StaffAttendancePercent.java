@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.entity;
 
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,8 +21,9 @@ import java.time.Year;
 
         private Double attendancePercentage;
 
-        @Enumerated(EnumType.STRING)
-        private StudentTerm studentTerm;
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
         private Year year;
 

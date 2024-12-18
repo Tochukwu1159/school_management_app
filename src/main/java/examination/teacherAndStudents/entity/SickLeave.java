@@ -1,7 +1,6 @@
 package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.SickLeaveStatus;
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,13 +42,14 @@ public class SickLeave {
     @Column(name = "status", nullable = false)
     private SickLeaveStatus status;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 
 
-    @Enumerated(EnumType.STRING)
-    private StudentTerm term;
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

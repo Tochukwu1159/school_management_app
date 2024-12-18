@@ -11,5 +11,4 @@ import java.time.LocalDateTime;
 @Data
 public class ComplaintDto {
     private String feedbackText;
-    private LocalDateTime submittedTime;
 }

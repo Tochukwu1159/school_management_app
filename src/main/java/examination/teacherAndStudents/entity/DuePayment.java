@@ -1,7 +1,6 @@
 package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.PaymentStatus;
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -36,7 +35,8 @@ public class DuePayment {
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
     private StudentTerm studentTerm;
 
     @Column(name = "created_at", nullable = false, updatable = false)

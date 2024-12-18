@@ -1,7 +1,13 @@
 package examination.teacherAndStudents.entity;
 
+import examination.teacherAndStudents.utils.VisitorStatus;
+import examination.teacherAndStudents.utils.VisitorType;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -21,15 +27,43 @@ public class Visitors {
 
     @Column(name = "name")
     private String name;
-    @Column(name = "phoneNumber")
+
+    @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
+    @Column(name = "email")
+    private String email;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visitor_type")
+    private VisitorType visitorType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private VisitorStatus status;
+
+    @NotBlank(message = "Purpose is required")
+    @Size(max = 255, message = "Purpose must be less than 255 characters")
     @Column(name = "purpose")
     private String purpose;
-    @Column(name = "signIn")
+
+    @NotBlank(message = "Host name is required")
+    @Size(max = 100, message = "Host name must be less than 100 characters")
+    @Column(name = "host_name")
+    private String hostName;
+
+    @CreationTimestamp
+    @Column(name = "signIn", updatable = false, nullable = false)
     private LocalDateTime signIn;
 
+    @UpdateTimestamp
     @Column(name = "signOut")
-    private LocalDateTime signOut;;
+    private LocalDateTime signOut;
+
+    public void checkOut() {
+        if (this.status == VisitorStatus.CHECKED_OUT) {
+            this.signOut = LocalDateTime.now();
+        }
+    }
 
 }

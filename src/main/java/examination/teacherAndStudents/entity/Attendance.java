@@ -1,7 +1,6 @@
 package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.AttendanceStatus;
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,7 +42,9 @@ public class Attendance {
     @Column(name = "status", nullable = false)
     private AttendanceStatus status;
 
-    @Enumerated(EnumType.STRING)
-    private StudentTerm term; // Enum for present or absent
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm
+            ;
 
 }

@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.entity;
 
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,8 +23,9 @@ public class LessonNote{
     private String content;
     private Year year;
 
-    @Enumerated(EnumType.STRING)
-    private StudentTerm term;
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
     @ManyToOne
     private User teacher;

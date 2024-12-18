@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.entity;
 import examination.teacherAndStudents.utils.DayOfWeek;
-import examination.teacherAndStudents.utils.StudentTerm;
 import examination.teacherAndStudents.utils.TimetableType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -30,9 +29,9 @@ public class Timetable {
     @Column(nullable = false)
     private TimetableType timetableType;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private StudentTerm term;
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "academic_year_id", nullable = false)

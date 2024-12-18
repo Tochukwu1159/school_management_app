@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.entity;
 
-import examination.teacherAndStudents.utils.StudentTerm;
 import examination.teacherAndStudents.utils.TimetableType;
 import examination.teacherAndStudents.utils.TransactionType;
 import jakarta.persistence.*;
@@ -39,9 +38,9 @@ public class Transaction {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private StudentTerm term;
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
 
 }
