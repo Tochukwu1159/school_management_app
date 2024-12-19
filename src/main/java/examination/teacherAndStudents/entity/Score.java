@@ -52,6 +52,10 @@ public class Score {
     private StudentTerm studentTerm;
 
     @ManyToOne
+    @JoinColumn(name = "subject_id", nullable = false)
+    private ClassSubject subject;
+
+    @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 

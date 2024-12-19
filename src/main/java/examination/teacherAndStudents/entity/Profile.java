@@ -60,10 +60,6 @@ public class Profile {
     private ClassBlock classBlock;
 
     @ManyToOne
-    @JoinColumn(name = "transport_id")
-    private Transport transport;
-
-    @ManyToOne
     @JoinColumn(name = "formclass_id")
     private ClassBlock classFormTeacher;
 
@@ -89,6 +85,9 @@ public class Profile {
     @OneToOne(mappedBy = "userProfile", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private Wallet wallet;
 
+    @ManyToOne
+    @JoinColumn(name = "transport_id")
+    private Transport transport;
 
     @OneToMany(mappedBy = "staff")
     private List<StaffAttendance> attendanceRecords;

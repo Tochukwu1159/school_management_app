@@ -12,4 +12,6 @@ public interface ResultRepository extends JpaRepository<Result, Long> {
     List<Result> findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(Profile userProfile, ClassBlock userClass, AcademicSession academicYear,StudentTerm term);
 
     Result findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndStudentTerm(Profile userProfile, Long classBlock_id, String subjectName, AcademicSession academicYear, StudentTerm term);
+
+    List<Result> findAllByClassBlockAndAcademicYearAndStudentTerm(ClassBlock classBlock, AcademicSession academicYear, StudentTerm studentTerm);
 }

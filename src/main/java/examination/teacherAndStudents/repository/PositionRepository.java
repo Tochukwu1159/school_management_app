@@ -10,4 +10,6 @@ public interface PositionRepository extends JpaRepository<Position, Long> {
     Position findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(Profile user, ClassBlock userClass,AcademicSession academicSession, StudentTerm term);
 
     List<Position> findAllByClassBlockAndAcademicYearAndStudentTerm(ClassBlock studentClass, AcademicSession academicSession,  StudentTerm term);
+
+    List<Position> findAllByClassBlockAndAcademicYear(ClassBlock presentClass, AcademicSession currentSession);
 }

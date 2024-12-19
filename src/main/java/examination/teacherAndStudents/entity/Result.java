@@ -47,7 +47,7 @@ public class Result {
     @JoinColumn(name = "classblock_id", nullable = false)
     private ClassBlock classBlock;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 

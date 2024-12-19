@@ -21,4 +21,6 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     Boolean existsByUniqueRegistrationNumber(String studentReg);
 
     Page<Profile> findAllByClassBlock(ClassBlock subClass,Pageable paging);
+
+    List<Profile> findAllByClassBlock(ClassBlock subClass);
 }

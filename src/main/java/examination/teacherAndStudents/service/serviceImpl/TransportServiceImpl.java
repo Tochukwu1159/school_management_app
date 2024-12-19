@@ -264,15 +264,7 @@ public class TransportServiceImpl implements TransportService {
             // Save the list of students
             profileRepository.saveAll(students);
 
-            // Add students to the transport
-            transport.getUserProfiles().addAll(students);
-
-            // Save the updated transport
             transportTrackerRepository.save(tracker);
-            transport.getUserProfiles().addAll(students);
-            transport = transportRepository.save(transport);
-
-
 
             // Return the transport response
             return mapToTransportResponse(transport);

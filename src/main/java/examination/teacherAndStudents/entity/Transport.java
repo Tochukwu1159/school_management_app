@@ -44,12 +44,10 @@ public class Transport {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
-    @JoinColumn(name = "driver_id", unique = true)
+    @ManyToOne
+    @JoinColumn(name = "driver_id")
     private Profile driver;
 
-    @OneToMany(mappedBy = "transport", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Profile> userProfiles;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "route_id", nullable = false)
