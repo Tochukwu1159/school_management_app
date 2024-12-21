@@ -2,10 +2,7 @@ package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,11 +23,13 @@ public class ClassBlock {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_level_id", nullable = false)
+    @ToString.Exclude
     private ClassLevel classLevel; // Relates to the class level
 
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")
+    @ToString.Exclude
     private Profile formTeacher;
 
     @Column(nullable = false, unique = true, length = 255)
@@ -40,9 +39,11 @@ public class ClassBlock {
     private int numberOfStudents;
 
     @OneToMany(mappedBy = "classBlock", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<Profile> studentList; // Many profiles belong to a class block
 
     @OneToMany(mappedBy = "classBlock", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<ClassSubject> subjects;
 
     @Column(name = "created_at", nullable = false, updatable = false)

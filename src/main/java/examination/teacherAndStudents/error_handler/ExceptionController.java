@@ -24,12 +24,31 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class ExceptionController  {
 
+
+//    @ExceptionHandler(MethodArgumentNotValidException.class)
+//    public ResponseEntity<ApiResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
+//        Map<String, String> errors = ex.getBindingResult().getFieldErrors()
+//                .stream()
+//                .collect(Collectors.toMap(
+//                        FieldError::getField,
+//                        FieldError::getDefaultMessage,
+//                        (existing, replacement) -> existing // Handle duplicate keys
+//                ));
+//
+//        return new ResponseEntity<>(
+//                new ApiResponse<>("Validation errors", false, errors),
+//                HttpStatus.BAD_REQUEST
+//        );
+//    }
+
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
         List<String> errors = ex.getBindingResult().getFieldErrors()
                 .stream().map(FieldError::getDefaultMessage).collect(Collectors.toList());
         return new ResponseEntity<>(new ApiResponse<>("validation errors",false, errors), HttpStatus.BAD_REQUEST);
     }
+
 
 
     private Map<String, List<String>> getErrorsMap(List<String> errors) {

@@ -17,9 +17,12 @@ public interface TeacherAttendanceRepository extends JpaRepository<TeacherAttend
     List<TeacherAttendance> findByDateBetween(LocalDateTime startDate, LocalDateTime endDate);
 
     List<TeacherAttendance> findByTeacherIdAndDateBetween(Long teacherId, LocalDateTime startDateTime, LocalDateTime endDateTime);
-    long countByTeacherIdAndStudentTermAndAndStatus(long teacherId, StudentTerm studentTerm, AttendanceStatus attendanceStatus);
+    long countByTeacherIdAndStudentTermAndAndStatus(Long teacherId, StudentTerm studentTerm, AttendanceStatus attendanceStatus);
 
     long countByTeacherIdAndStudentTerm(long teacherId, StudentTerm term);
 
-    TeacherAttendance findByTeacherAndDate(User teacher, LocalDateTime attendanceDate);
+    TeacherAttendance findByTeacherAndDate(Profile teacher, LocalDateTime attendanceDate);
+
+
+    TeacherAttendance findByTeacherAndDateAndAcademicYearAndStudentTerm(Profile profile, LocalDateTime attendanceDate, AcademicSession session, StudentTerm studentTerm);
 }

@@ -12,9 +12,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
-    Attendance findByUserProfileAndDate(Profile student, LocalDate date);
 
     List<Attendance> findByUserProfileAndDateBetween(Profile student, LocalDate startDate, LocalDate endDate);
 
@@ -24,4 +25,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     long countByUserProfileIdAndStudentTerm(Long profileId, StudentTerm studentTerm);
 
     long countByUserProfileIdAndStudentTermAndStatus(Long profileId, StudentTerm studentTerm, AttendanceStatus attendanceStatus);
+
+
+    Attendance findByUserProfileAndDateAndAcademicYearAndStudentTerm(Profile studentProfle, LocalDate date, AcademicSession academicSession, Optional<StudentTerm> studentTerm);
 }

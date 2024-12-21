@@ -1,6 +1,8 @@
 package examination.teacherAndStudents.dto;
 
 import examination.teacherAndStudents.utils.StudentTerm;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +17,9 @@ public class ScoreRequest {
     private  Long studentId;
     private Long sessionId;
     private Long subjectId;
+    @Max(70)
     private int examScore;
+    @Max(30)
     private int assessmentScore;
     private Long termId;
 }

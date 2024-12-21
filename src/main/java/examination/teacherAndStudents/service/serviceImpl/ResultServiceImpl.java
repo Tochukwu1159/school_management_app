@@ -12,10 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -150,10 +148,8 @@ public class ResultServiceImpl implements ResultService {
             return "Unsatisfactory";
         }
     }
-
-    @Transactional
+@Transactional
     public void calculateAverageResult(Long sessionId, Long classLevelId, Long termId) {
-
         AcademicSession academicYear = academicSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new NotFoundException("Session not found"));
 
@@ -175,30 +171,35 @@ public class ResultServiceImpl implements ResultService {
         Map<Profile, List<Result>> resultsByStudent = results.stream()
                 .collect(Collectors.groupingBy(Result::getUserProfile));
 
+        // Pre-fetch existing positions
+        Map<Profile, Position> existingPositions = positionRepository.findByClassBlockAndAcademicYearAndStudentTerm(
+                        classBlock, academicYear, studentTerm).stream()
+                .collect(Collectors.toMap(Position::getUserProfile, Function.identity()));
+
+        // Use a list to collect positions to batch save
+        List<Position> positionsToSave = new ArrayList<>();
+
         resultsByStudent.forEach((studentProfile, studentResults) -> {
             double totalScore = studentResults.stream()
                     .mapToDouble(Result::getTotalMarks)
                     .sum();
-
             double averageScore = Math.round((totalScore / studentResults.size()) * 100.0) / 100.0;
 
-            // Fetch or create the position
-            Position position = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                    studentProfile, classBlock, academicYear, studentTerm);
-
-            if (position == null) {
-                position = new Position();
-                position.setUserProfile(studentProfile);
-                position.setClassBlock(classBlock);
-                position.setAcademicYear(academicYear);
-                position.setStudentTerm(studentTerm);
-            }
-
-            // Update and save the position
+            // Fetch existing position or create a new one
+            Position position = existingPositions.getOrDefault(studentProfile, new Position());
+            position.setUserProfile(studentProfile);
+            position.setClassBlock(classBlock);
+            position.setAcademicYear(academicYear);
+            position.setStudentTerm(studentTerm);
             position.setAverageScore(averageScore);
-            positionRepository.save(position);
+
+            positionsToSave.add(position);
         });
+
+        // Batch save all positions
+        positionRepository.saveAll(positionsToSave);
     }
+
 
     @Transactional
     public void promoteStudents(Long sessionId, Long presentClassId, Long futureSessionId, Long futurePClassId, Long futureFClassId, int cutOff) {

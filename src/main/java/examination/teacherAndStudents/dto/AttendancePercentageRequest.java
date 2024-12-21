@@ -8,4 +8,5 @@ public class AttendancePercentageRequest {
     private long userId;
     private long classLevelId;
     private Long studentTermId;
+    private Long sessionId;
 }

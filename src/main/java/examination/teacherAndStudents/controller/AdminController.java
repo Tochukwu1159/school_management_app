@@ -2,11 +2,13 @@ package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.SubjectScheduleTeacherUpdateDto;
 import examination.teacherAndStudents.dto.TeacherAttendanceRequest;
+import examination.teacherAndStudents.dto.TeacherAttendanceResponse;
 import examination.teacherAndStudents.entity.SubjectSchedule;
 import examination.teacherAndStudents.entity.TeacherAttendance;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.service.AdminService;
 import examination.teacherAndStudents.service.TeacherAttendanceService;
 import examination.teacherAndStudents.utils.StudentTerm;
@@ -65,10 +67,10 @@ public class AdminController {
         return ResponseEntity.ok("Teacher attendance taken successfully");
     }
 
-    @GetMapping("/calculate-teacher-percentage/{userId}/{term}")
-    public ResponseEntity<Double> calculateAttendancePercentage(@PathVariable Long userId,@PathVariable Long term ) {
+    @GetMapping("/calculate-teacher-percentage/{userId}/{sessionId}/{term}")
+    public ResponseEntity<TeacherAttendanceResponse> calculateAttendancePercentage(@PathVariable Long userId,@PathVariable Long term, @PathVariable Long sessionId) {
         try {
-            double attendancePercentage = teacherAttendanceService.calculateAttendancePercentage(userId, term);
+            TeacherAttendanceResponse attendancePercentage = teacherAttendanceService.calculateAttendancePercentage(userId, sessionId, term);
             return ResponseEntity.ok(attendancePercentage);
         } catch (CustomNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
@@ -100,6 +102,21 @@ public class AdminController {
         return ResponseEntity.ok(attendanceList);
 
     }
+
+    @PostMapping("/calculate-teacher-attendance")
+    public ResponseEntity<List<TeacherAttendanceResponse>> calculateTeacherAttendancePercentage(@RequestParam Long sessionId, @RequestParam Long termId) {
+        try {
+            List<TeacherAttendanceResponse> attendancePercentage = teacherAttendanceService.calculateTeacherAttendancePercentage(sessionId, termId);
+            return ResponseEntity.ok(attendancePercentage);
+        } catch (NotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        } catch (CustomInternalServerException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
+
     @PutMapping("/update-teaching-status")
     public ResponseEntity<SubjectSchedule> updateTeachingStatus(
             @RequestBody SubjectScheduleTeacherUpdateDto updateDto

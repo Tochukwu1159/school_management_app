@@ -35,7 +35,11 @@ public class BookSale {
     @NotBlank
     private String author;
 
-    @NotBlank
+    @NotNull
+    private boolean inStock;
+
+    private String edition;
+
     private String idNo;
 
     private int numberOfCopies;

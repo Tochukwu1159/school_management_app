@@ -21,12 +21,12 @@ public class MedicalRecordController {
         this.medicalRecordService = medicalRecordService;
     }
 
-    @PostMapping("/create")
+    @PostMapping("/create/{studentId}")
     public ResponseEntity<MedicationDto> createMedicalRecord(@PathVariable Long studentId, @RequestBody MedicalRecordRequest medicalRecordRequest) {
         MedicationDto createdRecord = medicalRecordService.addMedicalRecord(studentId,medicalRecordRequest);
         return new ResponseEntity<>(createdRecord, HttpStatus.CREATED);
     }
-    @PutMapping("/update")
+    @PutMapping("/update/{studentId}")
     public ResponseEntity<MedicationDto> updateMedicalRecord(@PathVariable Long studentId, @RequestBody MedicalRecordRequest medicalRecordRequest) {
         MedicationDto updatedRecord = medicalRecordService.updateMedicalRecord(studentId,medicalRecordRequest);
         return new ResponseEntity<>(updatedRecord, HttpStatus.OK);

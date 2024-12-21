@@ -58,7 +58,7 @@ public class AccountUtils {
         String yearString = String.valueOf(currentYear);
         StringBuilder randomNumbers = new StringBuilder();
         SecureRandom random = new SecureRandom();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             int randomNumber = random.nextInt(10);
             randomNumbers.append(randomNumber);
         }
@@ -98,7 +98,7 @@ public class AccountUtils {
         do {
             StringBuilder randomNumbers = new StringBuilder();
             // Generate 3 random numbers
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 6; i++) {
                 int randomNumber = random.nextInt(10);
                 randomNumbers.append(randomNumber);
             }
@@ -120,7 +120,7 @@ public class AccountUtils {
         do {
             StringBuilder randomNumbers = new StringBuilder();
             // Generate 3 random numbers
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 6; i++) {
                 int randomNumber = random.nextInt(10);
                 randomNumbers.append(randomNumber);
             }
@@ -142,7 +142,7 @@ public class AccountUtils {
         do {
             StringBuilder randomNumbers = new StringBuilder();
             // Generate 3 random numbers
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 6; i++) {
                 int randomNumber = random.nextInt(10);
                 randomNumbers.append(randomNumber);
             }

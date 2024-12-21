@@ -1,5 +1,5 @@
 package examination.teacherAndStudents.utils;
 
 public enum AllocationStatus {
-    PENDING, SUCCESS
+    PENDING, SUCCESS,REMOVED
 }

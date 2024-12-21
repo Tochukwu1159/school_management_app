@@ -26,7 +26,7 @@ public class DuePayment {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user; // The student making the payment
+    private Profile profile; // The student making the payment
 
     @Lob
     @Column(name = "receipt_photo")
@@ -45,7 +45,7 @@ public class DuePayment {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 

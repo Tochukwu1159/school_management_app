@@ -4,16 +4,19 @@ import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.EmailDetailsToMultipleEmails;
 import examination.teacherAndStudents.dto.TransportRequest;
 import examination.teacherAndStudents.dto.TransportResponse;
-import examination.teacherAndStudents.dto.UserRequestDto;
+import examination.teacherAndStudents.dto.TransportResponseTracker;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
+import examination.teacherAndStudents.service.PaymentService;
 import examination.teacherAndStudents.service.TransportService;
+import examination.teacherAndStudents.utils.AllocationStatus;
+import examination.teacherAndStudents.utils.PaymentStatus;
 import examination.teacherAndStudents.utils.Roles;
 import jakarta.mail.MessagingException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -32,9 +35,15 @@ public class TransportServiceImpl implements TransportService {
 
     private final EmailService emailService;
 
+    private final PaymentService paymentService;
+
     private final ProfileRepository profileRepository;
     private final BusRouteRepository busRouteRepository;
     private final StudentTransportTrackerRepository studentTransportTrackerRepository;
+    private final AcademicSessionRepository academicSessionRepository;
+    private final DuesRepository duesRepository;
+    private final StudentTermRepository studentTermRepository;
+    private final DuesPaymentRepository duePaymentRepository;
 
     @Override
     public TransportResponse createTransport(TransportRequest transportRequest) {
@@ -152,26 +161,127 @@ public class TransportServiceImpl implements TransportService {
         }
     }
 
+
+    @Transactional
+    public StudentTransportAllocation payForTransport(Long dueId, Long sessionId, Long termId) {
+        try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User student = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as a Student"));
+
+            AcademicSession academicSession = academicSessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new EntityNotFoundException("Academic session not found with ID: " + sessionId));
+
+            StudentTerm term = studentTermRepository.findById(termId)
+                    .orElseThrow(() -> new EntityNotFoundException("student term not found with ID: " + termId));
+
+            Profile profile = profileRepository.findByUser(student)
+                    .orElseThrow(() -> new EntityNotFoundException("User profile not found"));
+
+            DuePayment duePayment = duePaymentRepository
+                    .findByDueIdAndAcademicYearAndStudentTermAndProfile(dueId,academicSession, term, profile);
+            if(duePayment!= null) {
+                throw new CustomInternalServerException("You have paid for transport for the month");
+            }
+            // Check if allocation already made
+            StudentTransportAllocation existingTracker = studentTransportTrackerRepository
+                    .findByDuesIdAndAcademicSessionAndTermAndProfile(dueId,academicSession, term, profile);
+
+            if (existingTracker != null) {
+                throw new EntityAlreadyExistException("Transport payment already made, please wait for transport allocation");
+            }
+
+            // Process payment
+            paymentService.payDue(dueId, termId, academicSession.getId());
+
+            // Save tracker entry after payment
+            StudentTransportAllocation transportTracker = new StudentTransportAllocation();
+            transportTracker.setPaymentStatus(PaymentStatus.SUCCESS);
+            transportTracker.setTerm(term);
+            transportTracker.setStatus(AllocationStatus.PENDING);
+            transportTracker.setDues(duesRepository.findById(dueId).get());
+            transportTracker.setAcademicSession(academicSession);
+            transportTracker.setProfile(profile);
+
+            studentTransportTrackerRepository.save(transportTracker);
+
+            // Return the transport response
+              return transportTracker;
+
+        } catch (EntityNotFoundException e) {
+            throw new NotFoundException("Transport payment not processed: " + e.getMessage());
+        } catch (Exception e) {
+            throw new ResponseStatusException("Error processing transport payment: " + e.getMessage());
+        }
+    }
+
+
+
+
     @Override
-    public TransportResponse addStudentToTransport(Long transportId, Long studentId) {
+    public TransportResponse addStudentToTransport(Long transportTrackerId, Long studentId, Long transportId,
+                                                   Long academicYearId, Long termId) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
             User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
             if (admin == null) {
                 throw new CustomNotFoundException("Please login as an Admin");
             }
-
             // Find the transport by ID
             Transport transport = transportRepository.findById(transportId)
                     .orElseThrow(() -> new NotFoundException("Transport not found with ID: " + transportId));
+
+            AcademicSession academicSession = academicSessionRepository.findById(academicYearId)
+                    .orElseThrow(() -> new NotFoundException("Academic year not found with ID: " + academicYearId));
+
+            StudentTerm studentTerm = studentTermRepository.findById(termId)
+                    .orElseThrow(() -> new NotFoundException("Student term not found with ID: " + studentId));
 
             // Find the student by ID
             User user = userRepository.findById(studentId)
                     .orElseThrow(() -> new NotFoundException("Student not found with ID: " + studentId));
 
+            // Find the student by ID
+            Profile profile = profileRepository.findByUser(user)
+                    .orElseThrow(() -> new NotFoundException("Student profile not found with ID: " + studentId));
 
+
+            StudentTransportAllocation studentTransportAllocation = studentTransportTrackerRepository.findByIdAndAcademicSessionAndTermAndProfile(transportTrackerId,academicSession, studentTerm, profile)
+                    .orElseThrow(() -> new CustomNotFoundException("Student Transport allocation not found OR fair not paid"));
+
+            StudentTransportAllocation existingAllocation = studentTransportTrackerRepository.findByTransportAndProfileAndAcademicSessionAndStatus(transport, profile, academicSession, AllocationStatus.SUCCESS);
+            if (existingAllocation != null) {
+                throw new AttendanceAlreadyTakenException(
+                        "Student has already been allocated transport");
+            }
+            if (transportTrackerId != null) {
+                StudentTransportAllocation existingAllocation1 = studentTransportTrackerRepository.findById(transportTrackerId)
+                        .orElseThrow(() -> new NotFoundException("Transport allocation not found"));
+
+                if (!existingAllocation1.getProfile().equals(profile)) {
+                    throw new NotFoundException("Allocation ID belongs to another student");
+                }
+                if (existingAllocation1.getPaymentStatus() != PaymentStatus.SUCCESS) {
+                    throw new RuntimeException("Payment not made for the allocation or pending");
+                }}
+
+                // Check if a tracker exists for the transport, if not, create one
             TransportTracker tracker = transportTrackerRepository.findByTransport(transport)
-                    .orElseThrow(() -> new NotFoundException("Transport Tracker not found"));
+                    .orElseGet(() -> {
+                        TransportTracker newTracker = new TransportTracker();
+                        newTracker.setTransport(transport);
+                        newTracker.setRemainingCapacity(transport.getCapacity()); // Assuming capacity is part of the transport entity
+                        return transportTrackerRepository.save(newTracker);
+                    });
+
+            // Check if already assigned
+            boolean alreadyAssigned = studentTransportTrackerRepository.existsByProfileAndTransportAndStatus(
+                    profile, transport, AllocationStatus.SUCCESS);
+
+            if (alreadyAssigned) {
+                throw new EntityAlreadyExistException("Student already allocated to this transport");
+            }
+
 
             if (tracker.getRemainingCapacity() <= 0) {
                 throw new IllegalStateException("No available capacity in transport");
@@ -181,8 +291,8 @@ public class TransportServiceImpl implements TransportService {
                     .orElseThrow(() -> new NotFoundException("Student Profile not found with ID: " + studentId));
 
             // Check if student is already added
-            boolean alreadyAdded = studentTransportTrackerRepository.existsByStudentAndTransportAndStatus(
-                    student, transport, StudentTransportTracker.Status.ADDED);
+            boolean alreadyAdded = studentTransportTrackerRepository.existsByProfileAndTransportAndStatus(
+                    student, transport, AllocationStatus.SUCCESS);
 
             if (alreadyAdded) {
                 throw new EntityNotFoundException("Student with ID " + studentId + " is already assigned to this transport");
@@ -194,15 +304,13 @@ public class TransportServiceImpl implements TransportService {
             // Save the updated student
             profileRepository.save(student);
 
+            // Create StudentTransportTracker entry for added student
+            studentTransportAllocation.setTransport(transport);
+            studentTransportAllocation.setStatus(AllocationStatus.SUCCESS);
+            studentTransportTrackerRepository.save(studentTransportAllocation );
+
             tracker.assignStudent();
             transportTrackerRepository.save(tracker);
-
-            // Create StudentTransportTracker entry for added student
-            StudentTransportTracker transportTracker = new StudentTransportTracker();
-            transportTracker.setTransport(transport);
-            transportTracker.setStudent(student);
-            transportTracker.setStatus(StudentTransportTracker.Status.ADDED);
-            studentTransportTrackerRepository.save(transportTracker );
 
             // Return the transport response
             return mapToTransportResponse(transport);
@@ -239,8 +347,8 @@ public class TransportServiceImpl implements TransportService {
                         .orElseThrow(() -> new CustomNotFoundException("Student not found with ID: " + studentId));
 
                 // Check if student is already added
-                boolean alreadyAdded = studentTransportTrackerRepository.existsByStudentAndTransportAndStatus(
-                        student, transport, StudentTransportTracker.Status.ADDED);
+                boolean alreadyAdded = studentTransportTrackerRepository.existsByProfileAndTransportAndStatus(
+                        student, transport,AllocationStatus.SUCCESS);
 
                 if (alreadyAdded) {
                     throw new EntityAlreadyExistException("Student with ID " + studentId + " is already assigned to this transport");
@@ -250,10 +358,10 @@ public class TransportServiceImpl implements TransportService {
                 student.setTransport(transport);
 
                 // Create StudentTransportTracker entry for added student
-                StudentTransportTracker transportTracker = new StudentTransportTracker();
+                StudentTransportAllocation transportTracker = new StudentTransportAllocation();
                 transportTracker.setTransport(transport);
-                transportTracker.setStudent(student);
-                transportTracker.setStatus(StudentTransportTracker.Status.ADDED);
+                transportTracker.setProfile(student);
+                transportTracker.setStatus(AllocationStatus.SUCCESS);
                 studentTransportTrackerRepository.save(transportTracker );
 
                 // Add student to the list
@@ -314,8 +422,8 @@ public class TransportServiceImpl implements TransportService {
                 .orElseThrow(() -> new CustomNotFoundException("Student Profile not found with ID: " + studentId));
 
         // Check if the student has already been removed
-        boolean alreadyRemoved = studentTransportTrackerRepository.existsByStudentAndTransportAndStatus(
-                student, transport, StudentTransportTracker.Status.REMOVED);
+        boolean alreadyRemoved = studentTransportTrackerRepository.existsByProfileAndTransportAndStatus(
+                student, transport, AllocationStatus.REMOVED);
 
         if (alreadyRemoved) {
             throw new EntityAlreadyExistException("Student with ID " + studentId + " has already been removed from this transport");
@@ -334,10 +442,10 @@ public class TransportServiceImpl implements TransportService {
         transportTrackerRepository.save(tracker);
 
         // Create StudentTransportTracker entry for added student
-        StudentTransportTracker transportTracker = new StudentTransportTracker();
+        StudentTransportAllocation transportTracker = new StudentTransportAllocation();
         transportTracker.setTransport(transport);
-        transportTracker.setStudent(student);
-        transportTracker.setStatus(StudentTransportTracker.Status.REMOVED);
+        transportTracker.setProfile(student);
+        transportTracker.setStatus(AllocationStatus.REMOVED);
         studentTransportTrackerRepository.save(transportTracker );
 
         return mapToTransportResponse(transport);
@@ -353,4 +461,14 @@ public class TransportServiceImpl implements TransportService {
         transportResponse.setLicenceNumber(transport.getLicenceNumber());
         return transportResponse;
     }
+
+//    private TransportResponse mapToTransportResponseTracker(StudentTransportAllocation
+//                                                                    transport) {
+//        TransportResponseTracker transportResponse = new TransportResponse();
+//        transportResponse.setId(transport.getId());
+//        transportResponse.setVehicleName(transport.());
+//        transportResponse.setVehicleNumber(transport.getVehicleNumber());
+//        transportResponse.setLicenceNumber(transport.getLicenceNumber());
+//        return transportResponse;
+//    }
 }

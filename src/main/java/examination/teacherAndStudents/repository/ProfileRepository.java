@@ -23,4 +23,6 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     Page<Profile> findAllByClassBlock(ClassBlock subClass,Pageable paging);
 
     List<Profile> findAllByClassBlock(ClassBlock subClass);
+
+    List<Profile> findByClassBlock(ClassBlock classLevel);
 }

@@ -1,37 +1,37 @@
 package examination.teacherAndStudents.entity;
-import examination.teacherAndStudents.utils.PaymentStatus;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-@Entity
-@Table(name = "hostel_bed_tracker")
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class HostelBedTracker {
-
+@Entity
+@Table(name = "book_tracker")
+public class BookTracker {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "hostel_id", nullable = false)
-    private Hostel hostel;
+    @JoinColumn(name = "book_id", nullable = false)
+    private BookSale bookSale;
 
     @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 
-    @Column(name = "beds_allocated", nullable = false)
-    private int bedsAllocated;
+    @Column(name = "book_remaining", nullable = false)
+    private int bookRemaining;
 
     @PrePersist
     protected void onCreate() {
-        this.bedsAllocated = 0;
+        this.bookRemaining = 0;
     }
+
 }

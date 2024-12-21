@@ -3,6 +3,7 @@ package examination.teacherAndStudents.controller;
 import examination.teacherAndStudents.dto.AttendancePercentageRequest;
 import examination.teacherAndStudents.dto.AttendanceRequest;
 import examination.teacherAndStudents.dto.AttendanceResponse;
+import examination.teacherAndStudents.dto.StudentAttendanceResponse;
 import examination.teacherAndStudents.entity.Attendance;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.service.AttendanceService;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/attendance")
@@ -52,9 +54,9 @@ public class AttendanceController {
     }
 
     @GetMapping("/calculate-attendance-percentage")
-    public ResponseEntity<Double> calculateAttendancePercentage(@RequestBody AttendancePercentageRequest attendancePercentageRequest) {
+    public ResponseEntity<StudentAttendanceResponse> calculateAttendancePercentage(@RequestBody AttendancePercentageRequest attendancePercentageRequest) {
         try {
-            double attendancePercentage = attendanceService.calculateAttendancePercentage(attendancePercentageRequest.getUserId(), attendancePercentageRequest.getClassLevelId(), attendancePercentageRequest.getStudentTermId());
+            StudentAttendanceResponse attendancePercentage = attendanceService.calculateAttendancePercentage(attendancePercentageRequest.getUserId(), attendancePercentageRequest.getClassLevelId(), attendancePercentageRequest.getSessionId(), attendancePercentageRequest.getStudentTermId());
             return ResponseEntity.ok(attendancePercentage);
         } catch (CustomNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
@@ -71,6 +73,15 @@ public class AttendanceController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         List<Attendance> studentAttendanceList = attendanceService.getStudentAttendanceByClass(classId, startDate, endDate);
         return ResponseEntity.ok(studentAttendanceList);
+    }
+
+    @GetMapping("/class/{classLevelId}/session/{sessionId}/term/{studentTermId}/percentage")
+    public ResponseEntity<List<StudentAttendanceResponse>> calculateClassAttendancePercentage(
+            @PathVariable Long classLevelId,
+            @PathVariable Long studentTermId,
+            @PathVariable Long  sessionId) {
+        List<StudentAttendanceResponse> attendancePercentages = attendanceService.calculateClassAttendancePercentage(classLevelId, sessionId, studentTermId);
+        return ResponseEntity.ok(attendancePercentages);
     }
 
     // Add more methods for fetching attendance, generating reports, etc.

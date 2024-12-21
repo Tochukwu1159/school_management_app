@@ -15,7 +15,8 @@ public class TeacherAttendanceRequest {
     private Long teacherId;
     private LocalDateTime attendanceDate;
     private AttendanceStatus status;
-    private Long stusentTermId;
+    private Long sessionId;
+    private Long studentTermId;
 
     // Constructors, getters, and setters
 }

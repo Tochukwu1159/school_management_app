@@ -1,8 +1,6 @@
 package examination.teacherAndStudents.controller;
-import examination.teacherAndStudents.dto.ApiResponse;
-import examination.teacherAndStudents.dto.TransactionResponse;
-import examination.teacherAndStudents.dto.TransportRequest;
-import examination.teacherAndStudents.dto.TransportResponse;
+import examination.teacherAndStudents.dto.*;
+import examination.teacherAndStudents.entity.StudentTransportAllocation;
 import examination.teacherAndStudents.entity.Transport;
 import examination.teacherAndStudents.service.TransactionService;
 import examination.teacherAndStudents.service.TransportService;
@@ -30,16 +28,27 @@ public class TransportController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @PostMapping("/pay")
+    public ResponseEntity<StudentTransportAllocation> payforTransport(@RequestParam Long dueId, @RequestParam Long sessionId, @RequestParam Long termId) {
+        StudentTransportAllocation response = transportService.payForTransport(dueId, sessionId, termId);
+        return ResponseEntity.ok(response);
+    }
 
-    @PostMapping("/{transportId}/students/{studentId}")
-    public ResponseEntity<TransportResponse> addStudentToTransport(  @PathVariable Long transportId,
-                                                                     @PathVariable Long studentId) {
+    @PostMapping("/add-student-to-transport")
+    public ResponseEntity<TransportResponse> addStudentToTransport(@RequestBody AddStudentToTransportRequest request) {
         try {
-            TransportResponse createdTransport = transportService.addStudentToTransport(transportId, studentId);
+            TransportResponse createdTransport = transportService.addStudentToTransport(
+                    request.getTransportTrackerId(),
+                    request.getStudentId(),
+                    request.getTransportId(),
+                    request.getAcademicYearId(),
+                    request.getTermId()
+            );
             return new ResponseEntity<>(createdTransport, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }}
+        }
+    }
 
 
     @PostMapping("/{transportId}/students")

@@ -44,7 +44,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Autowired
     private DuesRepository duesRepository;
     @Autowired
-    private DuePaymentRepository duePaymentRepository;
+    private DuesPaymentRepository duePaymentRepository;
     @Autowired
     private AcademicSessionRepository academicSessionRepository;
     @Autowired
@@ -80,7 +80,17 @@ public class PaymentServiceImpl implements PaymentService {
                     .orElseThrow(() -> new EntityNotFoundException("Due not found with id: " + dueId));
 
             // Check if a payment has already been made for this due by the user
-            DuePayment existingPayment = duePaymentRepository.findByDueIdAndUserId(dues.getId(), user.get().getId());
+            DuePayment existingPayment;
+            if (termId != null) {
+                StudentTerm term = studentTermRepository.findById(termId)
+                        .orElseThrow(() -> new EntityNotFoundException("Student term not found with id: " + termId));
+                // Check if a payment exists using dueId, userId, and sessionId
+                existingPayment = duePaymentRepository.findByDueAndProfileAndAcademicYearAndStudentTerm(dues, userProfile.get(), academicSession, term);
+            } else {
+                // Check if a payment exists using dueId and userId only
+                existingPayment = duePaymentRepository.findByDueIdAndAcademicYearAndProfile(dues.getId(), academicSession,userProfile.get());
+            }
+
             if (existingPayment != null) {
                 throw new DuplicateDesignationException("Due payment already made for this student");
             }
@@ -106,7 +116,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .academicYear(academicSession)
                     .studentTerm(studentTerm.orElse(null))
                     .due(dues)
-                    .user(user.get())
+                    .profile(userProfile.get())
                     .receiptPhoto(null)  // Assuming the receipt photo is handled elsewhere
                     .paymentStatus(PaymentStatus.SUCCESS)
                     .build();
@@ -153,8 +163,6 @@ public class PaymentServiceImpl implements PaymentService {
 
         } catch (EntityNotFoundException e) {
             throw new NotFoundException("User or due not found: " + e.getMessage());
-        } catch (InsufficientBalanceException e) {
-            throw new InsufficientBalanceException("Insufficient funds to pay the due: " + e.getMessage());
         } catch (DuplicateDesignationException e) {
             throw new DuplicateDesignationException("Payment already made: " + e.getMessage());
         } catch (DataAccessException e) {

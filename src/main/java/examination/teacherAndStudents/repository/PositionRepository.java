@@ -4,6 +4,7 @@ import examination.teacherAndStudents.entity.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 @Repository
 public interface PositionRepository extends JpaRepository<Position, Long> {
@@ -11,5 +12,5 @@ public interface PositionRepository extends JpaRepository<Position, Long> {
 
     List<Position> findAllByClassBlockAndAcademicYearAndStudentTerm(ClassBlock studentClass, AcademicSession academicSession,  StudentTerm term);
 
-    List<Position> findAllByClassBlockAndAcademicYear(ClassBlock presentClass, AcademicSession currentSession);
+    Collection<Position> findByClassBlockAndAcademicYearAndStudentTerm(ClassBlock classBlock, AcademicSession academicYear, StudentTerm studentTerm);
 }

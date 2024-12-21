@@ -39,13 +39,7 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     public MedicationDto addMedicalRecord(Long studentId, MedicalRecordRequest medicalRecordRequest) {
         try {
             Optional<User> student = userRepository.findById(studentId);
-            if (student == null) {
-                throw new CustomNotFoundException("Student not found");
-            }
             Optional<Profile> studentProfile = profileRepository.findByUser(student.get());
-            if (student == null) {
-                throw new CustomNotFoundException("Student profile not found");
-            }
 
             MedicalRecord medicalRecord = new MedicalRecord();
             medicalRecord.setUser(studentProfile.get());
@@ -81,9 +75,6 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     public List<MedicationDto> getAllMedicalRecordsByStudent(Long studentId) {
         try {
             Optional<User> student = userRepository.findById(studentId);
-            if (student == null) {
-                throw new CustomNotFoundException("Student not found");
-            }
             List<MedicalRecord> medicationDtoList = medicalRecordRepository.findAllByUser(student);
             return medicationDtoList.stream().map((element) -> modelMapper.map(element, MedicationDto.class)).collect(Collectors.toList());
         } catch (Exception e) {

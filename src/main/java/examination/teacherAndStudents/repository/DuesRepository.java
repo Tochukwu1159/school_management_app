@@ -1,8 +1,7 @@
 package examination.teacherAndStudents.repository;
 
 
-import examination.teacherAndStudents.entity.Dues;
-import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.utils.Roles;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

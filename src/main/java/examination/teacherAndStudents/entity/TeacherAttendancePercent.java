@@ -23,10 +23,6 @@ import lombok.NoArgsConstructor;
         @Max(value = 100, message = "Attendance percentage must be at most 100")
         private Double attendancePercentage;
 
-        @OneToOne
-        @JoinColumn(name = "attendance_id", nullable = false)
-        private TeacherAttendance attendance;
-
         @ManyToOne
         @JoinColumn(name = "teacher_id", nullable = false)
         private Profile teacher;
@@ -34,6 +30,11 @@ import lombok.NoArgsConstructor;
         @ManyToOne
         @JoinColumn(name = "term_id", nullable = false)
         private StudentTerm studentTerm;
+
+
+        @ManyToOne(fetch = FetchType.LAZY, optional = false)
+        @JoinColumn(name = "academic_year_id", nullable = false)
+        private AcademicSession academicYear;
 
 
     }

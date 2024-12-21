@@ -1,13 +1,11 @@
 package examination.teacherAndStudents.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.utils.ContractType;
 import examination.teacherAndStudents.utils.Gender;
 import examination.teacherAndStudents.utils.MaritalStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -57,14 +55,17 @@ public class Profile {
 
     @ManyToOne
     @JoinColumn(name = "classLevel_id")
+    @ToString.Exclude
     private ClassBlock classBlock;
 
     @ManyToOne
     @JoinColumn(name = "formclass_id")
+    @ToString.Exclude
     private ClassBlock classFormTeacher;
 
     @ManyToOne
     @JoinColumn(name = "subject_assigned_id")
+    @ToString.Exclude
     private Subject subjectAssigned;
 
     @Enumerated(value = EnumType.STRING)
@@ -80,19 +81,26 @@ public class Profile {
 
     @OneToOne
     @JoinColumn(name = "user_id")
+    @ToString.Exclude
     private User user;
 
     @OneToOne(mappedBy = "userProfile", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    @ToString.Exclude
     private Wallet wallet;
 
     @ManyToOne
+    @ToString.Exclude
     @JoinColumn(name = "transport_id")
     private Transport transport;
 
     @OneToMany(mappedBy = "staff")
+    @ToString.Exclude
+    @JsonBackReference
     private List<StaffAttendance> attendanceRecords;
 
     @OneToMany(mappedBy = "userProfile")
+    @ToString.Exclude
+    @JsonBackReference
     private List<Attendance> attendances;
 
     @CreationTimestamp

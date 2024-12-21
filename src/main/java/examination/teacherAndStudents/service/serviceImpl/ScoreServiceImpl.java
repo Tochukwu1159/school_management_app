@@ -4,15 +4,23 @@ import examination.teacherAndStudents.dto.ScoreRequest;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.EntityNotFoundException;
+import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.ResultService;
 import examination.teacherAndStudents.service.ScoreService;
+import examination.teacherAndStudents.utils.Roles;
+import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -44,12 +52,71 @@ public class ScoreServiceImpl implements ScoreService {
     private AcademicSessionRepository academicSessionRepository;
     @Autowired
     private StudentTermRepository studentTermRepository;
+
+    @Autowired
+    private Validator validator;
 //    @Autowired
 //    private  ResultService resultService;
 
-    public void addScore(ScoreRequest scoreRequest) {
-        User student = userRepository.findById(scoreRequest.getStudentId())
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+    public void addScoresFromCsv(MultipartFile file) {
+        List<ScoreRequest> scoreRequests = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
+            String line;
+            boolean isFirstLine = true;
+
+            while ((line = br.readLine()) != null) {
+                if (isFirstLine) {
+                    isFirstLine = false; // Skip the header
+                    continue;
+                }
+
+                String[] data = line.split(",");
+                if (data.length != 7) {
+                    throw new IllegalArgumentException("Invalid CSV format. Each row must have exactly 7 fields.");
+                }
+
+                ScoreRequest scoreRequest = ScoreRequest.builder()
+                        .studentId(Long.parseLong(data[0].trim()))
+                        .classLevelId(Long.parseLong(data[1].trim()))
+                        .sessionId(Long.parseLong(data[2].trim()))
+                        .termId(Long.parseLong(data[3].trim()))
+                        .subjectId(Long.parseLong(data[4].trim()))
+                        .assessmentScore(Integer.parseInt(data[5].trim()))
+                        .examScore(Integer.parseInt(data[6].trim()))
+                        .build();
+
+                // Validate the scoreRequest
+                var violations = validator.validate(scoreRequest);
+                if (!violations.isEmpty()) {
+                    String errorMessage = violations.stream()
+                            .map(violation -> violation.getPropertyPath() + " " + violation.getMessage())
+                            .collect(Collectors.joining(", "));
+                    throw new IllegalArgumentException("Validation failed: " + errorMessage);
+                }
+
+                scoreRequests.add(scoreRequest);
+            }
+        } catch (Exception e) {
+            throw new CustomInternalServerException("Failed to process CSV file: " + e.getMessage());
+        }
+
+        // Process each score request
+        for (ScoreRequest scoreRequest : scoreRequests) {
+            try {
+                addScore(scoreRequest);
+            } catch (Exception e) {
+                throw new EntityNotFoundException("Failed to add score for student ID: " + scoreRequest.getStudentId() + " - " + e.getMessage());
+//                System.err.println("Failed to add score for student ID: " + scoreRequest.getStudentId() + " - " + e.getMessage());
+            }
+        }
+    }
+
+        public void addScore(ScoreRequest scoreRequest) {
+        User student = userRepository.findByIdAndRoles(scoreRequest.getStudentId(), Roles.STUDENT);
+        if(student == null){
+            throw new NotFoundException("Student not found or the id is not a student");
+        }
 
         Profile studentProfile = profileRepository.findByUser(student)
                 .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
@@ -123,6 +190,8 @@ public class ScoreServiceImpl implements ScoreService {
         // After saving the score, calculate the result using a separate service method
         resultService.calculateResult(scoreRequest.getClassLevelId(), student.getId(), subject.getName(),scoreRequest.getSessionId(), studentTerm.getId());
     }
+
+
 
 
 

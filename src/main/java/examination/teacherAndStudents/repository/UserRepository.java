@@ -21,4 +21,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findAllByFirstNameContainingIgnoreCaseAndLastNameContainingIgnoreCaseOrId(String firstName, String lastName, Long id, Pageable pageable);
 
     User findByEmailAndRoles(String email, Roles roles);
+
+    List<User> findAllByRoles(Roles teacher);
 }
