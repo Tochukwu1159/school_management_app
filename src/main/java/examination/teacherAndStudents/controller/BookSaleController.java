@@ -39,12 +39,4 @@ public class BookSaleController {
         BookSale bookSale = bookSaleService.createBookSale(title, author, idNo, price, classId, subjectId, numberOfCopies);
         return ResponseEntity.ok(bookSale);
     }
-
-
-    @PostMapping("/assign")
-    public ResponseEntity<String> assignBookToStudent(@RequestBody BookAssignmentRequest request) {
-        // Call service method to assign books to student
-        bookSaleService.assignBooksToStudent(request);
-        return ResponseEntity.ok("Books assigned successfully");
-    }
 }
