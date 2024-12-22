@@ -22,11 +22,13 @@ public class MedicalRecord{
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "profile_id", nullable = false)
-    private Profile user;
+    @JoinColumn(name = "patient_id", nullable = false)
+    private Profile patient;
 
-    @Column(nullable = false)
-    private LocalDateTime recordDate;
+    @ManyToOne
+    @JoinColumn(name = "attendant_id", nullable = false)
+    private Profile attendant;
+
 
     @Column(columnDefinition = "TEXT")
     private String details;

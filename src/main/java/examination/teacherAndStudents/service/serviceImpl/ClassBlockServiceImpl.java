@@ -29,7 +29,6 @@ public class ClassBlockServiceImpl implements ClassBlockService {
     public ClassBlockResponse createClassBlock(ClassBlockRequest request) {
         ClassLevel classLevel = classLevelRepository.findById(request.getClassLevelId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class Level not found"));
-        System.out.println(classLevel);
 
         ClassBlock classBlock = ClassBlock.builder()
                 .classLevel(classLevel)
@@ -37,7 +36,6 @@ public class ClassBlockServiceImpl implements ClassBlockService {
                 .classUniqueUrl(request.getClassUniqueUrl())
                 .numberOfStudents(0)
                 .build();
-        System.out.println(classBlock +"cccccccc");
         classBlockRepository.save(classBlock);
         return mapToResponse(classBlock);
     }

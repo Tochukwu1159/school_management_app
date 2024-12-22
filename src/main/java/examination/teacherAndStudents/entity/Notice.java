@@ -6,8 +6,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -28,13 +31,13 @@ public class Notice {
     @Column(columnDefinition = "TEXT")
     private String eventDescription;
 
-    @Enumerated(EnumType.STRING)
-    private Roles roles;
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-    private LocalDate noticeDate;
-    private LocalDate publishedDate;
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 
-    private LocalDate updateNoticeDate;
 
 
 }

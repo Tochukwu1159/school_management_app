@@ -1,6 +1,7 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.MedicalRecordRequest;
 import examination.teacherAndStudents.dto.MedicationDto;
 import examination.teacherAndStudents.entity.MedicalRecord;
@@ -38,12 +39,24 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
 
     public MedicationDto addMedicalRecord(Long studentId, MedicalRecordRequest medicalRecordRequest) {
         try {
-            Optional<User> student = userRepository.findById(studentId);
-            Optional<Profile> studentProfile = profileRepository.findByUser(student.get());
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User attendant = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new CustomNotFoundException("attendant  not found"));
+
+            Profile attendantProfile = profileRepository.findByUser(attendant)
+                    .orElseThrow(() -> new CustomNotFoundException("Attendant profile not found"));
+
+            User user = userRepository.findById(studentId)
+                    .orElseThrow(() -> new CustomNotFoundException("User  not found"));
+
+            Profile profile = profileRepository.findByUser(user)
+                    .orElseThrow(() -> new CustomNotFoundException("Profile not found"));
+
+
 
             MedicalRecord medicalRecord = new MedicalRecord();
-            medicalRecord.setUser(studentProfile.get());
-            medicalRecord.setRecordDate(LocalDateTime.now());
+            medicalRecord.setAttendant(attendantProfile);
+            medicalRecord.setPatient(profile);
             medicalRecord.setDetails(medicalRecordRequest.getDetails());
 
             // Add any other fields as needed
@@ -75,7 +88,12 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
     public List<MedicationDto> getAllMedicalRecordsByStudent(Long studentId) {
         try {
             Optional<User> student = userRepository.findById(studentId);
-            List<MedicalRecord> medicationDtoList = medicalRecordRepository.findAllByUser(student);
+
+            Profile profile = profileRepository.findByUser(student.get())
+                    .orElseThrow(() -> new CustomNotFoundException("Attendant profile not found"));
+
+            List<MedicalRecord> medicationDtoList = medicalRecordRepository.findAllByPatient(profile);
+
             return medicationDtoList.stream().map((element) -> modelMapper.map(element, MedicationDto.class)).collect(Collectors.toList());
         } catch (Exception e) {
             throw new CustomInternalServerException("Error retrieving medical records: " + e.getMessage());

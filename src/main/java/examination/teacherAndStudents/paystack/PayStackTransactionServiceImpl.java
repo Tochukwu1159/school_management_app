@@ -59,7 +59,6 @@ public class PayStackTransactionServiceImpl implements PayStackPaymentService {
             }
         } catch (Exception ex) {
             // Log the exception for debugging
-            ex.printStackTrace();
             throw new Exception("Failure initializing PayStack transaction");
         }
         return null; // This line should not be reached, as exceptions are thrown

@@ -86,11 +86,8 @@ public class NoticeServiceImpl implements NoticeService {
             }
             Notice newNotice = new Notice();
             newNotice.setTitle(noticeRequest.getTitle());
-            newNotice.setEventDescription(noticeRequest.getEventDescription());
-            newNotice.setPublishedDate(LocalDate.now());
-            newNotice.setNoticeDate(noticeRequest.getNoticeDate());
-            newNotice.setRoles(noticeRequest.getRole());
             newNotice.setEventDate(LocalDate.now());
+            newNotice.setEventDescription(noticeRequest.getEventDescription());
             return modelMapper.map(noticeRepository.save(newNotice), NoticeResponse.class);
         } catch (Exception e) {
             throw new CustomInternalServerException("An error occurred while creating the blog post " +e.getMessage());
@@ -109,9 +106,6 @@ public class NoticeServiceImpl implements NoticeService {
                     .orElseThrow(() -> new CustomNotFoundException("Notice post not found with id: " + id));
 
             existingNoticePost.setTitle(updatedNoticePost.getTitle());
-            existingNoticePost.setRoles(updatedNoticePost.getRole());
-            existingNoticePost.setUpdateNoticeDate(LocalDate.now());
-            existingNoticePost.setPublishedDate(updatedNoticePost.getPublishedDate());
             existingNoticePost.setEventDescription(updatedNoticePost.getEventDescription());
             existingNoticePost.setEventDate(LocalDate.now());
             // You can update other fields as needed
