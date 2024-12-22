@@ -37,10 +37,10 @@ public class WalletServiceImpl implements WalletService {
     private final ProfileRepository profileRepository;
 
     @Override
-    public WalletResponse getStudentWalletBalance() {
+    public WalletResponse getProfileWalletBalance() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         Optional<User> student = userRepository.findByEmail(email);
-        if (student == null) {
+        if (student.isEmpty()) {
             throw new CustomNotFoundException("Student with Id " + student.get().getId() + " is not valid");
         }
 
@@ -71,12 +71,7 @@ public class WalletServiceImpl implements WalletService {
                     .email(email)
                     .amount(new BigDecimal(fundWalletRequest.getAmount()))
                     .build();
-//            PayStackTransactionResponse transactionResponse = new PayStackTransactionResponse();
-
             PayStackTransactionResponse transactionResponse = paymentService.initTransaction(payStackTransactionRequest);
-//            transactionResponse.setStatus(true);  // Default value for status (false)
-//            transactionResponse.setMessage("Default message");  // Default message
-//            transactionResponse.setStatusCode(0);
 
             if (!transactionResponse.isStatus()) {
                 throw new Exception("Payment not authorized");
@@ -85,16 +80,11 @@ public class WalletServiceImpl implements WalletService {
             Optional<User> user = userRepository.findByEmail(email);
             User student = user.get();
 
-            if (student == null) {
-                throw new CustomNotFoundException("User with email " + email + " is not valid");
-            }
-
             Optional<Profile> studentProfile = profileRepository.findByUser(student);
 
             if (studentProfile.isEmpty()) {
                 throw new CustomNotFoundException("Student with email " + email + " is not valid");
             }
-
 
             fundWalletRequest.setAmount(String.valueOf(Integer.parseInt(fundWalletRequest.getAmount()) / 100));
             double amount = Double.parseDouble(fundWalletRequest.getAmount());
@@ -113,7 +103,6 @@ public class WalletServiceImpl implements WalletService {
 
             return new PaymentResponse(transactionResponse.getData().getAuthorization_url());
         } catch (Exception ex) {
-            ex.printStackTrace(); // Log the exception for debugging
             throw new Exception("Failure funding wallet");
         }
     }
@@ -121,7 +110,7 @@ public class WalletServiceImpl implements WalletService {
     private void createNewWalletAndTransaction(User student, String amount, PayStackTransactionResponse transactionResponse, DecimalFormat formatter) {
         Optional<Profile> user = profileRepository.findByUser(student);
 
-        if (user == null) {
+        if (user.isEmpty()) {
             throw new CustomNotFoundException("Student profile does not exist");
         }
         Wallet walletDao1 = Wallet.builder()
@@ -152,7 +141,7 @@ public class WalletServiceImpl implements WalletService {
         Optional<Profile> user = profileRepository.findByUser(student);
 
 
-        if (user == null) {
+        if (user.isEmpty()) {
             throw new CustomNotFoundException("Student profile does not exist");
         }
         BigDecimal result = wallet.getBalance().add(new BigDecimal(amount));
@@ -195,7 +184,7 @@ public class WalletServiceImpl implements WalletService {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
             Optional<User> admin = userRepository.findByEmail(email);
-            if (!admin.isPresent()) {
+            if (admin.isEmpty()) {
                 throw new CustomNotFoundException("Admin is not valid");
             }
 

@@ -74,7 +74,7 @@ public class ResultController {
         }
     }
 
-        @PostMapping("/update")
+        @PostMapping("/session-average/update")
         public ResponseEntity<String> updateSessionAverage(@RequestParam Long classBlockId,
                                                            @RequestParam Long academicYearId) {
             // Fetch the class block and academic year

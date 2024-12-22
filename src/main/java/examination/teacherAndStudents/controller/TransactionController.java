@@ -27,7 +27,7 @@ public class TransactionController {
             @RequestParam("offset") int offset,
             @RequestParam("pageSize") int pageSize
     ) throws Exception {
-       List<TransactionResponse> transactionEntities = transactionService.getStudentTransactions(offset,pageSize);
+       List<TransactionResponse> transactionEntities = transactionService.getProfileTransactions(offset,pageSize);
         return new ResponseEntity<>(new ApiResponse<>("success",true,transactionEntities), HttpStatus.OK);
     }
 

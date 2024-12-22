@@ -16,7 +16,6 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.PositionService;
 import examination.teacherAndStudents.utils.Roles;
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -50,7 +49,7 @@ public class PositionServiceImpl implements PositionService {
     @Autowired
     private EmailService emailService;
 
-    private static final String RESULT_FILE = "/Users/mac/Documents/ResultStatement.pdf";
+    private static final String RESULT_FILE = "/Users/user/Documents/ResultStatement.pdf";
     @Autowired
     private ClassBlockRepository classBlockRepository;
     @Autowired
@@ -62,116 +61,151 @@ public class PositionServiceImpl implements PositionService {
 
 
     @Transactional
-    public void updateAllPositionsForAClass(Long classLevelId,Long  sessionId,  Long termId) {
+    public void updatePositionsForClass(Long classBlockId, Long sessionId, Long termId) {
 
+        // Fetch academic session
         AcademicSession academicSession = academicSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + classLevelId));
+                .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + sessionId));
 
-        Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(termId);
+        // Fetch student term
+        StudentTerm studentTerm = studentTermRepository.findById(termId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student term not found with ID: " + termId));
 
-        // Get all users in the specified ClassLevel
-        ClassBlock studentClass = classBlockRepository.findById(classLevelId)
-                .orElseThrow(() -> new ResourceNotFoundException("ClassLevel not found with ID: " + classLevelId));
+        // Fetch class block
+        ClassBlock classBlock = classBlockRepository.findById(classBlockId)
+                .orElseThrow(() -> new ResourceNotFoundException("Class block not found with ID: " + classBlockId));
 
-        // Get all users in the specified ClassLevel
-        ClassLevel classLevel = classLevelRepository.findById(studentClass.getClassLevel().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("ClassLevel not found with ID: " + studentClass.getClassLevel().getId()));
-
-        List<Profile> studentClassBlock = studentClass.getStudentList();
-
-        if (studentClassBlock.isEmpty()) {
-            throw new IllegalStateException("No users found in the specified ClassLevel.");
+        // Fetch all students in the class block
+        List<Profile> students = classBlock.getStudentList();
+        if (students.isEmpty()) {
+            throw new IllegalStateException("No students found in the specified class block.");
         }
 
-        // Fetch all positions for the given class level and term in a single query
-        List<Position> positions = positionRepository.findAllByClassBlockAndAcademicYearAndStudentTerm(studentClass,academicSession, studentTerm.get());
+        // Fetch positions for the class block, academic session, and student term
+        List<Position> existingPositions = positionRepository.findAllByClassBlockAndAcademicYearAndStudentTerm(
+                classBlock, academicSession, studentTerm
+        );
 
-        // Create a map for quick access to positions by user
-        Map<Profile, Position> positionMap = positions.stream()
+        // Map positions by user profile for quick lookup
+        Map<Profile, Position> positionMap = existingPositions.stream()
                 .collect(Collectors.toMap(Position::getUserProfile, Function.identity()));
 
-        // Sort users by average score in descending order
-        List<Profile> sortedUsers = studentClassBlock.stream()
-                .sorted(Comparator.comparingDouble(user -> positionMap.getOrDefault(user, new Position()).getAverageScore())
-                        .reversed())
-                .collect(Collectors.toList());
+        // Sort students by average score in descending order
+        List<Profile> sortedStudents = students.stream()
+                .sorted(Comparator.comparingDouble(student ->
+                        positionMap.getOrDefault(student, new Position()).getAverageScore()).reversed())
+                .toList();
 
-        // Update positions based on the sorted order
+        // Update or create positions based on the sorted order
         int rank = 1;
-        for (Profile user : sortedUsers) {
-            Position position = positionMap.getOrDefault(user, new Position());
-            position.setClassBlock(studentClass);
-            position.setUserProfile(user);
-            position.setStudentTerm(studentTerm.get());
+        List<Position> updatedPositions = new ArrayList<>();
+        for (Profile student : sortedStudents) {
+            Position position = positionMap.getOrDefault(student, new Position());
+            position.setClassBlock(classBlock);
+            position.setUserProfile(student);
+            position.setAcademicYear(academicSession);
+            position.setStudentTerm(studentTerm);
             position.setPositionRank(rank++);
-            positionRepository.save(position);
+            updatedPositions.add(position);
         }
+
+        // Save all updated positions in bulk
+        positionRepository.saveAll(updatedPositions);
     }
 
 
-
-    public String getPositionRank(int position) {
-        return getOrdinalSuffix(position);
+    public String getPositionRank(int rank) {
+        return getOrdinalSuffix(rank);
     }
 
-    public static String getOrdinalSuffix(int position) {
-        if (position >= 10 && position <= 20) {
-            return position + "th";
-        } else {
-            switch (position % 10) {
-                case 1:
-                    return position + "st";
-                case 2:
-                    return position + "nd";
-                case 3:
-                    return position + "rd";
-                default:
-                    return position + "th";
-            }
+    private static String getOrdinalSuffix(int rank) {
+        if (rank >= 11 && rank <= 13) {
+            return rank + "th";
         }
+        return switch (rank % 10) {
+            case 1 -> rank + "st";
+            case 2 -> rank + "nd";
+            case 3 -> rank + "rd";
+            default -> rank + "th";
+        };
     }
 
-    public void generateResultSummaryPdf(Long studentId, Long classLevelId,Long sessionId, Long term) throws IOException, DocumentException {
-        // Fetch user's scores, average, and position for the specific class
-        try{
+    public void generateResultSummaryPdf(Long studentId, Long classLevelId, Long sessionId, Long term) {
+        try {
+            // Fetch required data
             AcademicSession session = academicSessionRepository.findById(sessionId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Student academic session not found with ID: " + sessionId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + sessionId));
 
-            Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(term);
+            StudentTerm studentTerm = studentTermRepository.findById(term)
+                    .orElseThrow(() -> new ResourceNotFoundException("Student term not found with ID: " + term));
 
             ClassBlock userClass = classBlockRepository.findById(classLevelId)
-                .orElseThrow(() -> new ResourceNotFoundException("student class not found with ID: " + classLevelId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Student class not found with ID: " + classLevelId));
 
-            ClassLevel generalClass = classLevelRepository.findById(classLevelId)
-                    .orElseThrow(() -> new ResourceNotFoundException("ClassLevel not found with ID: " + classLevelId));
-
-        User user = userRepository.findById(studentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + studentId));
+            User user = userRepository.findById(studentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + studentId));
 
             Profile userProfile = profileRepository.findByUser(user)
                     .orElseThrow(() -> new ResourceNotFoundException("Student profile not found with ID: " + user.getId()));
 
+            List<Score> scores = scoreRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
+                    userProfile, userClass, session, studentTerm);
 
-        List<Score> scores = scoreRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(userProfile, userClass, session, studentTerm.get());
-//            System.out.println(scores);
-            System.out.println(scores.stream().collect(Collectors.toList()));
-//            System.out.println(scores.stream().toArray());
-        Position position = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(userProfile, userClass,session, studentTerm.get());
-        List<Result> results = resultRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(userProfile, userClass,session,  studentTerm.get());
-        if (results.isEmpty()) {
-            throw new NotFoundException("No results found for the user with ID: " + user.getId());
+            Position position = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
+                    userProfile, userClass, session, studentTerm);
+
+            List<Result> results = resultRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
+                    userProfile, userClass, session, studentTerm);
+
+            if (results.isEmpty()) {
+                throw new NotFoundException("No results found for the user with ID: " + user.getId());
+            }
+
+            // Create PDF document
+            try (OutputStream outputStream = new FileOutputStream(RESULT_FILE)) {
+                Document document = new Document();
+                PdfWriter.getInstance(document, outputStream);
+                document.open();
+
+                // Add header (school logo and name)
+                addDocumentHeader(document);
+
+                // Add title
+                addDocumentTitle(document, "Student Report Card");
+
+                // Add user information
+                addUserInformation(document, user);
+
+                // Add user details
+                addUserDetailsTable(document, user, userProfile, term);
+
+                // Add scores table
+                addScoresTable(document, scores, results);
+
+                // Add teacher's remark
+                addTeacherRemark(document, position);
+
+                // Add average and position
+                addSummary(document, position);
+
+                // Add signature
+                addSignature(document);
+
+                document.close();
+            }
+
+            // Send email with the result summary attached
+            sendResultSummaryEmail(user);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating result summary PDF", e);
         }
+    }
 
-        // Create PDF document
-        Document document = new Document();
-        OutputStream outputStream = new FileOutputStream(RESULT_FILE);
-        PdfWriter writer = PdfWriter.getInstance(document, outputStream);
+    private void addDocumentHeader(Document document) throws DocumentException, IOException {
+        Image schoolLogo = Image.getInstance("/Users/user/Documents/school.png");
+        schoolLogo.scaleAbsolute(60, 60);
 
-        // Load School Logo
-        Image schoolLogo = Image.getInstance("/Users/mac/Documents/school.png");
-        schoolLogo.scaleAbsolute(60, 60); // Adjust the size as needed
-
-        // Add School Logo and Name
         PdfPTable headerTable = new PdfPTable(2);
         headerTable.setWidthPercentage(100);
         headerTable.setWidths(new int[]{1, 3});
@@ -181,80 +215,57 @@ public class PositionServiceImpl implements PositionService {
         logoCell.setBorder(Rectangle.NO_BORDER);
         headerTable.addCell(logoCell);
 
-        PdfPCell schoolNameCell = new PdfPCell(new Phrase("THE ACADEMY OF ROYALTIES", new Font(Font.FontFamily.HELVETICA, 16, Font.BOLD, BaseColor.BLACK)));
+        PdfPCell schoolNameCell = new PdfPCell(new Phrase("THE ACADEMY OF ROYALTIES",
+                new Font(Font.FontFamily.HELVETICA, 16, Font.BOLD)));
         schoolNameCell.setBorder(Rectangle.NO_BORDER);
         schoolNameCell.setHorizontalAlignment(Element.ALIGN_LEFT);
         schoolNameCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
         headerTable.addCell(schoolNameCell);
 
-        document.open();
-
-        // Add School Logo and Name to the document
         document.add(headerTable);
+    }
 
-        // Add custom font
-        Font fontTitle = new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, BaseColor.DARK_GRAY);
-        Font fontSubtitle = new Font(Font.FontFamily.HELVETICA, 18, Font.NORMAL, BaseColor.DARK_GRAY);
-        Font fontBody = new Font(Font.FontFamily.HELVETICA, 12, Font.NORMAL, BaseColor.BLACK);
-
-        // Add certificate title
-        Paragraph title = new Paragraph("Student Report Card", fontTitle);
+    private void addDocumentTitle(Document document, String titleText) throws DocumentException {
+        Paragraph title = new Paragraph(titleText, new Font(Font.FontFamily.HELVETICA, 24, Font.BOLD, BaseColor.DARK_GRAY));
         title.setAlignment(Element.ALIGN_CENTER);
         title.setSpacingBefore(5);
         title.setSpacingAfter(20);
         document.add(title);
+    }
 
-        // Add user information
+    private void addUserInformation(Document document, User user) throws DocumentException {
         Paragraph userInfo = new Paragraph(
                 "This is to certify that " + user.getFirstName() + " " + user.getLastName() +
                         " has successfully completed the academic term with outstanding performance.",
-                fontSubtitle
+                new Font(Font.FontFamily.HELVETICA, 18, Font.NORMAL, BaseColor.DARK_GRAY)
         );
         userInfo.setAlignment(Element.ALIGN_CENTER);
         userInfo.setSpacingAfter(10);
         document.add(userInfo);
+    }
 
-        // Add user details table
+    private void addUserDetailsTable(Document document, User user, Profile userProfile, Long term) throws DocumentException {
         PdfPTable userDetailsTable = new PdfPTable(4);
         userDetailsTable.setWidthPercentage(100);
         userDetailsTable.setSpacingBefore(20);
 
-        Font fontTableHeader = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.WHITE);
-        Font fontTableCell = new Font(Font.FontFamily.HELVETICA, 10, Font.NORMAL, BaseColor.BLACK);
+        addTableHeaders(userDetailsTable, "Student ID", "Student Name", "Student Class", "Student Term");
 
-        PdfPCell cellUserId = new PdfPCell(new Phrase("Student ID", fontTableHeader));
-        cellUserId.setBackgroundColor(BaseColor.GRAY);
-        PdfPCell cellUserName = new PdfPCell(new Phrase("Student Name", fontTableHeader));
-        cellUserName.setBackgroundColor(BaseColor.GRAY);
-        PdfPCell cellUserClass = new PdfPCell(new Phrase("Student Class", fontTableHeader));
-        cellUserClass.setBackgroundColor(BaseColor.GRAY);
-        PdfPCell cellUserClassTerm = new PdfPCell(new Phrase("Student Term", fontTableHeader));
-        cellUserClassTerm.setBackgroundColor(BaseColor.GRAY);
-
-        userDetailsTable.addCell(cellUserId);
-        userDetailsTable.addCell(cellUserName);
-        userDetailsTable.addCell(cellUserClass);
-            userDetailsTable.addCell(cellUserClassTerm);
-
-        PdfPCell cellUserIdValue = new PdfPCell(new Phrase(String.valueOf(user.getId()), fontTableCell));
-        PdfPCell cellUserNameValue = new PdfPCell(new Phrase(user.getFirstName() + " " + user.getLastName(), fontTableCell));
-        PdfPCell cellUserIdClass = new PdfPCell(new Phrase(String.valueOf(userProfile.getClassBlock().getCurrentStudentClassName()), fontTableCell));
-            PdfPCell cellUserClassTermValue = new PdfPCell(new Phrase(String.valueOf(term), fontTableCell));
-
-
-            userDetailsTable.addCell(cellUserIdValue);
-        userDetailsTable.addCell(cellUserNameValue);
-        userDetailsTable.addCell(cellUserIdClass);
-            userDetailsTable.addCell(cellUserClassTermValue);
+        addTableRow(userDetailsTable,
+                String.valueOf(user.getId()),
+                user.getFirstName() + " " + user.getLastName(),
+                userProfile.getClassBlock().getCurrentStudentClassName(),
+                term.toString() + " Term");
 
         document.add(userDetailsTable);
+    }
 
-        // Add subjects and scores
-        PdfPTable scoreTable = new PdfPTable(6); // Increased the number of columns to include totalMark and Grade
+    private void addScoresTable(Document document, List<Score> scores, List<Result> results) throws DocumentException {
+        PdfPTable scoreTable = new PdfPTable(6);
         scoreTable.setWidthPercentage(100);
         scoreTable.setSpacingBefore(20);
 
-        addTableHeader(scoreTable, fontBody);
+        addTableHeaders(scoreTable, "Subject", "Assessment Score", "Exam Score", "Total Mark", "Grade", "Rating");
 
         for (Score score : scores) {
             Result result = results.stream()
@@ -262,115 +273,85 @@ public class PositionServiceImpl implements PositionService {
                     .findFirst()
                     .orElseThrow(() -> new RuntimeException("Result not found for subject: " + score.getSubjectName()));
 
-            addRowToTable(scoreTable, score.getSubjectName(),
-                    Integer.toString(score.getAssessmentScore()),
-                    Integer.toString(score.getExamScore()),
-                    Double.toString(result.getTotalMarks()),
+            addTableRow(scoreTable,
+                    score.getSubjectName(),
+                    String.valueOf(score.getAssessmentScore()),
+                    String.valueOf(score.getExamScore()),
+                    String.valueOf(result.getTotalMarks()),
                     result.getGrade(),
                     result.getRating());
         }
 
         document.add(scoreTable);
+    }
 
-        // Add teacher's remark
+    private void addTeacherRemark(Document document, Position position) throws DocumentException {
         Paragraph remark = new Paragraph(
-                "Teacher's Remark: " + getTeachersRemark(position.getAverageScore()),
-                fontSubtitle
+                "Teacher's Remark: " + generateTeacherRemark(position.getAverageScore()),
+                new Font(Font.FontFamily.HELVETICA, 18, Font.NORMAL, BaseColor.DARK_GRAY)
         );
         remark.setAlignment(Element.ALIGN_LEFT);
         remark.setSpacingAfter(20);
         document.add(remark);
+    }
 
-        // Add average and position
+    private void addSummary(Document document, Position position) throws DocumentException {
         Paragraph summary = new Paragraph(
                 "Average Score: " + position.getAverageScore() + "  |  Position: " + getPositionRank(position.getPositionRank()),
-                fontSubtitle
+                new Font(Font.FontFamily.HELVETICA, 18, Font.NORMAL, BaseColor.DARK_GRAY)
         );
         summary.setAlignment(Element.ALIGN_CENTER);
         summary.setSpacingAfter(20);
         document.add(summary);
+    }
 
-        // Add signature line
-        Paragraph signature = new Paragraph("___________________________\n");
-        signature.setAlignment(Element.ALIGN_RIGHT);
+    private void addSignature(Document document) throws DocumentException, IOException {
+        Image signatureImage = Image.getInstance("/Users/user/Documents/principal.png");
+        signatureImage.scaleToFit(100, 50);
+        signatureImage.setAbsolutePosition(400, 100);
+        document.add(signatureImage);
+    }
 
-        Image signatureImage = loadSignatureImage();
-        signatureImage.setAbsolutePosition(400, 900);
-        signature.add(new Chunk(new VerticalPositionMark(), 0, true));
-        signature.add(new Chunk(signatureImage, 400, 0, true));
-
-        document.add(signature);
-        document.close();
-
-        // Email result summary
+    private void sendResultSummaryEmail(User user) {
         EmailDetails emailDetails = EmailDetails.builder()
                 .recipient(user.getEmail())
                 .subject("Result Summary")
                 .templateName("email-template-result")
-                .model(createModelWithData(user))
+                .model(createEmailModel(user))
                 .attachmentPath(RESULT_FILE)
                 .build();
         emailService.sendEmailWithAttachment(emailDetails);
-
-        } catch (DocumentException | IOException e) {
-            e.printStackTrace(); // Handle or log the exception as needed
-        }
     }
 
-    private Image loadSignatureImage() throws IOException, BadElementException {
-        // Load the signature image
-        Image signatureImage = Image.getInstance("/Users/mac/Documents/principal.png"); // Replace with the actual path
-        signatureImage.scaleToFit(100, 50); // Adjust the width and height as needed
-        return signatureImage;
-
+    private String generateTeacherRemark(double averageScore) {
+        if (averageScore >= 70) return "Excellent performance! Keep up the good work.";
+        if (averageScore >= 50) return "Good effort. Continue to improve.";
+        return "Work harder to improve your performance.";
     }
 
-    private String getTeachersRemark(double averageScore) {
-        // Add your logic for generating the teacher's remark based on the average score
-        // You can customize this method according to your requirements
-        if (averageScore >= 70) {
-            return "Excellent performance! Keep up the good work.";
-        } else if (averageScore >= 50) {
-            return "Good effort. Continue to improve.";
-        } else {
-            return "Work harder to improve your performance.";
-        }
+    private Map<String, Object> createEmailModel(User user) {
+        Map<String, Object> model = new HashMap<>();
+        model.put("name", user.getFirstName() + " " + user.getLastName());
+        model.put("greeting", "Dear " + user.getFirstName() + ",");
+        model.put("message", "Attached is your result summary.");
+        return model;
     }
 
-
-    private void addTableHeader(PdfPTable table, Font font) {
-        Stream.of("Subject", "Assessment Score", "Exam Score", "Total Mark", "Grade", "Rating")
-                .forEach(columnTitle -> {
-                    PdfPCell header = new PdfPCell();
-                    header.setBackgroundColor(BaseColor.GRAY);
-                    header.setBorderWidth(2);
-                    header.setPhrase(new Phrase(columnTitle, font));
-                    table.addCell(header);
-                });
-    }
-
-    private void addRowToTable(PdfPTable table, String... values) {
-        for (String value : values) {
-            PdfPCell cell = new PdfPCell(new Phrase(value));
+    private void addTableHeaders(PdfPTable table, String... headers) {
+        for (String header : headers) {
+            PdfPCell cell = new PdfPCell(new Phrase(header, new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.WHITE)));
+            cell.setBackgroundColor(BaseColor.GRAY);
             cell.setBorderWidth(2);
             table.addCell(cell);
         }
     }
 
-
-
-
-    private Map<String, Object> createModelWithData(User user) {
-        Map<String, Object> model = new HashMap<>();
-
-        // Add data to the model
-        model.put("name", user.getFirstName() + " " + user.getLastName());
-        model.put("greeting", "Dear " + user.getFirstName() + ",");
-        model.put("message", "Attached is your result summary.");
-
-        // You can add more data as needed for your email template
-
-        return model;
+    private void addTableRow(PdfPTable table, String... values) {
+        for (String value : values) {
+            PdfPCell cell = new PdfPCell(new Phrase(value));
+            cell.setBorderWidth(1);
+            table.addCell(cell);
+        }
     }
 
 

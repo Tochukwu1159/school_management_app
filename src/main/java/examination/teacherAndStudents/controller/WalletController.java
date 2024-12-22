@@ -19,8 +19,8 @@ public class WalletController {
     }
 
     @GetMapping("student/balance")
-    public ResponseEntity<ApiResponse<WalletResponse>> getStudentBalance() {
-       WalletResponse walletResponse = walletService.getStudentWalletBalance();
+    public ResponseEntity<ApiResponse<WalletResponse>> getProfileWalletBalance() {
+       WalletResponse walletResponse = walletService.getProfileWalletBalance();
         return new ResponseEntity<>(new ApiResponse<>("success",true,walletResponse),HttpStatus.OK);
     }
 

@@ -20,10 +20,10 @@ public class PositionController {
     private PositionService positionService;
 
 
-    @GetMapping("/update-all/{classLevelId}/{term}")
+    @PostMapping("/update/{sessionId}/{term}/{classLevelId}")
     public ResponseEntity<String> updateAllPositionsForAClass(@PathVariable Long classLevelId, @PathVariable Long sessionId, @PathVariable Long term) {
         try {
-            positionService.updateAllPositionsForAClass(classLevelId,sessionId, term);
+            positionService.updatePositionsForClass(classLevelId,sessionId, term);
             return ResponseEntity.ok("Positions updated successfully");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -31,7 +31,7 @@ public class PositionController {
         }
     }
 
-    @PostMapping("/generateResultSummaryPdf/{studentId}/{classLevelId}/{term}")
+    @PostMapping("/generate-result-summary/{studentId}/{classLevelId}/{sessionId}/{term}")
     public ResponseEntity<String> generateResultSummaryPdf(@PathVariable Long studentId, @PathVariable Long classLevelId,@PathVariable Long sessionId, @PathVariable Long term) {
         try {
             positionService.generateResultSummaryPdf(studentId,classLevelId, sessionId, term);

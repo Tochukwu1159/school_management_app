@@ -8,9 +8,8 @@ import examination.teacherAndStudents.dto.WalletResponse;
 
 
 public interface WalletService {
-    WalletResponse getStudentWalletBalance ();
+    WalletResponse getProfileWalletBalance ();
     PaymentResponse fundWallet(FundWalletRequest fundWalletRequest) throws Exception;
-//    WalletResponse getTeacherWalletBalance();
 SchoolBalanceResponse schoolTotalWallet();
 
 }

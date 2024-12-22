@@ -2,10 +2,13 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.TransactionResponse;
+import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.Transaction;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.NotFoundException;
+import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.TransactionRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.TransactionService;
@@ -29,21 +32,25 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
+    private final ProfileRepository profileRepository;
 
 
     @Override
-    public List<TransactionResponse> getStudentTransactions(int offset, int pageSize) throws Exception {
+    public List<TransactionResponse> getProfileTransactions(int offset, int pageSize) throws Exception {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
             Optional<User> studentOptional = userRepository.findByEmail(email);
 
-            if (!studentOptional.isPresent()) {
-                throw new CustomNotFoundException("Student with email " + email + " is not valid");
+            if (studentOptional.isEmpty()) {
+                throw new CustomNotFoundException("Profile with email " + email + " is not valid");
             }
+
+            Profile profile = profileRepository.findByUser(studentOptional.get())
+                    .orElseThrow(() -> new NotFoundException("Profile not found"));
 
             User student = studentOptional.get();
             Pageable pageable = PageRequest.of(offset, pageSize);
-            Page<Transaction> pageList = transactionRepository.findTransactionByUserOrderByCreatedAtDesc(pageable, Optional.of(student));
+            Page<Transaction> pageList = transactionRepository.findTransactionByUserOrderByCreatedAtDesc(pageable, profile);
 
             List<TransactionResponse> transactionResponses = new ArrayList<>();
 
@@ -59,7 +66,6 @@ public class TransactionServiceImpl implements TransactionService {
 
             return transactionResponses;
         } catch (Exception ex) {
-            ex.printStackTrace(); // Log the exception for debugging
             throw new CustomInternalServerException("Error retrieving student transactions");
         }
     }
