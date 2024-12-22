@@ -1,7 +1,9 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.SickLeaveCancelRequest;
 import examination.teacherAndStudents.dto.SickLeaveRequest;
-import examination.teacherAndStudents.entity.SickLeave;
+import examination.teacherAndStudents.dto.SickLeaveRequestDto;
+import examination.teacherAndStudents.entity.Leave;
 import examination.teacherAndStudents.service.SickLeaveService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -12,35 +14,35 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/sick-leave")
+@RequestMapping("/api/v1/leave")
 public class SickLeaveController {
 
     private final SickLeaveService sickLeaveService;
 
 
     @PostMapping("/apply")
-    public ResponseEntity<Void> applyForSickLeave(@RequestBody SickLeaveRequest sickLeaveRequest) {
-        sickLeaveService.applyForSickLeave(sickLeaveRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<String> applyForSickLeave(@RequestBody SickLeaveRequest sickLeaveRequest) {
+      String response =  sickLeaveService.applyForSickLeave(sickLeaveRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
 
-    @PutMapping("/update/{sickLeaveId}")
-    public ResponseEntity<Void> updateSickLeave(@PathVariable Long sickLeaveId,
-                                                @RequestBody SickLeaveRequest updatedSickLeave) {
-        sickLeaveService.updateSickLeave(sickLeaveId, updatedSickLeave);
-        return ResponseEntity.ok().build();
+    @PutMapping("/approve-reject/{sickLeaveId}")
+    public ResponseEntity<String> updateSickLeave(@PathVariable Long sickLeaveId,
+                                                  @RequestBody SickLeaveRequestDto updatedSickLeave) {
+        String responseMessage = sickLeaveService.approveOrRejectSickLeaveRequest(sickLeaveId, updatedSickLeave);
+        return ResponseEntity.ok(responseMessage);
     }
 
-    @PostMapping("/cancel/{sickLeaveId}")
-    public ResponseEntity<Void> cancelSickLeave(@PathVariable Long sickLeaveId) {
-        sickLeaveService.cancelSickLeave(sickLeaveId);
-        return ResponseEntity.ok().build();
+    @PostMapping("/cancel")
+    public ResponseEntity<String> cancelSickLeave(@RequestBody SickLeaveCancelRequest cancelRequest) {
+        String result = sickLeaveService.cancelSickLeave(cancelRequest);
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("all")
-    public ResponseEntity<List<SickLeave>> getAllSickLeave() {
-        List<SickLeave> sickLeaveList = sickLeaveService.getAllSickLeave();
+    public ResponseEntity<List<Leave>> getAllSickLeave() {
+        List<Leave> sickLeaveList = sickLeaveService.getAllSickLeave();
         return ResponseEntity.ok(sickLeaveList);
     }
 }

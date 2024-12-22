@@ -68,7 +68,7 @@ public class BookSaleAllocationServiceImpl implements BookSaleAllocationService 
 
         // Calculate the total amount paid for all books
         double totalAmountPaid = books.stream()
-                .mapToDouble(BookSale::getPrice)  // Assuming getPrice() is the method that returns the price of a book
+                .mapToDouble(BookSale::getPrice)
                 .sum();
 
         // Create a BookSaleAllocation entry and link multiple books to it
@@ -97,6 +97,7 @@ public class BookSaleAllocationServiceImpl implements BookSaleAllocationService 
 
     @Transactional
     public BookSaleAllocation allocateBook(Long academicYearId, Long termId, Long bookAllocationId) {
+
         // Validate if the BookAllocation exists and retrieve it
         BookSaleAllocation bookAllocation = bookSaleAllocationRepository.findById(bookAllocationId)
                 .orElseThrow(() -> new NotFoundException("Book Allocation not found with ID: " + bookAllocationId));
@@ -162,7 +163,12 @@ public class BookSaleAllocationServiceImpl implements BookSaleAllocationService 
 
 
     @Transactional
-    public BookSaleAllocation allocateBook(Long bookId, Long academicYearId, Long termId, Long studentId, Long bookPaymentId) {
+    public BookSaleAllocation allocateBook(Long bookId, Long academicYearId, Long termId, Long bookAllocationId) {
+
+        // Validate if the BookAllocation exists and retrieve it
+        BookSaleAllocation bookAllocation = bookSaleAllocationRepository.findById(bookAllocationId)
+                .orElseThrow(() -> new NotFoundException("Book Allocation not found with ID: " + bookAllocationId));
+
         BookSale book = bookSaleRepository.findById(bookId)
                 .orElseThrow(() -> new NotFoundException("Book not found")); ///update thius method and remove student id
 
@@ -171,16 +177,9 @@ public class BookSaleAllocationServiceImpl implements BookSaleAllocationService 
                 .orElseThrow(() -> new NotFoundException("Academic year not found with ID: " + academicYearId));
 
         StudentTerm studentTerm = studentTermRepository.findById(termId)
-                .orElseThrow(() -> new NotFoundException("Student term not found with ID: " + studentId));
+                .orElseThrow(() -> new NotFoundException("Student term not found with ID: " + termId));
 
-        // Find the student by ID
-        User user = userRepository.findById(studentId)
-                .orElseThrow(() -> new NotFoundException("Student not found with ID: " + studentId));
-
-
-        Profile profile = profileRepository.findByUser(user)
-                .orElseThrow(() -> new NotFoundException("Profile not found"));
-
+        Profile profile  = bookAllocation.getProfile();
 
         BookTracker bookTracker = bookTrackerRepository.findByBookSaleAndAcademicYear(book, academicSession)
                 .orElseGet(() -> bookTrackerRepository.save(

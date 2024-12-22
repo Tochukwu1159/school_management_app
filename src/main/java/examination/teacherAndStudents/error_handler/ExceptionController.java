@@ -192,10 +192,10 @@ public class ExceptionController  {
     }
 
 
-//    @ExceptionHandler(WorkshopNotFoundException.class)
-//    public ResponseEntity<?> WorkshopNotFoundException(WorkshopNotFoundException ex) {
-//        return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.NOT_FOUND);
-//    }
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<?> WorkshopNotFoundException(UnauthorizedException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.UNAUTHORIZED);
+    }
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<?> EntityNotFoundException(EntityNotFoundException ex) {

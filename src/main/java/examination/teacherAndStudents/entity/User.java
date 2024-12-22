@@ -36,7 +36,10 @@ public class User {
     private String lastName;
     private String middleName;
     private Boolean deactivate = false;
+
+    @Column(unique = true, nullable = false)
     private String email;
+
     //    @Size(min = 6, message = "Password should have at least 6 characters")
     private String password;
     @Enumerated(value = EnumType.STRING)
@@ -49,7 +52,9 @@ public class User {
         return Objects.hash(id);
     }
 
-
+    public boolean isActive() {
+        return !deactivate;
+    }
 
     @Override
     public String toString() {

@@ -28,10 +28,6 @@ public class DuePayment {
     @JoinColumn(name = "user_id", nullable = false)
     private Profile profile; // The student making the payment
 
-    @Lob
-    @Column(name = "receipt_photo")
-    private byte[] receiptPhoto;
-
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
 

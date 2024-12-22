@@ -28,11 +28,10 @@ public class BookSaleAllocationController {
     @PostMapping("/track")
     public ResponseEntity<BookSaleAllocation> trackPurchase(
             @RequestParam Long bookId,
-            @RequestParam Long profileId,
             @RequestParam Long academicYearId,
             @RequestParam Long termId,
     @RequestParam  Long bookPaymentId) {
-        BookSaleAllocation tracker = trackerService.allocateBook(bookId,academicYearId, profileId,termId, bookPaymentId);
+        BookSaleAllocation tracker = trackerService.allocateBook(bookId,academicYearId,termId, bookPaymentId);
         return ResponseEntity.ok(tracker);
     }
 }

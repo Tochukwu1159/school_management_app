@@ -30,7 +30,7 @@ public class Dues {
     private BigDecimal amount;
 
     @ManyToOne
-    @JoinColumn(name = "term_id", nullable = false)
+    @JoinColumn(name = "term_id")
     private StudentTerm studentTerm;
 
     @ManyToOne

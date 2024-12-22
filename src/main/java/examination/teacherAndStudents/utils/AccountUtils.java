@@ -1,9 +1,7 @@
 package examination.teacherAndStudents.utils;
 
-import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
-import examination.teacherAndStudents.error_handler.BadRequestException;
-import examination.teacherAndStudents.error_handler.UserAlreadyExistException;
-import examination.teacherAndStudents.error_handler.UserPasswordMismatchException;
+import examination.teacherAndStudents.entity.Profile;
+import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.LibraryMemberRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.UserRepository;
@@ -16,9 +14,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -152,6 +152,26 @@ public class AccountUtils {
         } while (libraryMemberRepository.existsByMemberId(libraryId));
 
         return libraryId;
+    }
+
+    public static void validateProfileStatus(Profile profile) {
+        // Check if profile is suspended
+        if (ProfileStatus.SUSPENDED.equals(profile.getProfileStatus()) &&
+                profile.getSuspensionEndDate() != null &&
+                LocalDate.now().isAfter(profile.getSuspensionEndDate())) {
+            // Reactivate if the suspension period is over
+            profile.setProfileStatus(ProfileStatus.ACTIVE);
+        }
+
+        // General check for restricted statuses
+        if (ProfileStatus.SUSPENDED.equals(profile.getProfileStatus()) ||
+                ProfileStatus.FIRED.equals(profile.getProfileStatus()) ||
+                ProfileStatus.GRADUATED.equals(profile.getProfileStatus()) ||
+                ProfileStatus.ALUMNI.equals(profile.getProfileStatus()) ||
+                ProfileStatus.WITHDRAWN.equals(profile.getProfileStatus()) ||
+                ProfileStatus.TRANSFERRING.equals(profile.getProfileStatus())) {
+            throw new UnauthorizedException("Profile cannot access because you are " + profile.getProfileStatus().name().toLowerCase());
+        }
     }
 
 

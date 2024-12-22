@@ -117,7 +117,6 @@ public class PaymentServiceImpl implements PaymentService {
                     .studentTerm(studentTerm.orElse(null))
                     .due(dues)
                     .profile(userProfile.get())
-                    .receiptPhoto(null)  // Assuming the receipt photo is handled elsewhere
                     .paymentStatus(PaymentStatus.SUCCESS)
                     .build();
 
@@ -172,36 +171,5 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
-
-
-    public void submitReceiptPhoto(Long duesId, byte[] receiptPhoto) {
-        DuePayment dues = duePaymentRepository.findById(duesId)
-                .orElseThrow(() -> new EntityNotFoundException("Dues not found with ID: " + duesId));
-
-        dues.setReceiptPhoto(receiptPhoto);
-        dues.setPaymentStatus(PaymentStatus.PENDING); // Set the status to pending after receipt submission
-
-        duePaymentRepository.save(dues);
-    }
-
-    public void reviewAndSetStatus(Long duesId, PaymentStatus newStatus) {
-        // Step 1: Find the dues record by ID
-        DuePayment dues = duePaymentRepository.findById(duesId)
-                .orElseThrow(() -> new EntityNotFoundException("Dues not found with ID: " + duesId));
-        if (!adminReviewPassed(dues)) {
-            throw new CustomInternalServerException("Admin review failed for Dues ID: " + duesId);
-        }
-        dues.setPaymentStatus(newStatus);
-        duePaymentRepository.save(dues);
-    }
-
-    private boolean adminReviewPassed(DuePayment dues) {
-        byte[] receiptPhoto = dues.getReceiptPhoto();
-        if (receiptPhoto == null || receiptPhoto.length == 0) {
-            return false;
-        }
-
-        return true;
-    }
 }
 

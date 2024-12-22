@@ -9,10 +9,7 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.PayStackPaymentService;
 import examination.teacherAndStudents.service.WalletService;
-import examination.teacherAndStudents.utils.NotificationStatus;
-import examination.teacherAndStudents.utils.NotificationType;
-import examination.teacherAndStudents.utils.Roles;
-import examination.teacherAndStudents.utils.TransactionType;
+import examination.teacherAndStudents.utils.*;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,10 +43,13 @@ public class WalletServiceImpl implements WalletService {
         if (student == null) {
             throw new CustomNotFoundException("Student with Id " + student.get().getId() + " is not valid");
         }
+
         Optional<Profile> studentProfile = profileRepository.findByUser(student.get());
         if (studentProfile.isEmpty()) {
             throw new CustomNotFoundException("Student with Id " + student.get().getId() + " is not valid");
         }
+        // Validate profile status
+        AccountUtils.validateProfileStatus(studentProfile.get());
 
         Wallet wallet = walletRepository.findWalletByUserProfile(studentProfile.get());
         if (wallet == null) {

@@ -20,19 +20,4 @@ public class PaymentController {
         return ResponseEntity.ok("Payment successful");
     }
 
-    @PostMapping("/dues/{duesId}/submit-receipt")
-    public ResponseEntity<?> submitReceiptPhoto(
-            @PathVariable Long duesId,
-            @RequestBody byte[] receiptPhoto) {
-        paymentService.submitReceiptPhoto(duesId, receiptPhoto);
-        return ResponseEntity.ok("Receipt photo submitted successfully");
-    }
-
-    @PostMapping("/admin/dues/{duesId}/review")
-    public ResponseEntity<?> reviewAndSetStatus(
-            @PathVariable Long duesId,
-            @RequestParam PaymentStatus newStatus) {
-        paymentService.reviewAndSetStatus(duesId, newStatus);
-        return ResponseEntity.ok("Dues status updated successfully");
-    }
 }

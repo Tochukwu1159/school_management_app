@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.utils.ContractType;
 import examination.teacherAndStudents.utils.Gender;
 import examination.teacherAndStudents.utils.MaritalStatus;
+import examination.teacherAndStudents.utils.ProfileStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -109,4 +110,27 @@ public class Profile {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @Enumerated(EnumType.STRING)
+    private ProfileStatus profileStatus = ProfileStatus.ACTIVE;  // Default status
+
+    private LocalDate suspensionEndDate;  // Date when the suspension ends
+
+    public boolean isSuspended() {
+        return ProfileStatus.SUSPENDED.equals(profileStatus) && suspensionEndDate != null && suspensionEndDate.isAfter(LocalDate.now());
+    }
+
+
+    @PrePersist
+    @PreUpdate
+    public void checkSuspensionStatus() {
+        // If the profile is suspended and the current date is after the suspension end date,
+        // update the status to ACTIVE.
+        if (profileStatus == ProfileStatus.SUSPENDED && suspensionEndDate != null) {
+            if (suspensionEndDate.isBefore(LocalDate.now())) {
+                profileStatus = ProfileStatus.ACTIVE;
+                suspensionEndDate = null; // Optional: Clear the suspension end date after status update.
+            }
+        }
+    }
 }

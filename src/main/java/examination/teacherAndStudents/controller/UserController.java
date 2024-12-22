@@ -1,19 +1,28 @@
 package examination.teacherAndStudents.controller;
 import examination.teacherAndStudents.dto.*;
+import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.BadRequestException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
+import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.service.UserService;
 import examination.teacherAndStudents.utils.AccountUtils;
+import examination.teacherAndStudents.utils.ProfileStatus;
+import examination.teacherAndStudents.utils.Roles;
 import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 
 @RestController
@@ -22,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final ProfileRepository profileRepository;
 
     @PostMapping("/create")
     public UserResponse createStudent(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
@@ -122,6 +132,38 @@ public class UserController {
         }
         return null;
     }
+
+
+    @PatchMapping("/{userId}/status")
+    public ResponseEntity<String> updateUserStatus(@PathVariable Long userId,
+                                                   @RequestBody UserStatusUpdateRequest statusUpdateRequest) {
+        try {
+            // Convert action to ProfileStatus and update user status
+            ProfileStatus newStatus = ProfileStatus.valueOf(statusUpdateRequest.getAction().toUpperCase());
+            String responseMessage = userService.updateUserStatus(userId, newStatus, statusUpdateRequest.getSuspensionEndDate()); // No need for suspensionEndDate here
+            return ResponseEntity.ok(responseMessage);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid status action.");
+        } catch (NotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating user status: " + e.getMessage());
+        }
+    }
 //
 //
+@GetMapping("/profiles")
+public ResponseEntity<Page<UserProfileResponse>> getProfiles(
+        @RequestParam("role") String role,
+        @RequestParam("status") String status,
+        @RequestParam(value = "page", defaultValue = "0") int page,
+        @RequestParam(value = "size", defaultValue = "10") int size) {
+
+    role = role.toUpperCase();
+    status = status.toUpperCase();
+    Page<UserProfileResponse> profiles = userService.getProfilesByRoleAndStatus(role, status, page, size);
+
+    return ResponseEntity.ok(profiles);
+}
+
 }

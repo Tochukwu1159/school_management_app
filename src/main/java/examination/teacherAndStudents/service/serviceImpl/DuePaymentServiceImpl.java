@@ -116,7 +116,6 @@ public class DuePaymentServiceImpl implements DuePaymentService {
 
     // Delete DuePayment by ID
     public void deleteDuePaymentById(Long id) {
-
         DuePayment duePayment = duePaymentRepository.findById(id).orElseThrow(() -> new RuntimeException("DuePayment not found"));
         duePaymentRepository.delete(duePayment);
     }

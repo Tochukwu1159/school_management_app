@@ -10,6 +10,7 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.UserService;
 import examination.teacherAndStudents.utils.AccountUtils;
+import examination.teacherAndStudents.utils.ProfileStatus;
 import examination.teacherAndStudents.utils.Roles;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -944,6 +945,42 @@ public class UserServiceImpl implements UserService {
 
 
     }
+    public String updateUserStatus(Long userId, ProfileStatus newStatus, LocalDate suspensionEndDate) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found for user ID: " + userId));
+        // Fetch the user profile
+        Profile profile = profileRepository.findByUser(user)
+                .orElseThrow(() -> new NotFoundException("Profile not found for user ID: " + userId));
+
+        // Set the new profile status (it can be any of the restricted statuses)
+        profile.setProfileStatus(newStatus);
+
+        // Optionally set the suspension end date if the status requires it (e.g., for suspension)
+        if (newStatus == ProfileStatus.SUSPENDED && suspensionEndDate != null) {
+            profile.setSuspensionEndDate(suspensionEndDate);
+        } else {
+            profile.setSuspensionEndDate(null); // Clear the end date if the status is not suspension
+        }
+
+        // Save the updated profile
+        profileRepository.save(profile);
+
+        return "User status updated successfully.";
+    }
+
+    public Page<UserProfileResponse> getProfilesByRoleAndStatus(String role, String status, int page, int size) {
+        // Convert role and status strings to enum
+        Roles roleEnum = Roles.valueOf(role);  // Converts to enum
+        ProfileStatus statusEnum = ProfileStatus.valueOf(status);  // Converts to enum
+
+        // Create pageable object
+        Pageable pageable = PageRequest.of(page, size);
+
+        // Query the repository to get the profiles
+        return profileRepository.findProfilesByRoleAndStatus(roleEnum, statusEnum, pageable);
+    }
+
+
 
 
 

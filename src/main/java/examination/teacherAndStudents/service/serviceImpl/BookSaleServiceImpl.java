@@ -9,8 +9,6 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.BookSaleService;
 import examination.teacherAndStudents.service.PaymentService;
 import examination.teacherAndStudents.service.TransactionService;
-import examination.teacherAndStudents.utils.PaymentStatus;
-import examination.teacherAndStudents.utils.TransactionType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
