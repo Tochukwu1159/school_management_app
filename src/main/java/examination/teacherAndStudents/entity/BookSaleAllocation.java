@@ -25,7 +25,7 @@ public class BookSaleAllocation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToMany
+    @ManyToMany(cascade = CascadeType.PERSIST)
     @JoinTable(
             name = "book_allocation_books",
             joinColumns = @JoinColumn(name = "allocation_id"),
@@ -42,6 +42,14 @@ public class BookSaleAllocation {
 
     @NotNull
     private double amountPaid;
+
+    @ManyToOne
+    @JoinColumn(name = "academic_year_id", nullable = false)
+    private AcademicSession academicYear;
+
+    @ManyToOne
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm studentTerm;
 
 
     @CreationTimestamp

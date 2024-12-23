@@ -10,39 +10,47 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "school")
-@Entity
 @Builder
-public class School  {
+@Entity
+@Table(name = "school")
+public class School {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
+    @Column(nullable = false, unique = true)
     private String schoolName;
+
+    @Column(nullable = false)
     private String schoolAddress;
 
     private String schoolLogoUrl;
 
+    @Column(nullable = false, unique = true)
     private String phoneNumber;
 
-    @Column(unique = true)
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(unique = true, nullable = false)
     private String subscriptionKey;
-//    @OneToMany(mappedBy = "school")
-//   private List<User> students;
+
+    @Column(nullable = false)
+    private LocalDate subscriptionExpiryDate;
+
+    @Column(nullable = false)
+    private Boolean isActive;
 
     @ElementCollection
-    private List<String> selectedServices; // Store selected services by their names
+    private List<String> selectedServices;
 
-    private LocalDate subscriptionExpiryDate;
+//    @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<AcademicSession> academicSessions;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -51,8 +59,7 @@ public class School  {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-
-    public Collection<Object> selectedServices() {
-        return Collections.singleton(this.selectedServices);
+    public boolean isSubscriptionValid() {
+        return subscriptionExpiryDate.isAfter(LocalDate.now());
     }
 }

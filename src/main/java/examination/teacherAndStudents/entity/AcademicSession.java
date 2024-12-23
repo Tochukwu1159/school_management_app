@@ -25,10 +25,3 @@ public class AcademicSession {
     private LocalDate endDate;
 
 }
-
-
-//{
-//        "name": "2024/2025 Academic Year",
-//        "startDate": "2024-09-01",
-//        "endDate": "2025-06-30"
-//        }

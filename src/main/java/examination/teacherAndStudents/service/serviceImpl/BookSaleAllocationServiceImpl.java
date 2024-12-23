@@ -7,6 +7,7 @@ import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.error_handler.PaymentFailedException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.BookSaleAllocationService;
+import examination.teacherAndStudents.service.PaymentService;
 import examination.teacherAndStudents.utils.AllocationStatus;
 import examination.teacherAndStudents.utils.PaymentStatus;
 import jakarta.transaction.Transactional;
@@ -20,189 +21,131 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BookSaleAllocationServiceImpl implements BookSaleAllocationService {
 
-    private final BookSaleAllocationRepository trackerRepository;
+    private final BookSaleAllocationRepository bookSaleAllocationRepository;
     private final BookSaleRepository bookSaleRepository;
     private final ProfileRepository profileRepository;
     private final BookTrackerRepository bookTrackerRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final UserRepository userRepository;
-    private final BookSaleAllocationRepository bookSaleAllocationRepository;
+    private final PaymentService paymentService;
 
     public List<BookSaleAllocation> getAllPurchases() {
-        return trackerRepository.findAll();
+        return bookSaleAllocationRepository.findAll();
     }
 
     public List<BookSaleAllocation> getPurchasesByProfile(Long profileId) {
-        return trackerRepository.findByProfileId(profileId);
+        return bookSaleAllocationRepository.findByProfileId(profileId);
     }
 
     @Transactional
     public BookPaymentResponse payForBook(List<Long> bookIds, Long studentId, Long academicYearId, Long termId) {
-        // Validate if books exist
-        List<BookSale> books = bookSaleRepository.findAllById(bookIds);
-        if (books.isEmpty() || books.size() != bookIds.size()) {
-            throw new NotFoundException("One or more books not found");
-        }
+        // Validate books
+        List<BookSale> books = validateBooks(bookIds);
 
-        // Validate if student exists
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new NotFoundException("Student not found"));
+        // Validate student and profile
+        Profile profile = validateStudentProfile(studentId);
 
-        // Get the student's profile
-        Profile profile = profileRepository.findByUser(student)
-                .orElseThrow(() -> new NotFoundException("Profile not found"));
+        // Validate academic year and term
+        AcademicSession academicYear = validateAcademicYear(academicYearId);
+        StudentTerm studentTerm = validateStudentTerm(termId);
 
-        // Get the academic year and term
-        AcademicSession academicYear = academicSessionRepository.findById(academicYearId)
-                .orElseThrow(() -> new NotFoundException("Academic year not found"));
+        // Calculate total amount
+        double totalAmountPaid = calculateTotalAmountPaid(books);
 
-        StudentTerm studentTerm = studentTermRepository.findById(termId)
-                .orElseThrow(() -> new NotFoundException("Term not found"));
-
-        // Call the payment service (You should replace this with actual payment processing)
-//        PaymentResponse paymentResponse = paymentService.processPayment(student, books);
-//        if (paymentResponse.getStatus() != PaymentStatus.SUCCESS) {
-//            throw new PaymentFailedException("Payment failed for student ID: " + studentId);
-//        }
-
-        // Calculate the total amount paid for all books
-        double totalAmountPaid = books.stream()
-                .mapToDouble(BookSale::getPrice)
-                .sum();
-
-        // Create a BookSaleAllocation entry and link multiple books to it
+        // Create and save book allocation
         BookSaleAllocation allocation = BookSaleAllocation.builder()
                 .paymentStatus(PaymentStatus.SUCCESS)
+                .academicYear(academicYear)
+                .studentTerm(studentTerm)
                 .amountPaid(totalAmountPaid)
                 .profile(profile)
-//                .paymentId(paymentResponse.getPaymentId())
+                .books(books)
                 .build();
 
-        // Add all books to the allocation (this assumes allocation has a setBooks() method)
-        allocation.setBooks(books);
-
-        // Save the allocation
+        // Save allocation (books will be saved automatically due to CascadeType.PERSIST)
         BookSaleAllocation savedAllocation = bookSaleAllocationRepository.save(allocation);
 
-        // Return the payment response along with allocation details
         return BookPaymentResponse.builder()
-//                .paymentId(savedAllocation.getPaymentId())
                 .totalAmountPaid(savedAllocation.getAmountPaid())
-//                .paymentStatus(savedAllocation.getPaymentStatus())
-                .books(books)  // Include all the bookIds in the response
+                .books(books)
                 .build();
     }
 
-
-    @Transactional
-    public BookSaleAllocation allocateBook(Long academicYearId, Long termId, Long bookAllocationId) {
-
-        // Validate if the BookAllocation exists and retrieve it
-        BookSaleAllocation bookAllocation = bookSaleAllocationRepository.findById(bookAllocationId)
-                .orElseThrow(() -> new NotFoundException("Book Allocation not found with ID: " + bookAllocationId));
-
-        // Get the books linked to the allocation
-        List<BookSale> books = bookAllocation.getBooks();
-        if (books.isEmpty()) {
-            throw new NotFoundException("No books found in the allocation");
-        }
-
-        // Get the academic year and term
-        AcademicSession academicSession = academicSessionRepository.findById(academicYearId)
-                .orElseThrow(() -> new NotFoundException("Academic year not found with ID: " + academicYearId));
-
-        StudentTerm studentTerm = studentTermRepository.findById(termId)
-                .orElseThrow(() -> new NotFoundException("Student term not found with ID: " + termId));
-
-        // Allocate books and check stock for each book
-        List<BookTracker> bookTrackers = new ArrayList<>();
-        for (BookSale book : books) {
-            // Check if the book is available for the selected academic year
-            BookTracker bookTracker = bookTrackerRepository.findByBookSaleAndAcademicYear(book, academicSession)
-                    .orElseGet(() -> bookTrackerRepository.save(
-                            BookTracker.builder()
-                                    .bookSale(book)
-                                    .academicYear(academicSession)
-                                    .bookRemaining(0)
-                                    .build()
-                    ));
-
-            // Check if enough books are available
-            if (bookTracker.getBookRemaining() >= book.getNumberOfCopies()) {
-                throw new NotFoundException("No books available for the selected academic year and book ID: " + book.getId());
-            }
-
-            // Update book tracker for each book
-            bookTracker.setBookRemaining(bookTracker.getBookRemaining() + 1);
-            bookTrackers.add(bookTracker);
-        }
-
-        // Save all the updated book trackers
-        bookTrackerRepository.saveAll(bookTrackers);
-
-        // Get the student's profile from the original allocation
-        Profile profile = bookAllocation.getProfile();
-
-        // Create a BookSaleAllocation and associate the books
-        BookSaleAllocation allocation = BookSaleAllocation.builder()
-                .paymentStatus(PaymentStatus.SUCCESS)
-                .profile(profile)
-//                .paymentId(bookAllocation.getPaymentId())  // Use bookPaymentId here
-                .books(books) // Link the books to this allocation
-                .build();
-
-        // Save the allocation and return it
-        return bookSaleAllocationRepository.save(allocation);
-    }
-    private double calculateTotalAmountPaid(List<BookSale> books) {
-        return books.stream()
-                .mapToDouble(BookSale::getPrice) // Assuming `BookSale` has a `getPrice` method
-                .sum();
-    }
 
 
     @Transactional
     public BookSaleAllocation allocateBook(Long bookId, Long academicYearId, Long termId, Long bookAllocationId) {
+        BookSaleAllocation bookAllocation = validateBookAllocation(bookAllocationId);
+        BookSale book = validateBook(bookId);
+        AcademicSession academicYear = validateAcademicYear(academicYearId);
+        StudentTerm studentTerm = validateStudentTerm(termId);
 
-        // Validate if the BookAllocation exists and retrieve it
-        BookSaleAllocation bookAllocation = bookSaleAllocationRepository.findById(bookAllocationId)
-                .orElseThrow(() -> new NotFoundException("Book Allocation not found with ID: " + bookAllocationId));
-
-        BookSale book = bookSaleRepository.findById(bookId)
-                .orElseThrow(() -> new NotFoundException("Book not found")); ///update thius method and remove student id
-
-
-        AcademicSession academicSession = academicSessionRepository.findById(academicYearId)
-                .orElseThrow(() -> new NotFoundException("Academic year not found with ID: " + academicYearId));
-
-        StudentTerm studentTerm = studentTermRepository.findById(termId)
-                .orElseThrow(() -> new NotFoundException("Student term not found with ID: " + termId));
-
-        Profile profile  = bookAllocation.getProfile();
-
-        BookTracker bookTracker = bookTrackerRepository.findByBookSaleAndAcademicYear(book, academicSession)
+        BookTracker bookTracker = bookTrackerRepository.findByBookSaleAndAcademicYear(book, academicYear)
                 .orElseGet(() -> bookTrackerRepository.save(
                         BookTracker.builder()
                                 .bookSale(book)
-                                .academicYear(academicSession)
+                                .academicYear(academicYear)
                                 .bookRemaining(0)
                                 .build()
                 ));
 
-        if (bookTracker.getBookRemaining() >= book.getNumberOfCopies()) {
-            throw new NotFoundException("No books available in this book id for the selected academic year");
+        if (bookTracker.getBookRemaining() < book.getNumberOfCopies()) {
+            throw new NotFoundException("Insufficient books available for this academic year");
         }
 
-        bookTracker.setBookRemaining(bookTracker.getBookRemaining() + 1);
+        bookTracker.setBookRemaining(bookTracker.getBookRemaining() - book.getNumberOfCopies());
         bookTrackerRepository.save(bookTracker);
 
-        BookSaleAllocation tracker = BookSaleAllocation.builder()
-//                .book(book)
-                .profile(profile)
+        BookSaleAllocation allocation = BookSaleAllocation.builder()
+                .profile(bookAllocation.getProfile())
+                .books(List.of(book))
                 .paymentStatus(PaymentStatus.SUCCESS)
                 .build();
 
-        return trackerRepository.save(tracker);
+        return bookSaleAllocationRepository.save(allocation);
     }
+
+    // Helper Methods
+    private List<BookSale> validateBooks(List<Long> bookIds) {
+        List<BookSale> books = bookSaleRepository.findAllById(bookIds);
+        if (books.isEmpty() || books.size() != bookIds.size()) {
+            throw new NotFoundException("One or more books not found");
+        }
+        return books;
+    }
+
+    private BookSale validateBook(Long bookId) {
+        return bookSaleRepository.findById(bookId)
+                .orElseThrow(() -> new NotFoundException("Book not found"));
+    }
+
+    private Profile validateStudentProfile(Long studentId) {
+        return profileRepository.findByUser(
+                userRepository.findById(studentId)
+                        .orElseThrow(() -> new NotFoundException("Student not found"))
+        ).orElseThrow(() -> new NotFoundException("Profile not found"));
+    }
+
+    private AcademicSession validateAcademicYear(Long academicYearId) {
+        return academicSessionRepository.findById(academicYearId)
+                .orElseThrow(() -> new NotFoundException("Academic year not found"));
+    }
+
+    private StudentTerm validateStudentTerm(Long termId) {
+        return studentTermRepository.findById(termId)
+                .orElseThrow(() -> new NotFoundException("Student term not found"));
+    }
+
+    private BookSaleAllocation validateBookAllocation(Long bookAllocationId) {
+        return bookSaleAllocationRepository.findById(bookAllocationId)
+                .orElseThrow(() -> new NotFoundException("Book Allocation not found"));
+    }
+
+    private double calculateTotalAmountPaid(List<BookSale> books) {
+        return Math.ceil(books.stream()
+                .mapToDouble(BookSale::getPrice)
+                .sum());
+    }
+
 }

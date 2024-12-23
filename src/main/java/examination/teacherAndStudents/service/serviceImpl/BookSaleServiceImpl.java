@@ -2,8 +2,9 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.dto.BookAssignmentRequest;
+import examination.teacherAndStudents.dto.BookSaleRequest;
+import examination.teacherAndStudents.dto.BookSaleResponse;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.BookSaleService;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,41 +25,54 @@ public class BookSaleServiceImpl implements BookSaleService {
     private final BookSaleRepository bookSaleRepository;
     private final ClassLevelRepository classLevelRepository;
     private final SubjectRepository subjectRepository;
-    private final ProfileRepository profileRepository;
-    private final BookSaleAllocationRepository bookSaleTrackerRepository;
-    private final PaymentService paymentService;
-    private final TransactionService transactionService;
-    private final AcademicSessionRepository academicSessionRepository;
-    private final TransactionRepository transactionRepository;
 
-    public List<BookSale> getAllBooks() {
-        return bookSaleRepository.findAll();
+
+    public List<BookSaleResponse> getAllBooks() {
+        return bookSaleRepository.findAll().stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
     }
-
-    public BookSale getBookById(Long id) {
-        return bookSaleRepository.findById(id)
+    public BookSaleResponse getBookById(Long id) {
+        BookSale bookSale = bookSaleRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Book not found"));
+        return convertToResponse(bookSale);
     }
 
     @Transactional
-    public BookSale createBookSale(String title, String author, String idNo, double price, Long classId, Long subjectId, int numberOfCopies) {
-        ClassLevel classLevel = classLevelRepository.findById(classId)
-                .orElseThrow(() -> new NotFoundException("Class level not found"));
+    @Override
+    public BookSaleResponse createBookSale(BookSaleRequest request) {
+        ClassLevel classLevel = classLevelRepository.findById(request.getClassId())
+                .orElseThrow(() -> new RuntimeException("Class level not found"));
 
-        Subject subject = subjectRepository.findById(subjectId)
-                .orElseThrow(() -> new NotFoundException("Subject not found"));
+        Subject subject = subjectRepository.findById(request.getSubjectId())
+                .orElseThrow(() -> new RuntimeException("Subject not found"));
 
         BookSale bookSale = BookSale.builder()
-                .title(title)
-                .author(author)
-                .idNo(idNo)
-                .numberOfCopies(numberOfCopies)
-                .price(price)
+                .title(request.getTitle())
+                .author(request.getAuthor())
+                .idNo(request.getIdNo())
+                .inStock(true)
+                .numberOfCopies(request.getNumberOfCopies())
+                .price(request.getPrice())
                 .classLevel(classLevel)
                 .subject(subject)
                 .build();
 
-        return bookSaleRepository.save(bookSale);
+        bookSale = bookSaleRepository.save(bookSale);
+
+        return convertToResponse(bookSale);
     }
 
+    private BookSaleResponse convertToResponse(BookSale bookSale) {
+        return BookSaleResponse.builder()
+                .id(bookSale.getId())
+                .title(bookSale.getTitle())
+                .author(bookSale.getAuthor())
+                .idNo(bookSale.getIdNo())
+                .price(bookSale.getPrice())
+                .numberOfCopies(bookSale.getNumberOfCopies())
+                .classLevelName(bookSale.getClassLevel().getClassName())
+                .subjectName(bookSale.getSubject().getName())
+                .build();
+    }
 }
