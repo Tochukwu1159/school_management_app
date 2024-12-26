@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,4 +32,8 @@ public class BusRoute {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
     // other fields, constructors, getters, setters
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
 }

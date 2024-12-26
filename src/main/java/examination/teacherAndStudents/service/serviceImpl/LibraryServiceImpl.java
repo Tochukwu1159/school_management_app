@@ -3,6 +3,7 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.BookRequest;
 import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.*;
@@ -45,11 +46,13 @@ public class LibraryServiceImpl implements LibraryService {
             if (admin == null) {
                 throw new CustomNotFoundException("Please login as an Admin");
             }
+            Optional<User> userDetails = userRepository.findByEmail(email);
             Book newBook = new Book();
             // Set the initial quantity available to the total quantity
             newBook.setQuantityAvailable(book.getQuantityAvailable());
             newBook.setRackNo(book.getRackNo());
             newBook.setAuthor(book.getAuthor());
+            newBook.setSchool(userDetails.get().getSchool());
             newBook.setTitle(book.getTitle());
             return bookRepository.save(newBook);
         } catch (Exception e) {

@@ -1,33 +1,38 @@
 package examination.teacherAndStudents.entity;
 
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import examination.teacherAndStudents.utils.ServiceType;
+import examination.teacherAndStudents.utils.SubscriptionType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
-import java.time.Year;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "academic_year")
-@Entity
 @Builder
-public class AcademicSession {
+@Entity
+@Table(name = "services_offered")
+public class ServiceOffered {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;
-    private LocalDate startDate;
-    private LocalDate endDate;
 
-    @JsonBackReference
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "school_id", nullable = false)
-    private School school;
+    private String name;
+
+
+
 
 }

@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,8 +28,6 @@ public class NoticeServiceImpl implements NoticeService {
 
     private final NoticeRepository noticeRepository;
     private final UserRepository userRepository;
-    private final NotificationRepository notificationRepository;
-    private final TransactionRepository transactionRepository;
     private final ModelMapper modelMapper;
 
     public NoticeServiceImpl(NoticeRepository noticeRepository, UserRepository userRepository,
@@ -37,8 +36,6 @@ public class NoticeServiceImpl implements NoticeService {
                              ModelMapper modelMapper) {
         this.noticeRepository = noticeRepository;
         this.userRepository = userRepository;
-        this.notificationRepository = notificationRepository;
-        this.transactionRepository = transactionRepository;
         this.modelMapper = modelMapper;
     }
 
@@ -84,9 +81,12 @@ public class NoticeServiceImpl implements NoticeService {
             if (admin == null) {
                 throw new AuthenticationFailedException("Please login as an Admin");
             }
+
+            Optional<User> userDetails = userRepository.findByEmail(email);
             Notice newNotice = new Notice();
             newNotice.setTitle(noticeRequest.getTitle());
             newNotice.setEventDate(LocalDate.now());
+            newNotice.setSchool(userDetails.get().getSchool());
             newNotice.setEventDescription(noticeRequest.getEventDescription());
             return modelMapper.map(noticeRepository.save(newNotice), NoticeResponse.class);
         } catch (Exception e) {

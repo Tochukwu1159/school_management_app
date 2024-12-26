@@ -48,7 +48,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(
                                         "/api/v1/users/create",
+                                        "/api/v1/services/create",
                                         "/api/v1/users/login",
+                                        "/api/v1/schools/onboard",
+                                        "/api/v1/schools/**",
                                         "/api/v1/users/verify/**",
                                         "api/v1/users/resend-verify",
                                         "/api/v1/users/forgot-password",

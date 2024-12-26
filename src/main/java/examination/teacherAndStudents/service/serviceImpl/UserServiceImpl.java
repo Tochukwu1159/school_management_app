@@ -36,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -64,9 +65,14 @@ public class UserServiceImpl implements UserService {
 
     private  final  AccountUtils accountUtils;
     private final SubjectRepository subjectRepository;
+    private final SchoolRepository schoolRepository;
 
     @Override
     public UserResponse createStudent(UserRequestDto userRequest) throws MessagingException {
+
+        School school = schoolRepository.findById(userRequest.getSchoolId())
+                .orElseThrow(() -> new CustomNotFoundException("Please login as a student"));
+
         if (userRepository.existsByEmail(userRequest.getEmail())) {
 
            throw new UserAlreadyExistException("Email already exist");
@@ -103,6 +109,7 @@ public class UserServiceImpl implements UserService {
                 .email(userRequest.getEmail())
                 .roles(Roles.STUDENT)
                 .isVerified(true)
+                .school(school)
                 .password(passwordEncoder.encode(userRequest.getPassword()))
                 .roles(Roles.STUDENT)
 //                .profilePicture(imageUrl)
@@ -174,6 +181,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse createAdmin(UserRequestDto userRequest) throws MessagingException {
+
+        School school = schoolRepository.findById(userRequest.getSchoolId())
+                .orElseThrow(() -> new CustomNotFoundException("School not found or school id not exist"));
+
         if (userRepository.existsByEmail(userRequest.getEmail())) {
 
             throw new UserAlreadyExistException("User with email already exist");
@@ -204,6 +215,7 @@ public class UserServiceImpl implements UserService {
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
                 .email(userRequest.getEmail())
+                .school(school)
                 .password(passwordEncoder.encode(userRequest.getPassword()))
                 .isVerified(true)
                 .roles(Roles.ADMIN)
@@ -255,6 +267,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse createTeacher(UserRequestDto userRequest) throws MessagingException {
 
+        School school = schoolRepository.findById(userRequest.getSchoolId())
+                .orElseThrow(() -> new CustomNotFoundException("Please login as a student"));
+
         // Check if ClassFormTeacherId is provided before fetching ClassBlock
         if (userRequest.getClassFormTeacherId() != null) {
             ClassBlock classBlockAssigned = classBlockRepository.findById(userRequest.getClassFormTeacherId())
@@ -292,6 +307,7 @@ public class UserServiceImpl implements UserService {
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
                 .email(userRequest.getEmail())
+                .school(school)
                 .password(passwordEncoder.encode(userRequest.getPassword()))
                 .isVerified(true)
                 .roles(Roles.TEACHER)
@@ -368,12 +384,16 @@ public class UserServiceImpl implements UserService {
             if (!authenticate.isAuthenticated()) {
                 throw new UserPasswordMismatchException("Wrong email or password");
             }
-
-//            UserDetails userDetails = loadUserByUsername(loginRequest.getEmail());
             Optional<User> userDetails = userRepository.findByEmail(loginRequest.getEmail());
 
+            // Check if the subscription has expired
+            School school = userDetails.get().getSchool();
+            if (school != null && !school.isSubscriptionValid()) {
+                throw new SubscriptionExpiredException("Your subscription has expired. Please renew your subscription.");
+            }
+
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail());
+            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool().getSubscriptionKey());
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -398,11 +418,16 @@ public class UserServiceImpl implements UserService {
                 throw new UserPasswordMismatchException("Wrong email or password");
             }
 
-//            UserDetails userDetails = loadUserByUsername(loginRequest.getEmail());
             Optional<User> userDetails = userRepository.findByEmail(loginRequest.getEmail());
 
+            // Check if the subscription has expired
+            School school = userDetails.get().getSchool();
+            if (school != null && !school.isSubscriptionValid()) {
+                throw new SubscriptionExpiredException("Your subscription has expired. Please renew your subscription.");
+            }
+
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail());
+            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool().getSubscriptionKey());
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -426,11 +451,17 @@ public class UserServiceImpl implements UserService {
                 throw new UserPasswordMismatchException("Wrong email or password");
             }
 
-//            UserDetails userDetails = loadUserByUsername(loginRequest.getEmail());
+
             Optional<User> userDetails = userRepository.findByEmail(loginRequest.getEmail());
 
+            // Check if the subscription has expired
+            School school = userDetails.get().getSchool();
+            if (school != null && !school.isSubscriptionValid()) {
+                throw new SubscriptionExpiredException("Your subscription has expired. Please renew your subscription.");
+            }
+
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail());
+            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool().getSubscriptionKey());
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -653,15 +684,16 @@ public class UserServiceImpl implements UserService {
 
         Optional<User> userOptional = userRepository.findByEmail(forgotPasswordRequest.getEmail());
 
-        if (!userOptional.isPresent()) {
+        if (userOptional.isEmpty()) {
             throw new CustomNotFoundException("User with provided Email not found");
         }
 
         User user = userOptional.get();
         UserDetails userDetails = customUserDetailsService.loadUserByUsername(forgotPasswordRequest.getEmail());
 
+
         // Generate a new token
-        String token = new JwtUtil().generateToken(user.getEmail());
+        String token = new JwtUtil().generateToken(user.getEmail(), user.getSchool().getSubscriptionKey());
 
         // Check if the user already has a PasswordResetToken
         PasswordResetToken existingToken = passwordResetTokenRepository.findByUser(user);
@@ -923,8 +955,8 @@ public class UserServiceImpl implements UserService {
     }
 
     private boolean isSubscriptionExpired(School school) {
-        LocalDate expiryDate = school.getSubscriptionExpiryDate();
-        return expiryDate != null && expiryDate.isBefore(LocalDate.now());
+        LocalDateTime expiryDate = school.getSubscriptionExpiryDate();
+        return expiryDate != null && expiryDate.isBefore(LocalDateTime.now());
     }
 
 

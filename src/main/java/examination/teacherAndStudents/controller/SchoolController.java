@@ -2,8 +2,11 @@ package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.SchoolRequest;
 import examination.teacherAndStudents.dto.SchoolResponse;
+import examination.teacherAndStudents.dto.SubscriptionRequest;
 import examination.teacherAndStudents.entity.School;
+import examination.teacherAndStudents.entity.ServiceOffered;
 import examination.teacherAndStudents.service.SchoolService;
+import examination.teacherAndStudents.utils.ServiceType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -12,9 +15,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 @RestController
-@RequestMapping("/schools")
+@RequestMapping("/api/v1/schools")
 public class SchoolController {
 
     @Autowired
@@ -27,24 +31,18 @@ public class SchoolController {
     }
 
     @GetMapping("/{id}/services")
-    public ResponseEntity<List<String>> getSelectedServices(@PathVariable Long id) {
-        List<String> selectedServices = schoolService.getSelectedServices(id);
+    public ResponseEntity<List<ServiceOffered>> getSelectedServices(@PathVariable Long id) {
+        List<ServiceOffered> selectedServices = schoolService.getSelectedServices(id);
         return ResponseEntity.ok(selectedServices);
     }
 
     @PutMapping("/{id}/subscribe")
     public ResponseEntity<School> subscribeSchool(
             @PathVariable Long id,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate newExpiryDate) {
-        return ResponseEntity.ok(schoolService.subscribeSchool(id, newExpiryDate));
+            @RequestBody SubscriptionRequest subscriptionRequest) throws Exception {
+        return ResponseEntity.ok(schoolService.subscribeSchool(id, subscriptionRequest));
     }
 
-//    @PutMapping("/{id}/renew-subscription")
-//    public ResponseEntity<School> renewSubscription(
-//            @PathVariable Long id,
-//            @RequestParam int additionalDays) {
-//        return ResponseEntity.ok(schoolService.renewSubscription(id, additionalDays));
-//    }
 
     @GetMapping("/{id}/validate-subscription")
     public ResponseEntity<Boolean> validateSubscription(@PathVariable Long id) {

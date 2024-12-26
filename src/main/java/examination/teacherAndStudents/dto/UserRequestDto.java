@@ -31,6 +31,8 @@ public class UserRequestDto {
     private LocalDate admissionDate;
     private String studentGuardianOccupation;
 
+    private Long schoolId;
+
     @NotNull(message = "Password is required")
     @NotEmpty(message = "Password cannot be empty")
     private  String password;

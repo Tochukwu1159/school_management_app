@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
@@ -30,4 +31,5 @@ public class StudentTerm {
     @ManyToOne
     @JoinColumn(name = "academic_session_id", nullable = false)
     private AcademicSession academicSession;
+
 }

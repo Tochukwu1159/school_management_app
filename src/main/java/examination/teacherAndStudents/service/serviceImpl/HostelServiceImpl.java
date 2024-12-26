@@ -26,12 +26,6 @@ public class HostelServiceImpl implements HostelService {
 
     @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private WalletRepository walletRepository;
-    @Autowired
-    private TransactionRepository transactionRepository;
-    @Autowired
-    private NotificationRepository notificationRepository;
 
     @Override
     public List<Hostel> getAllHostels() {
@@ -110,6 +104,7 @@ public class HostelServiceImpl implements HostelService {
                     Hostel newHostel = new Hostel();
                     newHostel.setNumberOfBed(hostel.getNumberOfBed());
                     newHostel.setHostelName(hostel.getHostelName());
+                    newHostel.setSchool(user.getSchool());
                     newHostel.setCostPerBed(hostel.getCostPerBed());
                     newHostel.setAvailabilityStatus(AvailabilityStatus.AVAILABLE);
 

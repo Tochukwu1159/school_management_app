@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.utils.Roles;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -37,6 +38,11 @@ public class Notice {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
 
 
 

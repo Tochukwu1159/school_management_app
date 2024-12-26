@@ -1,18 +1,25 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.AcademicSessionRequest;
 import examination.teacherAndStudents.dto.AcademicSessionResponse;
 import examination.teacherAndStudents.entity.AcademicSession;
+import examination.teacherAndStudents.entity.School;
 import examination.teacherAndStudents.entity.StudentTerm;
+import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.StudentTermRepository;
+import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.AcademicSessionService;
+import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,12 +28,25 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
 
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
+    private final UserRepository userRepository;
 
     public AcademicSessionResponse  createAcademicSession(AcademicSessionRequest request) {
+
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+        if (admin == null) {
+            throw new AuthenticationFailedException("Please login as an Admin");
+        }
+
+        Optional<User> userDetails = userRepository.findByEmail(email);
+
+        // Check if the subscription has expired
+        School school = userDetails.get().getSchool();
         AcademicSession session = AcademicSession.builder()
                 .name(request.getName())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
+                .school(userDetails.get().getSchool())
                 .build();
         AcademicSession savedSession = academicSessionRepository.save(session);
         createStudentTerms(request,savedSession);

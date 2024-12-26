@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.utils.AvailabilityStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -34,6 +35,11 @@ public class Hostel {
     @Enumerated(EnumType.STRING)
     @Column(name = "availability_status", nullable = false)
     private AvailabilityStatus availabilityStatus;
+
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

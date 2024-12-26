@@ -1,10 +1,15 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.RouteRequest;
 import examination.teacherAndStudents.dto.RouteResponse;
 import examination.teacherAndStudents.entity.BusRoute;
+import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.repository.BusRouteRepository;
+import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.BusRouteService;
+import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,13 +17,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class BusRouteServiceImpl implements BusRouteService {
     private final BusRouteRepository busRouteRepository;
+    private final UserRepository userRepository;
 
 
-        public Page<RouteResponse> getAllRoutes(int pageNo, int pageSize, String sortBy) {
+    public Page<RouteResponse> getAllRoutes(int pageNo, int pageSize, String sortBy) {
 
         try {
             Pageable paging = PageRequest.of(pageNo, pageSize, Sort.by(sortBy).ascending());
@@ -43,10 +51,18 @@ public class BusRouteServiceImpl implements BusRouteService {
 
     public RouteResponse createRoute(RouteRequest routeRequest) {
         try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+            if (admin == null) {
+                throw new AuthenticationFailedException("Please login as an Admin");
+            }
+
+            Optional<User> userDetails = userRepository.findByEmail(email);
             BusRoute newRoute = new BusRoute();
             newRoute.setRouteName(routeRequest.getRouteName());
             newRoute.setStartPoint(routeRequest.getStartPoint());
             newRoute.setEndPoint(routeRequest.getEndPoint());
+            newRoute.setSchool(userDetails.get().getSchool());
             BusRoute savedRoute = busRouteRepository.save(newRoute);
             return mapToRouteResponse(savedRoute);
         } catch (Exception e) {

@@ -4,6 +4,7 @@ import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.SubjectScheduleRequest;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.entity.StudentTerm;
+import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
@@ -55,6 +56,8 @@ public class TimetableServiceImpl implements TimetableService {
             if (admin == null) {
                 throw new CustomNotFoundException("Please login as an Admin");
             }
+
+            Optional<User> userDetails = userRepository.findByEmail(email);
             // Find the teacher by ID
             User teacher = userRepository.findByIdAndRoles(teacherId, Roles.TEACHER);
             if (teacher == null) {
@@ -87,6 +90,7 @@ public class TimetableServiceImpl implements TimetableService {
             timetable.setClassBlock(classBlock.get());
             timetable.setDayOfWeek(dayOfWeek);
             timetable.setTerm(studentTerm.get());
+            timetable.setSchool(userDetails.get().getSchool());
             timetable.setAcademicYear(academicYear);
             timetable.setTimetableType(timetableType); // Set the timetable type
 

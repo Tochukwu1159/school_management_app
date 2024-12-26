@@ -6,6 +6,7 @@ import examination.teacherAndStudents.dto.SubjectResponse;
 import examination.teacherAndStudents.entity.ClassBlock;
 import examination.teacherAndStudents.entity.Subject;
 import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.objectMapper.SubjectMapper;
@@ -19,6 +20,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,8 +42,11 @@ public class SubjectServiceImpl implements SubjectService {
                 throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
             }
 
+            Optional<User> userDetails = userRepository.findByEmail(email);
+
             Subject subject = subjectMapper.mapToSubject(subjectRequest);
             subject.setName(subjectRequest.getName());
+            subject.setSchool(userDetails.get().getSchool());
             subjectRepository.save(subject);
             return subjectMapper.mapToSubjectResponse(subject);
 

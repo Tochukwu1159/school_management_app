@@ -1,9 +1,6 @@
-package examination.teacherAndStudents.service.serviceImpl;
+package examination.teacherAndStudents.service;
 
 import examination.teacherAndStudents.entity.StudyMaterial;
-import examination.teacherAndStudents.repository.StudyMaterialRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 

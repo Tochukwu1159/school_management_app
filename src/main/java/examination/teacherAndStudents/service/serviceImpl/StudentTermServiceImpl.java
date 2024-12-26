@@ -1,17 +1,23 @@
 
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.StudentTermRequest;
 import examination.teacherAndStudents.dto.StudentTermResponse;
 import examination.teacherAndStudents.entity.AcademicSession;
 import examination.teacherAndStudents.entity.StudentTerm;
+import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.StudentTermRepository;
+import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.StudentTermService;
+import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,6 +26,7 @@ public class StudentTermServiceImpl implements StudentTermService {
 
     private final StudentTermRepository studentTermRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final UserRepository userRepository;
 
 
     public StudentTermResponse createStudentTerm(StudentTermRequest request) {

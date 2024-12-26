@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class BlogServiceImpl implements BlogService {
@@ -77,8 +78,10 @@ public class BlogServiceImpl implements BlogService {
             if (admin == null) {
                 throw new AuthenticationFailedException("Please login as an Admin");
             }
+            Optional<User> userDetails = userRepository.findByEmail(email);
             Blog newBlog = new Blog();
             newBlog.setContent(blogPost.getContent());
+            newBlog.setSchool(userDetails.get().getSchool());
             newBlog.setTitle(blogPost.getTitle());
             return blogRepository.save(newBlog);
         } catch (Exception e) {

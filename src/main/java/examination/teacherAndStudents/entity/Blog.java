@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -33,6 +34,11 @@ public class Blog {
     @NotNull
     @Column(columnDefinition = "TEXT")
     private String content;
+
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

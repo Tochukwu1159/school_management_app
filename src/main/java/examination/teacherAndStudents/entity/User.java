@@ -37,6 +37,11 @@ public class User {
     private String middleName;
     private Boolean deactivate = false;
 
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
     @Column(unique = true, nullable = false)
     private String email;
 

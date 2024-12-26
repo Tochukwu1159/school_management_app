@@ -1,24 +1,31 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
-import examination.teacherAndStudents.dto.FundWalletRequest;
-import examination.teacherAndStudents.dto.PayStackTransactionRequest;
-import examination.teacherAndStudents.dto.SchoolRequest;
-import examination.teacherAndStudents.dto.SchoolResponse;
+import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.School;
+import examination.teacherAndStudents.entity.ServiceOffered;
+import examination.teacherAndStudents.entity.SubscriptionHistory;
 import examination.teacherAndStudents.error_handler.PaymentFailedException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.error_handler.SubscriptionExpiredException;
+import examination.teacherAndStudents.error_handler.UserAlreadyExistException;
 import examination.teacherAndStudents.repository.SchoolRepository;
+import examination.teacherAndStudents.repository.ServiceOfferedRepository;
+import examination.teacherAndStudents.repository.SubscriptionHistoryRepository;
 import examination.teacherAndStudents.service.PayStackPaymentService;
 import examination.teacherAndStudents.service.SchoolService;
+import examination.teacherAndStudents.utils.ServiceType;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,15 +34,48 @@ public class SchoolServiceImpl implements SchoolService {
     private final SchoolRepository schoolRepository;
     private final PayStackPaymentService paymentService;
     private final ModelMapper modelMapper;
+    private final SubscriptionHistoryRepository subscriptionHistoryRepository;
+    private final ServiceOfferedRepository serviceOfferedRepository;
 
     public SchoolResponse onboardSchool(SchoolRequest schoolRequest) {
         try {
-            School newSchool = schoolRepository.save(modelMapper.map(schoolRequest, School.class));
-            return modelMapper.map(newSchool, SchoolResponse.class);
+            String generatedSubscriptionKey = UUID.randomUUID().toString();
+
+            if (schoolRepository.existsByEmail(schoolRequest.getEmail())) {
+
+                throw new UserAlreadyExistException("Email already exist");
+
+            }
+
+            if (schoolRepository.existsByPhoneNumber(schoolRequest.getPhoneNumber())) {
+
+                throw new UserAlreadyExistException("Phone Number already exist");
+
+            }
+            if (schoolRepository.existsBySchoolName(schoolRequest.getSchoolName())) {
+
+                throw new UserAlreadyExistException("School Name already exist");
+
+            }
+
+            // Map SchoolRequest to School
+            School newSchool = modelMapper.map(schoolRequest, School.class);
+            newSchool.setIsActive(false);
+            newSchool.setSubscriptionKey(generatedSubscriptionKey);
+
+            // Fetch and associate selected services
+            List<ServiceOffered> services = serviceOfferedRepository.findAllById(schoolRequest.getSelectedServices());
+            newSchool.setSelectedServices(services);
+
+            // Save the school entity
+            School savedSchool = schoolRepository.save(newSchool);
+
+            return modelMapper.map(savedSchool, SchoolResponse.class);
         } catch (Exception e) {
             throw new RuntimeException("Error onboarding school: " + e.getMessage(), e);
         }
     }
+
 
     public void accessibleService(Long schoolId, String serviceName) {
         try {
@@ -46,9 +86,12 @@ public class SchoolServiceImpl implements SchoolService {
                 throw new SubscriptionExpiredException("Subscription expired");
             }
 
-            if (!school.getSelectedServices().contains(serviceName)) {
+            boolean serviceSubscribed = school.getSelectedServices().stream()
+                    .anyMatch(service -> service.getName().equals(serviceName));
+            if (!serviceSubscribed) {
                 throw new SubscriptionExpiredException("Service not subscribed");
             }
+
             System.out.println("Access granted for " + serviceName + " service.");
         } catch (ResourceNotFoundException | SubscriptionExpiredException e) {
             throw e;
@@ -56,20 +99,80 @@ public class SchoolServiceImpl implements SchoolService {
             throw new RuntimeException("Error accessing service: " + e.getMessage(), e);
         }
     }
-
-    public School subscribeSchool(Long schoolId, LocalDate newExpiryDate) {
+    public School subscribeSchool(Long schoolId, SubscriptionRequest subscriptionRequest) {
         try {
+            // Find the school by ID
             School school = schoolRepository.findById(schoolId)
                     .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
 
-            school.setSubscriptionExpiryDate(newExpiryDate);
-            school.setIsActive(newExpiryDate.isAfter(LocalDate.now()));
-            schoolRepository.save(school);
-            return school;
+            int amountInKobo;
+            try {
+                amountInKobo = subscriptionRequest.getAmount() * 100;
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid amount format", e);
+            }
+
+            String email = school.getEmail();
+
+
+            PayStackTransactionRequest payStackTransactionRequest = PayStackTransactionRequest.builder()
+                    .email(email)
+                    .amount(new BigDecimal(amountInKobo))
+                    .build();
+
+            // Initialize payment transaction
+//            boolean paymentSuccessful = paymentService.initTransaction(payStackTransactionRequest).isStatus();
+            boolean paymentSuccessful = true;
+
+            if (paymentSuccessful) {
+                // Get the current expiry date or default to now if no active subscription
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime currentExpiryDate = school.getSubscriptionExpiryDate() != null && school.getSubscriptionExpiryDate().isAfter(now)
+                        ? school.getSubscriptionExpiryDate()
+                        : now;
+
+                // Calculate the new expiry date based on the subscription type
+                LocalDateTime newExpiryDate;
+                switch (subscriptionRequest.getSubscriptionType()) {
+                    case MONTHLY:
+                        newExpiryDate = currentExpiryDate.plusDays(30);
+                        break;
+                    case YEARLY:
+                        newExpiryDate = currentExpiryDate.plusYears(1);
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Unsupported subscription type: " + subscriptionRequest.getSubscriptionType());
+                }
+
+                SubscriptionHistory subscriptionHistory = SubscriptionHistory.builder()
+                        .school(school)
+                        .subscriptionType(subscriptionRequest.getSubscriptionType())
+                        .startDate(currentExpiryDate.toLocalDate())
+                        .endDate(newExpiryDate.toLocalDate())
+                        .amountPaid(new BigDecimal(subscriptionRequest.getAmount()))
+//                        .paymentReference(payStackTransactionRequest.getPaymentReference()) // Assume you get this from the payment response
+                        .build();
+                subscriptionHistoryRepository.save(subscriptionHistory);
+
+                // Update subscription details
+                school.setSubscriptionExpiryDate(newExpiryDate);
+                school.setIsActive(newExpiryDate.isAfter(now)); // Check if the subscription is valid
+                school.setSubscriptionType(subscriptionRequest.getSubscriptionType());
+                schoolRepository.save(school);
+
+                return school;
+            } else {
+                throw new PaymentFailedException("Subscription payment failed");
+            }
+        } catch (ResourceNotFoundException e) {
+            throw e; // Rethrow known exceptions to avoid wrapping them unnecessarily
+        } catch (IllegalArgumentException e) {
+            throw e; // Handle input errors directly
         } catch (Exception e) {
-            throw new RuntimeException("Error subscribing school: " + e.getMessage(), e);
+            throw new RuntimeException("Error renewing subscription: " + e.getMessage(), e);
         }
     }
+
 
     public School findBySubscriptionKey(String subscriptionKey) {
         try {
@@ -79,7 +182,7 @@ public class SchoolServiceImpl implements SchoolService {
         }
     }
 
-    public List<String> getSelectedServices(Long schoolId) {
+    public List<ServiceOffered> getSelectedServices(Long schoolId) {
         try {
             School school = schoolRepository.findById(schoolId)
                     .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
@@ -88,6 +191,26 @@ public class SchoolServiceImpl implements SchoolService {
             throw new RuntimeException("Error fetching selected services: " + e.getMessage(), e);
         }
     }
+
+    public BigDecimal getAmountToSubscribe(Long schoolId) {
+       School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+        long numberOfUsers = school.getUsers().size();
+        return BigDecimal.valueOf(numberOfUsers * 2000);
+    }
+
+    public boolean canAccessService(Long schoolId, Long serviceId) {
+
+        ServiceOffered serviceOffered = serviceOfferedRepository.findById(serviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Service not found with ID: " + serviceId));
+
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+
+        return school.getSelectedServices().stream()
+                .anyMatch(service -> service.getName().equalsIgnoreCase(serviceOffered.getName()));
+    }
+
 
     public void deactivateExpiredSubscriptions() {
         try {
@@ -113,37 +236,6 @@ public class SchoolServiceImpl implements SchoolService {
             return true;
         } catch (Exception e) {
             throw new RuntimeException("Error validating subscription key: " + e.getMessage(), e);
-        }
-    }
-
-    public void renewSubscription(Long schoolId, FundWalletRequest fundWalletRequest) {
-        try {
-            School school = schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
-
-            int amountInKobo = Integer.parseInt(fundWalletRequest.getAmount()) * 100;
-
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-
-            PayStackTransactionRequest payStackTransactionRequest = PayStackTransactionRequest.builder()
-                    .email(email)
-                    .amount(new BigDecimal(amountInKobo))
-                    .build();
-
-            boolean paymentSuccessful = paymentService.initTransaction(payStackTransactionRequest).isStatus();
-
-            if (paymentSuccessful) {
-                LocalDate newExpiryDate = LocalDate.now().plusMonths(1);
-                school.setSubscriptionExpiryDate(newExpiryDate);
-                school.setIsActive(true);
-                schoolRepository.save(school);
-            } else {
-                throw new PaymentFailedException("Subscription payment failed");
-            }
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid amount format");
-        } catch (Exception e) {
-            throw new RuntimeException("Error renewing subscription: " + e.getMessage(), e);
         }
     }
 

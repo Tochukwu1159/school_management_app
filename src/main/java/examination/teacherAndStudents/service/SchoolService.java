@@ -3,10 +3,15 @@ package examination.teacherAndStudents.service;
 import examination.teacherAndStudents.dto.FundWalletRequest;
 import examination.teacherAndStudents.dto.SchoolRequest;
 import examination.teacherAndStudents.dto.SchoolResponse;
+import examination.teacherAndStudents.dto.SubscriptionRequest;
 import examination.teacherAndStudents.entity.School;
+import examination.teacherAndStudents.entity.ServiceOffered;
+import examination.teacherAndStudents.utils.ServiceType;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 public interface SchoolService {
     /**
@@ -18,6 +23,10 @@ public interface SchoolService {
      */
     SchoolResponse onboardSchool(SchoolRequest school);
 
+    BigDecimal getAmountToSubscribe(Long schoolId);
+
+    boolean canAccessService(Long schoolId, Long serviceId);
+
     /**
      * Retrieves the selected services for a school.
      *
@@ -25,7 +34,7 @@ public interface SchoolService {
      * @return a list of selected services.
      * @throws RuntimeException if an error occurs or the school is not found.
      */
-    List<String> getSelectedServices(Long schoolId);
+    List<ServiceOffered> getSelectedServices(Long schoolId);
 
     /**
      * Checks if a school can access a specific service.
@@ -55,12 +64,11 @@ public interface SchoolService {
     /**
      * Subscribes a school to a new expiry date.
      *
-     * @param schoolId      the school ID.
-     * @param newExpiryDate the new subscription expiry date.
+     * @param schoolId the school ID.
      * @return the updated school.
      * @throws RuntimeException if an error occurs or the school is not found.
      */
-    School subscribeSchool(Long schoolId, LocalDate newExpiryDate);
+    School subscribeSchool(Long schoolId, SubscriptionRequest subscriptionRequest) throws Exception;
 
     /**
      * Finds a school by its subscription key.
@@ -70,13 +78,4 @@ public interface SchoolService {
      * @throws RuntimeException if an error occurs or the school is not found.
      */
     School findBySubscriptionKey(String subscriptionKey);
-
-    /**
-     * Renews the subscription for a school.
-     *
-     * @param schoolId          the school ID.
-     * @param fundWalletRequest the wallet funding request details.
-     * @throws RuntimeException if an error occurs during the subscription renewal.
-     */
-    void renewSubscription(Long schoolId, FundWalletRequest fundWalletRequest);
 }

@@ -56,6 +56,7 @@ public class DuesServiceImpl implements DuesService {
         if (admin == null) {
             throw new AuthenticationFailedException("Please login as an Admin");
         }
+        Optional<User> userDetails = userRepository.findByEmail(email);
         Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(duesRequest.getStudentTerm());
         Optional<examination.teacherAndStudents.entity.AcademicSession> academicSession = academicSessionRepository.findById(duesRequest.getAcademicYear());
 
@@ -67,6 +68,7 @@ public class DuesServiceImpl implements DuesService {
         studentDues.setStudentTerm(studentTerm.get());
         studentDues.setPurpose(duesRequest.getPurpose());
         studentDues.setAmount(duesRequest.getAmount());
+        studentDues.setSchool(userDetails.get().getSchool());
         studentDues.setAcademicYear(academicSession.get());
         return duesRepository.save(studentDues);
     }

@@ -8,7 +8,7 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 import examination.teacherAndStudents.entity.StudyMaterial;
-import examination.teacherAndStudents.service.serviceImpl.StudyMaterialService;
+import examination.teacherAndStudents.service.StudyMaterialService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;

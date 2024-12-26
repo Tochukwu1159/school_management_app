@@ -53,6 +53,8 @@ public class TransportServiceImpl implements TransportService {
             if (admin == null) {
                 throw new CustomNotFoundException("Please login as an Admin");
             }
+
+            Optional<User> userDetails = userRepository.findByEmail(email);
             Optional<BusRoute> busRoute = busRouteRepository.findById(transportRequest.getBusRouteId());
 
             Optional<Profile> driver = profileRepository.findById(transportRequest.getDriverId());
@@ -64,6 +66,7 @@ public class TransportServiceImpl implements TransportService {
             transport.setCapacity(transportRequest.getCapacity());
             transport.setDriver(driver.get());
             transport.setLicenceNumber(transportRequest.getLicenceNumber());
+            transport.setSchool(userDetails.get().getSchool());
             transport.setBusRoute(busRoute.get());
             transport = transportRepository.save(transport);
 

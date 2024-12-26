@@ -81,12 +81,15 @@ public class ClassLevelServiceImpl implements ClassLevelService {
             if (admin == null) {
                 throw new AuthenticationFailedException("Please login as an Admin");
             }
+
+            Optional<User> userDetails = userRepository.findByEmail(email);
             Optional<AcademicSession> academicSession = academicSessionRepository.findById(classLevel.getAcademicSessionId());
 
 
             ClassLevel newClass = new ClassLevel();
             newClass.setClassName(classLevel.getClassName());
             newClass.setAcademicYear(academicSession.get());
+            newClass.setSchool(userDetails.get().getSchool());
             return classLevelRepository.save(newClass);
 
         } catch (Exception e) {

@@ -1,4 +1,5 @@
 package examination.teacherAndStudents.entity;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.utils.DayOfWeek;
 import examination.teacherAndStudents.utils.TimetableType;
 import jakarta.persistence.*;
@@ -61,6 +62,11 @@ public class Timetable {
 
     @OneToMany(mappedBy = "timetable", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SubjectSchedule> subjectSchedules;
+
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
 
 
     // Getters and setters
