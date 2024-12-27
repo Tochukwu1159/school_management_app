@@ -82,31 +82,6 @@ public class StaffServiceImpl implements StaffService {
         }
     }
 
-    public StaffResponse deactivateStaff(String uniqueRegistrationNumber) {
-        try {
-            // Step 1: Find the profile using uniqueRegistrationNumber
-            Optional<Profile> optionalProfile = profileRepository.findByUniqueRegistrationNumber(uniqueRegistrationNumber);
-            if (optionalProfile.isPresent()) {
-               Profile profile = optionalProfile.get();
-                User user = profile.getUser();
-                if (user != null) {
-                    user.setDeactivate(true);
-                    userRepository.save(user);
-                    return staffMapper.mapToStaffResponse(user);
-                } else {
-                    throw new EntityNotFoundException("User not found for profile with registration number: " + uniqueRegistrationNumber);
-                }
-            } else {
-                throw new EntityNotFoundException("Profile not found with registration number: " + uniqueRegistrationNumber);
-            }
-
-        } catch (EntityNotFoundException e) {
-            throw e; // Re-throw the EntityNotFoundException as it is, so it's handled appropriately elsewhere
-        } catch (Exception e) {
-            throw new CustomInternalServerException("Error deactivating staff with registration number " + uniqueRegistrationNumber + ": " + e.getMessage());
-        }
-    }
-
 
     private  User mapToStaff(StaffRequest staffRequest){
         User staff = new User();
@@ -121,7 +96,6 @@ public class StaffServiceImpl implements StaffService {
 
     private  Profile mapToProfile(StaffRequest staffRequest){
         Profile staffProfile = new Profile();
-        staffProfile.setAge(staffRequest.getAge());
         staffProfile.setAddress(staffRequest.getAddress());
         staffProfile.setGender(staffProfile.getGender());
         staffProfile.setAcademicQualification(staffProfile.getAcademicQualification());

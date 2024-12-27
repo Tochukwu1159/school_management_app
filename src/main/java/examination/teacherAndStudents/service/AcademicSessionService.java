@@ -11,4 +11,5 @@ public interface AcademicSessionService {
     AcademicSessionResponse getAcademicSessionById(Long id);
     List<AcademicSessionResponse> getAllAcademicSessions();
     void deleteAcademicSession(Long id);
+    void graduateStudentsForSession(Long academicSessionId);
 }

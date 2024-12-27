@@ -89,11 +89,6 @@ public class UserController {
         return userService.resetPassword(passwordResetRequest, token);
     }
 
-    @PostMapping("/deactivate/{uniqueRegistrationNumber}")
-    public User deactivateStudent(@PathVariable String uniqueRegistrationNumber) {
-        return userService.deactivateStudent(uniqueRegistrationNumber);
-
-    }
 
 
     @PostMapping("/update")

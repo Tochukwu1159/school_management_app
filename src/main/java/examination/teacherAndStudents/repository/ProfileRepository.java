@@ -43,4 +43,6 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     Page<UserProfileResponse> findProfilesByRoleAndStatus(@Param("role") Roles role,
                                                           @Param("status") ProfileStatus status,
                                                           Pageable pageable);
+
+    List<Profile> findAllByClassBlockClassLevelClassNameAndProfileStatus(String className, ProfileStatus profileStatus);
 }

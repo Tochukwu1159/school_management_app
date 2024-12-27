@@ -4,6 +4,7 @@ public enum ProfileStatus {
     ACTIVE,
     SUSPENDED,
     FIRED,
+    EXPELLED,
     GRADUATED,
     ON_LEAVE,
     ALUMNI,

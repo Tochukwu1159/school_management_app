@@ -3,20 +3,21 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.AcademicSessionRequest;
 import examination.teacherAndStudents.dto.AcademicSessionResponse;
-import examination.teacherAndStudents.entity.AcademicSession;
-import examination.teacherAndStudents.entity.School;
-import examination.teacherAndStudents.entity.StudentTerm;
-import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
+import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.StudentTermRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.AcademicSessionService;
+import examination.teacherAndStudents.utils.ProfileStatus;
 import examination.teacherAndStudents.utils.Roles;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,7 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
 
     public AcademicSessionResponse  createAcademicSession(AcademicSessionRequest request) {
 
@@ -77,6 +79,41 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
 
     public void deleteAcademicSession(Long id) {
         academicSessionRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void graduateStudentsForSession(Long academicSessionId) {
+        // Fetch the academic session
+        AcademicSession academicSession = academicSessionRepository.findById(academicSessionId)
+                .orElseThrow(() -> new RuntimeException("Academic session not found"));
+
+        // Check if the session has ended
+        if (academicSession.getEndDate().isAfter(LocalDate.now())) {
+            throw new IllegalStateException("Academic session has not ended yet");
+        }
+        // Fetch all SS3 profiles with 'ACTIVE' status
+        List<Profile> secondaryProfilesToGraduate = profileRepository.findAllByClassBlockClassLevelClassNameAndProfileStatus(
+                "SS3", ProfileStatus.ACTIVE);
+
+        // Fetch all primary 6 profiles with 'ACTIVE' status
+        List<Profile> primaryProfilesToGraduate = profileRepository.findAllByClassBlockClassLevelClassNameAndProfileStatus(
+                "primary6", ProfileStatus.ACTIVE);
+
+        if (secondaryProfilesToGraduate.isEmpty() || primaryProfilesToGraduate.isEmpty()) {
+            System.out.println("No students found for graduation in session: " + academicSession.getName());
+            return; // Early return if no profiles found
+        }
+        // Update the status of secondary profiles to 'GRADUATED'
+        secondaryProfilesToGraduate.forEach(profile -> profile.setProfileStatus(ProfileStatus.GRADUATED));
+
+        // Update the status of primary profiles to 'GRADUATED'
+        primaryProfilesToGraduate.forEach(profile -> profile.setProfileStatus(ProfileStatus.GRADUATED));
+
+        // Batch update (save all at once)
+        profileRepository.saveAll(secondaryProfilesToGraduate);
+        profileRepository.saveAll(primaryProfilesToGraduate);
+
+        System.out.println("Graduation process completed for session: " + academicSession.getName());
     }
 
     private AcademicSessionResponse mapToResponse(AcademicSession session) {

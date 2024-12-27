@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,4 +19,8 @@ public interface SchoolRepository extends JpaRepository<School, Long> {
     boolean existsByPhoneNumber(String phoneNumber);
 
     boolean existsBySchoolName(String schoolName);
+
+    List<School> findBySubscriptionExpiryDateBeforeAndIsActiveTrue(LocalDateTime now);
+
+    List<School> findBySubscriptionExpiryDateBetweenAndIsActiveTrue(LocalDateTime localDateTime, LocalDateTime localDateTime1);
 }

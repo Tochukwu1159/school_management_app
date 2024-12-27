@@ -24,8 +24,7 @@ public class AdminServiceImpl implements AdminService {
                 throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
             }
 
-            List<User> studentsList = userRepository.findUserByRoles(Roles.STUDENT);
-            return studentsList;
+            return userRepository.findUserByRoles(Roles.STUDENT);
         } catch (Exception e) {
             throw new CustomInternalServerException("An error occurred while fetching students " +e.getMessage());
         }
@@ -40,8 +39,7 @@ public class AdminServiceImpl implements AdminService {
                     throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
                 }
 
-                List<User> teachersList = userRepository.findUserByRoles(Roles.TEACHER);
-                return teachersList;
+                return userRepository.findUserByRoles(Roles.TEACHER);
             } catch (Exception e) {
                 throw new CustomInternalServerException("An error occurred while fetching teachers "+e.getMessage());
             }

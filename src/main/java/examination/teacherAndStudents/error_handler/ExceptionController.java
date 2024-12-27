@@ -57,6 +57,11 @@ public class ExceptionController {
         return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(InsufficientBalanceException.class)
+    public ResponseEntity<?> InsufficientBalanceException(InsufficientBalanceException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(UserServiceException.class)
     public ResponseEntity<?> UserServiceException(UserServiceException ex) {
         return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.INTERNAL_SERVER_ERROR);

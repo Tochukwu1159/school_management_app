@@ -2,6 +2,8 @@ package examination.teacherAndStudents.dto;
 
 import examination.teacherAndStudents.entity.ClassBlock;
 import examination.teacherAndStudents.entity.Subject;
+import examination.teacherAndStudents.utils.ContractType;
+import examination.teacherAndStudents.utils.MaritalStatus;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.Email;
@@ -12,6 +14,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Date;
 
@@ -21,6 +24,8 @@ import java.util.Date;
 @NoArgsConstructor
 public class UserRequestDto {
 
+    public ContractType contractType;
+    public BigDecimal salary;
     @NotNull(message = "First Name is required")
     @NotEmpty(message = "first name cannot be empty")
     private String firstName;
@@ -28,6 +33,11 @@ public class UserRequestDto {
     @NotNull(message = "Last Name is required")
     @NotEmpty(message = "Last name cannot be empty")
     private String lastName;
+
+    @NotNull(message = "middle Name is required")
+    @NotEmpty(message = "middle name cannot be empty")
+    private String middleName;
+
     private LocalDate admissionDate;
     private String studentGuardianOccupation;
 
@@ -64,8 +74,11 @@ public class UserRequestDto {
 
     private Long classFormTeacherId;
 
+    private MaritalStatus maritalStatus;
+
 
     @NotNull(message = "Gender is required")
     @NotEmpty(message = "Gender  cannot be empty")
     private String gender;
-}
+ }
+

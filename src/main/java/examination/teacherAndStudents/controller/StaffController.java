@@ -42,11 +42,6 @@ public class StaffController {
         return new ResponseEntity<>(staffById, HttpStatus.OK);
     }
 
-    @PostMapping("/deactivate/{uniqueRegistrationNumber}")
-    public StaffResponse deactivateStudent(@PathVariable String uniqueRegistrationNumber){
-        return staffService.deactivateStaff(uniqueRegistrationNumber);
-
-    }
 
     @DeleteMapping("/delete/{StaffId}")
     public ResponseEntity<Void> deleteStaff(@PathVariable Long StaffId) {

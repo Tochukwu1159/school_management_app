@@ -2,6 +2,7 @@ package examination.teacherAndStudents.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import examination.teacherAndStudents.utils.Roles;
+import examination.teacherAndStudents.utils.Status;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -29,13 +30,12 @@ public class User {
     @Column(name = "id", nullable = false)
     private Long id;
 
-
     @Size(min = 3, message = "Last name can not be less than 3")
     private String firstName;
     @Size(min = 3, message = "Last name can not be less than 3")
     private String lastName;
+
     private String middleName;
-    private Boolean deactivate = false;
 
     @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -57,9 +57,6 @@ public class User {
         return Objects.hash(id);
     }
 
-    public boolean isActive() {
-        return !deactivate;
-    }
 
     @Override
     public String toString() {

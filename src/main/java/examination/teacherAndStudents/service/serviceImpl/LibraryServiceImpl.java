@@ -3,9 +3,7 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.BookRequest;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
-import examination.teacherAndStudents.error_handler.CustomInternalServerException;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.LibraryService;
 import examination.teacherAndStudents.utils.BorrowingStatus;
@@ -149,14 +147,14 @@ public class LibraryServiceImpl implements LibraryService {
                     .orElseThrow(() -> new CustomInternalServerException("User profile not found"));
 
             Book book = bookRepository.findById(bookId)
-                    .orElseThrow(() -> new CustomInternalServerException("Book not found"));
+                    .orElseThrow(() -> new CustomNotFoundException("Book not found"));
 
             // Check if the student has already borrowed the book with a status other than RETURNED
             BookBorrowing existingBorrowing = bookBorrowingRepository.findByStudentProfileAndBookAndStatusNot(
                    profile, book, BorrowingStatus.RETURNED);
 
             if (existingBorrowing != null) {
-                throw new CustomInternalServerException("You have already borrowed this book.");
+                throw new EntityAlreadyExistException("You have already borrowed this book.");
             }
 
             // Check if there are available copies

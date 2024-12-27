@@ -48,7 +48,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(
                                         "/api/v1/users/create",
-                                        "/api/v1/services/create",
+                                        "/api/v1/services/**",
                                         "/api/v1/users/login",
                                         "/api/v1/schools/onboard",
                                         "/api/v1/schools/**",
@@ -62,8 +62,7 @@ public class SecurityConfig {
                                         "/api/v1/schedules/event/client/**",
                                         "api/v1/events/speaker/client/all",
                                         "/api/v1/users/workshops/client/all-workshops",
-                                        "api/v1/events/sponsor/client/all",
-                                        "/api/v1/events/client/**"
+                                        "api/v1/events/sponsor/client/all"
 
                                 ).permitAll()
                                 .anyRequest().authenticated()

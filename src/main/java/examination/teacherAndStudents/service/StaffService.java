@@ -9,6 +9,5 @@ public interface StaffService {
     StaffResponse updateStaff(Long staffId, StaffRequest updatedStaff);
     Page<StaffResponse> findAllStaff(String searchTerm, int page, int size, String sortBy);
     StaffResponse findStaffById(Long StaffId);
-    StaffResponse deactivateStaff(String uniqueRegistrationNumber);
     void deleteStaff(Long StaffId);
 }

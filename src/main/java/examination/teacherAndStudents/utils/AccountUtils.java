@@ -28,6 +28,7 @@ public class AccountUtils {
     public static final String PAGESIZE = "10";
 
     public static final String PAYSTACK_TRANSACTION_INITIALIZER ="https://api.paystack.co/transaction/initialize";
+    public static final String PAYSTACK_BULK_TRANSFER_URL = "https://api.paystack.co/transfer/bulk";
     public static final String ACCOUNT_UPDATE_SUCCESS = "019";
     public static final String ACCOUNT_NOT_FOUND = "020" ;
     public static final String ACCOUNT_UPDATE_FAILED = "021";

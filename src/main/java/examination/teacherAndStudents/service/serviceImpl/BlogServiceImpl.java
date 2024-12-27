@@ -31,16 +31,10 @@ public class BlogServiceImpl implements BlogService {
 
     private final BlogRepository blogRepository;
     private final UserRepository userRepository;
-    private final NotificationRepository notificationRepository;
-    private final TransactionRepository transactionRepository;
 
-    public BlogServiceImpl(BlogRepository blogRepository, UserRepository userRepository,
-                           NotificationRepository notificationRepository,
-                           TransactionRepository transactionRepository) {
+    public BlogServiceImpl(BlogRepository blogRepository, UserRepository userRepository) {
         this.blogRepository = blogRepository;
         this.userRepository = userRepository;
-        this.notificationRepository = notificationRepository;
-        this.transactionRepository = transactionRepository;
     }
 
     public List<Blog> getAllBlogPosts() {

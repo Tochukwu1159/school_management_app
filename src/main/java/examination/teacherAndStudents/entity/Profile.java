@@ -23,7 +23,7 @@ import java.util.List;
 @Table(name = "Profile")
 @Entity
 @Builder
-public class Profile {
+public class  Profile {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -39,13 +39,13 @@ public class Profile {
     private String studentGuardianPhoneNumber;
     private String gender;
 
+    private String bankAccountId;
+
     private String religion;
 
     private Boolean isVerified;
     private String address;
     private Date dateOfBirth;
-    private String age;
-
     private String academicQualification;
 
     private String courseOfStudy;

@@ -31,7 +31,6 @@ public interface UserService {
     ResponseEntity<Void> deleteUser(Long userId);
     UserResponse geenerateIdCard(String uniqueRegistrationNumber);
     String updateUserStatus(Long userId, ProfileStatus newStatus, LocalDate suspensionEndDate);
-    User deactivateStudent(String uniqueRegistrationNumber);
 
     Page<UserResponse> getAllStudentsFilteredAndPaginated(Long classCategoryId, Long subClassId, Long academicYearId, int page, int size,String sortBy);
 

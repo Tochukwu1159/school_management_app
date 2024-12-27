@@ -18,4 +18,5 @@ public class SubjectMapper {
     public SubjectResponse mapToSubjectResponse(Subject subject) {
         return modelMapper.map(subject, SubjectResponse.class);
     }
+
 }

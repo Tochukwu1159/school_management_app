@@ -10,6 +10,7 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.UserService;
 import examination.teacherAndStudents.utils.AccountUtils;
+import examination.teacherAndStudents.utils.MaritalStatus;
 import examination.teacherAndStudents.utils.ProfileStatus;
 import examination.teacherAndStudents.utils.Roles;
 import jakarta.mail.MessagingException;
@@ -69,9 +70,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse createStudent(UserRequestDto userRequest) throws MessagingException {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
 
-        School school = schoolRepository.findById(userRequest.getSchoolId())
-                .orElseThrow(() -> new CustomNotFoundException("Please login as a student"));
+        if (admin == null) {
+            throw new AuthenticationFailedException("Please login as an Admin");
+        }
+
+        Optional<User> userDetails = userRepository.findByEmail(email);
+
 
         if (userRepository.existsByEmail(userRequest.getEmail())) {
 
@@ -106,10 +113,12 @@ public class UserServiceImpl implements UserService {
         User newUser = User.builder()
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
+                .middleName(userRequest.getMiddleName())
+                .school(userDetails.get().getSchool())
                 .email(userRequest.getEmail())
                 .roles(Roles.STUDENT)
                 .isVerified(true)
-                .school(school)
+                .school(userDetails.get().getSchool())
                 .password(passwordEncoder.encode(userRequest.getPassword()))
                 .roles(Roles.STUDENT)
 //                .profilePicture(imageUrl)
@@ -128,6 +137,9 @@ public class UserServiceImpl implements UserService {
                 .uniqueRegistrationNumber(AccountUtils.generateStudentId())
                 .address(userRequest.getAddress())
                 .user(savedUser)
+                .isVerified(true)
+                .profileStatus(ProfileStatus.ACTIVE)
+                .maritalStatus(userRequest.getMaritalStatus())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .admissionDate(userRequest.getAdmissionDate())
                 .classBlock(studentClassBlock.get())
@@ -214,6 +226,7 @@ public class UserServiceImpl implements UserService {
         User newUser = User.builder()
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
+                .middleName(userRequest.getMiddleName())
                 .email(userRequest.getEmail())
                 .school(school)
                 .password(passwordEncoder.encode(userRequest.getPassword()))
@@ -227,6 +240,14 @@ public class UserServiceImpl implements UserService {
                 .gender(userRequest.getGender())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .religion(userRequest.getReligion())
+                .isVerified(true)
+                .profileStatus(ProfileStatus.ACTIVE)
+                .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
+                .phoneNumber(userRequest.getPhoneNumber())
+                .maritalStatus(userRequest.getMaritalStatus())
+                .courseOfStudy(userRequest.getCourseOfStudy())
+                .contractType(userRequest.getContractType())
+                .academicQualification(userRequest.getAcademicQualification())
                 .admissionDate(userRequest.getAdmissionDate())
                 .uniqueRegistrationNumber(AccountUtils.generateTeacherId())
                 .address(userRequest.getAddress())
@@ -267,6 +288,15 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse createTeacher(UserRequestDto userRequest) throws MessagingException {
 
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+
+        if (admin == null) {
+            throw new AuthenticationFailedException("Please login as an Admin");
+        }
+
+        Optional<User> userDetails = userRepository.findByEmail(email);
+
         School school = schoolRepository.findById(userRequest.getSchoolId())
                 .orElseThrow(() -> new CustomNotFoundException("Please login as a student"));
 
@@ -306,6 +336,8 @@ public class UserServiceImpl implements UserService {
         User newUser = User.builder()
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
+                .school(userDetails.get().getSchool())
+                .middleName(userRequest.getMiddleName())
                 .email(userRequest.getEmail())
                 .school(school)
                 .password(passwordEncoder.encode(userRequest.getPassword()))
@@ -318,9 +350,15 @@ public class UserServiceImpl implements UserService {
         // Create Profile with the condition that ClassBlock and Subject are assigned only if they are provided
         Profile userProfile = Profile.builder()
                 .gender(userRequest.getGender())
+                .isVerified(true)
+                .profileStatus(ProfileStatus.ACTIVE)
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .courseOfStudy(userRequest.getCourseOfStudy())
                 .classOfDegree(userRequest.getClassOfDegree())
+                .admissionDate(userRequest.getAdmissionDate())
+                .contractType(userRequest.getContractType())
+                .dateOfBirth(userRequest.getDateOfBirth())
+                .salary(userRequest.getSalary())
                 .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
                 .academicQualification(userRequest.getAcademicQualification())
                 .religion(userRequest.getReligion())
@@ -454,8 +492,12 @@ public class UserServiceImpl implements UserService {
 
             Optional<User> userDetails = userRepository.findByEmail(loginRequest.getEmail());
 
+
             // Check if the subscription has expired
             School school = userDetails.get().getSchool();
+            if(school.getSubscriptionExpiryDate() == null){
+                throw new SubscriptionExpiredException("Not subscribe yet. Please  subscribe to enjoy the services.");
+            }
             if (school != null && !school.isSubscriptionValid()) {
                 throw new SubscriptionExpiredException("Your subscription has expired. Please renew your subscription.");
             }
@@ -474,111 +516,6 @@ public class UserServiceImpl implements UserService {
             throw new AuthenticationFailedException("Wrong email or password");
         }
     }
-
-//
-//
-//    @Override
-//    public UserResponse updateStudent(UserRequestDto userRequest) throws MessagingException {
-//        if (userRepository.existsByEmail(userRequest.getEmail())) {
-//
-//            throw new UserAlreadyExistException("Email already exist");
-//
-//        }
-//        if (!AccountUtils.validatePassword(userRequest.getPassword(), userRequest.getConfirmPassword())){
-//            throw new UserPasswordMismatchException("Password does not match");
-//
-//        }
-//        if(existsByMail(userRequest.getEmail())){
-//            throw new BadRequestException
-//                    ("Error: Email is already taken!");
-//        }
-//
-//        if(!isValidEmail(userRequest.getEmail())){
-//            throw new BadRequestException("Error: Email must be valid");
-//        }
-//
-//        if(userRequest.getPassword().length() < 8 || userRequest.getConfirmPassword().length() < 8 ){
-//            throw new BadRequestException("Password is too short, should be minimum of 8 character long");
-//        }
-//        ClassLevel studentClass = classLevelRepository.findByClassName(userRequest.getClassAssigned());
-//        System.out.println(studentClass.getClassName());
-//        System.out.println(studentClass.getNumberOfStudents());
-//
-//        if (studentClass == null) {
-//            throw new BadRequestException("Error: Class level not found for class " + userRequest.getClassAssigned());
-//        }
-//
-////        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
-////        // Get the secure URL of the uploaded image from Cloudinary
-////        String imageUrl = (String) uploadResult.get("secure_url");
-//
-//        User newUser = User.builder()
-//                .gender(userRequest.getGender())
-//                .dateOfBirth(userRequest.getDateOfBirth())
-//                .religion(userRequest.getReligion())
-//                .admissionDate(userRequest.getAdmissionDate())
-//                .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
-//                .classLevel(studentClass)
-//                .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
-//                .studentGuardianName(userRequest.getStudentGuardianName())
-//                .studentGuardianPhoneNumber(userRequest.getStudentGuardianPhoneNumber())
-//                .uniqueRegistrationNumber(AccountUtils.generateStudentId())
-//                .firstName(userRequest.getFirstName())
-//                .address(userRequest.getAddress())
-//                .dateOfBirth(userRequest.getDateOfBirth())
-//                .lastName(userRequest.getLastName())
-//                .email(userRequest.getEmail())
-//                .admissionDate(userRequest.getAdmissionDate())
-//                .isVerified(true)
-//                .phoneNumber(userRequest.getPhoneNumber())
-//                .password(passwordEncoder.encode(userRequest.getPassword()))
-//                .roles(Roles.STUDENT)
-////                .profilePicture(imageUrl)
-//                .build();
-//        User savedUser = userRepository.save(newUser);
-//        //update the number of students in a class
-//        // Update the number of students in the class
-//        studentClass.setNumberOfStudents(studentClass.getNumberOfStudents() + 1);
-//        classLevelRepository.save(studentClass);
-//        //create wallet
-//        Wallet userWallet = new Wallet();
-//        userWallet.setBalance(BigDecimal.ZERO);
-//        userWallet.setTotalMoneySent(BigDecimal.ZERO);
-//        userWallet.setUser(savedUser);
-//        walletRepository.save(userWallet);
-//
-//        EmailDetails emailDetails = EmailDetails.builder()
-//                .recipient(savedUser.getEmail())
-//                .subject("SUCCESSFULLY REGISTRATION")
-//                .templateName("email-template")  // Name of your Thymeleaf template
-//                .model(Map.of("name", savedUser.getFirstName() + " " + savedUser.getLastName()))
-//                .build();
-//        emailService.sendHtmlEmail(emailDetails);
-//
-//        return UserResponse.builder()
-//                .responseCode(AccountUtils.ACCOUNT_CREATION_SUCCESS)
-//                .responseMessage(AccountUtils.ACCOUNT_CREATION_MESSAGE)
-//                .accountInfo(AccountInfo.builder()
-//                        .studentGuardianOccupation(savedUser.getStudentGuardianOccupation())
-//                        .age(savedUser.getDateOfBirth())
-//                        .admissionDate(savedUser.getAdmissionDate())
-//                        .gender(savedUser.getGender())
-//                        .studentGuardianName(savedUser.getStudentGuardianName())
-//                        .studentGuardianPhoneNumber(savedUser.getStudentGuardianPhoneNumber())
-//                        .uniqueRegistrationNumber(savedUser.getUniqueRegistrationNumber())
-//                        .classAssigned(savedUser.getClassLevel().getClassName())
-//                        .firstName(savedUser.getFirstName())
-//                        .address(savedUser.getAddress())
-//                        .phoneNumber(savedUser.getPhoneNumber())
-//                        .lastName(savedUser.getLastName())
-//                        .email(savedUser.getEmail())
-//                        .firstName(savedUser.getFirstName())
-//                        .lastName(savedUser.getLastName())
-//                        .email(savedUser.getEmail())
-//                        .build())
-//
-//                .build();
-//    }
 
     @Transactional
     public UserResponse updateStudentClassLevel(Long studentId, Long newClassLevelId) {
@@ -899,33 +836,6 @@ public class UserServiceImpl implements UserService {
 
         }
     }
-
-    public User deactivateStudent(String uniqueRegistrationNumber) {
-        try {
-            // Step 1: Find the Profile using the uniqueRegistrationNumber
-            Optional<Profile> studentOptional = profileRepository.findByUniqueRegistrationNumber(uniqueRegistrationNumber);
-            if (studentOptional.isPresent()) {
-                Profile studentProfile = studentOptional.get();
-                User student = studentProfile.getUser();
-
-                if (student != null) {
-                    // Step 3: Deactivate the User
-                    student.setDeactivate(true);
-                    return userRepository.save(student);
-                } else {
-                    throw new EntityNotFoundException("User not found for profile with registration number: " + uniqueRegistrationNumber);
-                }
-            } else {
-                throw new EntityNotFoundException("Profile not found with registration number: " + uniqueRegistrationNumber);
-            }
-
-        } catch (EntityNotFoundException e) {
-            throw e; // Re-throw the EntityNotFoundException as it is, so it's handled appropriately elsewhere
-        } catch (Exception e) {
-            throw new CustomInternalServerException("Error deactivating student with registration number " + uniqueRegistrationNumber + ": " + e.getMessage());
-        }
-    }
-
     public Page<UserResponse> getAllStudentsFilteredAndPaginated(
             Long classCategoryId,
             Long subClassId,

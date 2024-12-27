@@ -1,7 +1,10 @@
 package examination.teacherAndStudents.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import examination.teacherAndStudents.utils.PaymentStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,15 +25,28 @@ public class StaffPayroll{
 
     private String name;
     private  String uniqueRegistrationNumber;
-    private double baseSalary;
+
+    @NotNull
+    @Positive
+    private Double baseSalary;
+
     private double bonuses;
+
     private double deductions;
+
     private double tax;
+
     private double hmo;
+
     private double grossPay;
+
     private double netPay;
 
     private LocalDateTime datePayed;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -40,7 +56,7 @@ public class StaffPayroll{
 
     @ManyToOne
     @JoinColumn(name = "staff_id", nullable = false)
-    private User staff;
+    private Profile staff;
 
     @Column(name = "remarks")
     private String remarks;
@@ -49,5 +65,17 @@ public class StaffPayroll{
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
+
+    @PrePersist
+    public void prePersist() {
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 
 }
