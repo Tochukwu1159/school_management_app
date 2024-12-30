@@ -44,8 +44,8 @@ public class UserController {
     }
 
     @PostMapping("/teacher/create")
-    public UserResponse createTeacher(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
-        return userService.createTeacher(userRequest);
+    public UserResponse createStaff(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
+        return userService.createStaff(userRequest);
     }
 
     @GetMapping("/findAll")

@@ -1,5 +1,5 @@
 package examination.teacherAndStudents.utils;
 
 public enum PaymentStatus {
-    FAILED, PENDING, SUCCESS
+    FAILED,IN_PROGRESS, PENDING, SUCCESS
 }

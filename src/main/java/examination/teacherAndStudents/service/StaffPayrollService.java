@@ -13,4 +13,5 @@ public interface StaffPayrollService {
     List<StaffPayrollResponse> getAllPayroll();
     List<StaffPayrollResponse> getPayrollForMonth(int month, int year);
     void deletePayroll(Long payrollId);
+    String promoteStaff(Long userId, Long staffLevelId);
 }

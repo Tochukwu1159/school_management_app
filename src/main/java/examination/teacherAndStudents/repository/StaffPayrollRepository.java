@@ -21,4 +21,6 @@ public interface StaffPayrollRepository extends JpaRepository<StaffPayroll, Long
 
     @Query("SELECT p FROM StaffPayroll p WHERE p.school.id = :schoolId AND YEAR(p.createdAt) = :year AND MONTH(p.createdAt) = :month")
     List<StaffPayroll> findBySchoolIdAndYearAndMonth(Long schoolId, int month, int year);
+
+    Optional<StaffPayroll> findByStaffIdAndSchoolId(Long id, Long id1);
 }

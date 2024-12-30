@@ -13,7 +13,7 @@ public interface UserService {
     //    UserResponse editStudent(EditUserRequest editUserDto);
     UserResponse createAdmin(UserRequestDto userRequest) throws MessagingException;
     LoginResponse loginAdmin(LoginRequest loginRequest);
-    UserResponse createTeacher(UserRequestDto userRequest) throws MessagingException;
+    UserResponse createStaff(UserRequestDto userRequest) throws MessagingException;
 
     LoginResponse loginUser(LoginRequest loginRequest);
 

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/api/payroll")
+@RequestMapping("/api/v1/payroll")
 public class PayrollController {
 
     private final PayStackBulkTransfer payStackBulkTransfer;

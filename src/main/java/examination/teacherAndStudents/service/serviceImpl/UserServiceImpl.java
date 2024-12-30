@@ -67,6 +67,7 @@ public class UserServiceImpl implements UserService {
     private  final  AccountUtils accountUtils;
     private final SubjectRepository subjectRepository;
     private final SchoolRepository schoolRepository;
+    private final StaffLevelRepository staffLevelRepository;
 
     @Override
     public UserResponse createStudent(UserRequestDto userRequest) throws MessagingException {
@@ -286,7 +287,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public UserResponse createTeacher(UserRequestDto userRequest) throws MessagingException {
+    public UserResponse createStaff(UserRequestDto userRequest) throws MessagingException {
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
         User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
@@ -294,6 +295,8 @@ public class UserServiceImpl implements UserService {
         if (admin == null) {
             throw new AuthenticationFailedException("Please login as an Admin");
         }
+        StaffLevel staffLevel = staffLevelRepository.findById(userRequest.getStaffLevelId())
+                .orElseThrow(() -> new CustomNotFoundException("Staff level not found"));
 
         Optional<User> userDetails = userRepository.findByEmail(email);
 
@@ -342,15 +345,16 @@ public class UserServiceImpl implements UserService {
                 .school(school)
                 .password(passwordEncoder.encode(userRequest.getPassword()))
                 .isVerified(true)
-                .roles(Roles.TEACHER)
+                .roles(userRequest.getRole())
                 .build();
 
         User savedUser = userRepository.save(newUser);
 
         // Create Profile with the condition that ClassBlock and Subject are assigned only if they are provided
-        Profile userProfile = Profile.builder()
+         Profile userProfile = Profile.builder()
                 .gender(userRequest.getGender())
                 .isVerified(true)
+                 .staffLevel(staffLevel)
                 .profileStatus(ProfileStatus.ACTIVE)
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .courseOfStudy(userRequest.getCourseOfStudy())
@@ -370,6 +374,7 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         // Only assign class and subject if the IDs are provided
+
         if (userRequest.getClassFormTeacherId() != null) {
             ClassBlock classBlockAssigned = classBlockRepository.findById(userRequest.getClassFormTeacherId())
                     .orElseThrow(() -> new NotFoundException("Class not found with ID: " + userRequest.getClassFormTeacherId()));
@@ -409,7 +414,7 @@ public class UserServiceImpl implements UserService {
                 .gender(userProfile.getGender())
                 .build();
 
-        return new UserResponse("200", "Teacher Successfully Created", accountInfo);
+        return new UserResponse("200", "Staff Successfully Created", accountInfo);
     }
 
 

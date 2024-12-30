@@ -45,6 +45,13 @@ public class StaffPayrollController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
+    @PatchMapping("/promote/{userId}/{staffLevelId}")
+    public ResponseEntity<String> promoteStaff(@PathVariable Long userId, @PathVariable Long staffLevelId) {
+        String response = staffPayrollService.promoteStaff(userId, staffLevelId);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+
     // List all payroll entries
     @GetMapping("/all")
     public ResponseEntity<List<StaffPayrollResponse>> getAllPayroll() {

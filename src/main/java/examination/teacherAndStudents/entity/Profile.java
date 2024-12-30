@@ -1,10 +1,7 @@
 package examination.teacherAndStudents.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import examination.teacherAndStudents.utils.ContractType;
-import examination.teacherAndStudents.utils.Gender;
-import examination.teacherAndStudents.utils.MaritalStatus;
-import examination.teacherAndStudents.utils.ProfileStatus;
+import examination.teacherAndStudents.utils.*;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -93,6 +90,11 @@ public class  Profile {
     @ToString.Exclude
     @JoinColumn(name = "transport_id")
     private Transport transport;
+
+    @ManyToOne
+    @ToString.Exclude
+    @JoinColumn(name = "staff_level_id")
+    private StaffLevel staffLevel;
 
     @OneToMany(mappedBy = "staff")
     @ToString.Exclude

@@ -1,11 +1,8 @@
 package examination.teacherAndStudents.dto;
 
-import examination.teacherAndStudents.entity.ClassBlock;
-import examination.teacherAndStudents.entity.Subject;
 import examination.teacherAndStudents.utils.ContractType;
 import examination.teacherAndStudents.utils.MaritalStatus;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import examination.teacherAndStudents.utils.Roles;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -37,6 +34,8 @@ public class UserRequestDto {
     @NotNull(message = "middle Name is required")
     @NotEmpty(message = "middle name cannot be empty")
     private String middleName;
+
+    private Long staffLevelId;
 
     private LocalDate admissionDate;
     private String studentGuardianOccupation;
@@ -76,9 +75,12 @@ public class UserRequestDto {
 
     private MaritalStatus maritalStatus;
 
+    private Roles role;
+
 
     @NotNull(message = "Gender is required")
     @NotEmpty(message = "Gender  cannot be empty")
     private String gender;
- }
+
+}
 

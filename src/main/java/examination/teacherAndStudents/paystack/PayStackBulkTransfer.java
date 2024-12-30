@@ -36,6 +36,9 @@ public class PayStackBulkTransfer {
             return "No payrolls found for the given criteria.";
         }
 
+        payrolls.forEach(payroll -> payroll.setPaymentStatus(PaymentStatus.IN_PROGRESS));
+        staffPayrollRepository.saveAll(payrolls);
+
         // Prepare the payment payload
         Map<String, Object> payload = new HashMap<>();
         payload.put("source", "balance"); // Paystack supports 'balance' or 'card' as source
