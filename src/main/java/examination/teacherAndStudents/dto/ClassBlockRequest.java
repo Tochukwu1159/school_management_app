@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 public class ClassBlockRequest {
     private Long classLevelId;
     private Long formTeacherId;
+    private Long nextClassId;
     private String subClassName;
     private String classUniqueUrl;
 }

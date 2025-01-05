@@ -1,8 +1,6 @@
 package examination.teacherAndStudents.controller;
 
-import examination.teacherAndStudents.dto.SchoolRequest;
-import examination.teacherAndStudents.dto.SchoolResponse;
-import examination.teacherAndStudents.dto.SubscriptionRequest;
+import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.School;
 import examination.teacherAndStudents.entity.ServiceOffered;
 import examination.teacherAndStudents.service.SchoolService;
@@ -28,6 +26,12 @@ public class SchoolController {
     public ResponseEntity<SchoolResponse> onboardSchool(@RequestBody SchoolRequest school) {
         SchoolResponse onboardedSchool = schoolService.onboardSchool(school );
         return new ResponseEntity<>(onboardedSchool, HttpStatus.CREATED);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<SchoolLoginResponse>   loginSchool(@RequestBody LoginRequest school) {
+        SchoolLoginResponse loginSchool = schoolService.loginSchool(school );
+        return new ResponseEntity<>(loginSchool, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}/services")

@@ -1,5 +1,12 @@
 package examination.teacherAndStudents.dto;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Setter
+@Getter
+@NoArgsConstructor
 public class ProfileData {
     private Long id;
     private String uniqueRegistrationNumber;
@@ -13,27 +20,4 @@ public class ProfileData {
 
     // Getters and Setters
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getUniqueRegistrationNumber() {
-        return uniqueRegistrationNumber;
-    }
-
-    public void setUniqueRegistrationNumber(String uniqueRegistrationNumber) {
-        this.uniqueRegistrationNumber = uniqueRegistrationNumber;
-    }
-
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
-    }
 }

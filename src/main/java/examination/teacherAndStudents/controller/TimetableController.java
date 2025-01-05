@@ -26,13 +26,12 @@ public class TimetableController {
     @PostMapping("/create")
     public ResponseEntity<String> createTimetable(@RequestBody TimetableCreationRequest request) {
         Timetable timetable = timetableService.createTimetable(
-                request.getSchoolClassId(),
-                request.getTeacherId(),
                 request.getDayOfWeek(),
                 request.getSubjectSchedules(),
                 request.getTimetableType(),
                 request.getTerm(),
-                request.getYearId()
+                request.getYearId(),
+                request.getClassBlockId()
         );
 
         return ResponseEntity.ok("Timetable created with ID: " + timetable.getId());
@@ -42,8 +41,6 @@ public class TimetableController {
     public ResponseEntity<String> updateTimetable(@PathVariable Long timetableId, @RequestBody TimetableCreationRequest request) {
         Timetable updatedTimetable = timetableService.updateTimetable(
                 timetableId,
-                request.getSchoolClassId(),
-                request.getTeacherId(),
                 request.getDayOfWeek(),
                 request.getSubjectSchedules(),
                 request.getTerm(),

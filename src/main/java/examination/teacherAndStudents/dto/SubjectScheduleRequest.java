@@ -13,6 +13,7 @@ import java.time.LocalTime;
 public class SubjectScheduleRequest {
     private Long subjectId;
     private String topic;
+    private Long teacherId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 

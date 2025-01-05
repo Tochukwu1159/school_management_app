@@ -1,31 +1,34 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
-import examination.teacherAndStudents.Security.SecurityConfig;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import examination.teacherAndStudents.Security.JwtUtil;
 import examination.teacherAndStudents.dto.*;
-import examination.teacherAndStudents.entity.School;
-import examination.teacherAndStudents.entity.ServiceOffered;
-import examination.teacherAndStudents.entity.SubscriptionHistory;
-import examination.teacherAndStudents.error_handler.PaymentFailedException;
-import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
-import examination.teacherAndStudents.error_handler.SubscriptionExpiredException;
-import examination.teacherAndStudents.error_handler.UserAlreadyExistException;
-import examination.teacherAndStudents.repository.SchoolRepository;
-import examination.teacherAndStudents.repository.ServiceOfferedRepository;
-import examination.teacherAndStudents.repository.SubscriptionHistoryRepository;
+import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.error_handler.*;
+import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.PayStackPaymentService;
 import examination.teacherAndStudents.service.SchoolService;
+import examination.teacherAndStudents.utils.Roles;
 import examination.teacherAndStudents.utils.ServiceType;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +39,19 @@ public class SchoolServiceImpl implements SchoolService {
     private final ModelMapper modelMapper;
     private final SubscriptionHistoryRepository subscriptionHistoryRepository;
     private final ServiceOfferedRepository serviceOfferedRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
+
+    private static ProfileData apply(Profile profile) {
+        ProfileData profileData = new ProfileData();
+        profileData.setId(profile.getId());
+        profileData.setPhoneNumber(profile.getPhoneNumber());
+        profileData.setUniqueRegistrationNumber(profile.getUniqueRegistrationNumber());
+        return profileData;
+    }
 
     public SchoolResponse onboardSchool(SchoolRequest schoolRequest) {
         try {
@@ -63,6 +79,9 @@ public class SchoolServiceImpl implements SchoolService {
             newSchool.setIsActive(false);
             newSchool.setSubscriptionKey(generatedSubscriptionKey);
 
+            String encryptedPassword = passwordEncoder.encode(schoolRequest.getPassword());
+            newSchool.setPassword(encryptedPassword);
+
             // Fetch and associate selected services
             List<ServiceOffered> services = serviceOfferedRepository.findAllById(schoolRequest.getSelectedServices());
             newSchool.setSelectedServices(services);
@@ -73,6 +92,39 @@ public class SchoolServiceImpl implements SchoolService {
             return modelMapper.map(savedSchool, SchoolResponse.class);
         } catch (Exception e) {
             throw new RuntimeException("Error onboarding school: " + e.getMessage(), e);
+        }
+    }
+
+
+    public SchoolLoginResponse loginSchool(LoginRequest loginRequest) {
+        try {
+//            Authentication authenticate = authenticationManager.authenticate(
+//                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+//            );
+//
+//            if (!authenticate.isAuthenticated()) {
+//                throw new UserPasswordMismatchException("Wrong email or password");
+//            }
+
+
+            Optional<School> optionalSchool = schoolRepository.findByEmail(loginRequest.getEmail());
+
+            School school = optionalSchool.get();
+
+//            SecurityContextHolder.getContext().setAuthentication(authenticate);
+            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), school);
+
+            // Create a UserDto object containing user details
+            SchoolResponse schoolResponse = new SchoolResponse();
+            schoolResponse.setSchoolName(school.getSchoolName());
+            schoolResponse.setSchoolAddress(school.getSchoolAddress());
+            schoolResponse.setEmail(school.getEmail());
+            return new SchoolLoginResponse(token, schoolResponse);
+        } catch (BadCredentialsException e) {
+            // Handle the "Bad credentials" error here
+            throw new AuthenticationFailedException("Wrong email or password");
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -99,6 +151,7 @@ public class SchoolServiceImpl implements SchoolService {
             throw new RuntimeException("Error accessing service: " + e.getMessage(), e);
         }
     }
+
     public School subscribeSchool(Long schoolId, SubscriptionRequest subscriptionRequest) {
         try {
             // Find the school by ID
@@ -193,7 +246,7 @@ public class SchoolServiceImpl implements SchoolService {
     }
 
     public BigDecimal getAmountToSubscribe(Long schoolId) {
-       School school = schoolRepository.findById(schoolId)
+        School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
         long numberOfUsers = school.getUsers().size();
         return BigDecimal.valueOf(numberOfUsers * 2000);
@@ -277,4 +330,108 @@ public class SchoolServiceImpl implements SchoolService {
             throw new RuntimeException("Error updating school: " + e.getMessage(), e);
         }
     }
+
+
+    public List<ProfileData> teacherProfilesForSchool(Long schoolId) {
+        try {
+            List<User> teachers = userRepository.findByRolesAndSchoolId(Roles.TEACHER, schoolId);
+
+            // Extract their user IDs
+            List<Long> teacherIds = teachers.stream()
+                    .map(User::getId)
+                    .collect(Collectors.toList());
+
+            List<Profile> teacherProfiles = profileRepository.findByUserIdIn(teacherIds);
+
+            // Map profiles to ProfileData format
+
+            return teacherProfiles.stream()
+                    .map(profile -> {
+                        ProfileData profileData = new ProfileData();
+                        profileData.setId(profile.getId());
+                        profileData.setPhoneNumber(profile.getPhoneNumber());
+                        profileData.setUniqueRegistrationNumber(profile.getUniqueRegistrationNumber());
+                        return profileData;
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error fetching teacher profiles for the school: " + e.getMessage(), e);
+        }
+    }
+
+    public List<ProfileData> studentsProfilesForSchool(Long schoolId) {
+        try {
+            List<User> students = userRepository.findByRolesAndSchoolId(Roles.STUDENT, schoolId);
+
+            // Extract their user IDs
+            List<Long> studentIds = students.stream()
+                    .map(User::getId)
+                    .collect(Collectors.toList());
+
+            List<Profile>studentProfiles = profileRepository.findByUserIdIn(studentIds);
+
+            // Map profiles to ProfileData format
+
+            return studentProfiles.stream()
+                    .map(profile -> {
+                        ProfileData profileData = new ProfileData();
+                        profileData.setId(profile.getId());
+                        profileData.setPhoneNumber(profile.getPhoneNumber());
+                        profileData.setUniqueRegistrationNumber(profile.getUniqueRegistrationNumber());
+                        return profileData;
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error fetching student profiles for the school: " + e.getMessage(), e);
+        }
+    }
+
+    public List<ProfileData> adminProfilesForSchool(Long schoolId) {
+        try {
+            List<User> admins = userRepository.findByRolesAndSchoolId(Roles.ADMIN, schoolId);
+
+            // Extract their user IDs
+            List<Long> teacherIds = admins.stream()
+                    .map(User::getId)
+                    .collect(Collectors.toList());
+
+            List<Profile> adminProfiles = profileRepository.findByUserIdIn(teacherIds);
+
+            // Map profiles to ProfileData format
+
+            return adminProfiles.stream()
+                    .map(profile -> {
+                        ProfileData profileData = new ProfileData();
+                        profileData.setId(profile.getId());
+                        profileData.setPhoneNumber(profile.getPhoneNumber());
+                        profileData.setUniqueRegistrationNumber(profile.getUniqueRegistrationNumber());
+                        return profileData;
+                    })
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error fetching admin profiles for the school: " + e.getMessage(), e);
+        }
+    }
+
+    public List<ProfileData> gateManProfilesForSchool(Long schoolId) {
+        try {
+            List<User> gateMen = userRepository.findByRolesAndSchoolId(Roles.GATEMAN, schoolId);
+
+            // Extract their user IDs
+            List<Long> gateMenIds = gateMen.stream()
+                    .map(User::getId)
+                    .collect(Collectors.toList());
+
+            List<Profile> gateMenProfiles = profileRepository.findByUserIdIn(gateMenIds);
+
+            // Map profiles to ProfileData format
+
+            return gateMenProfiles.stream()
+                    .map(SchoolServiceImpl::apply)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error fetching gate men profiles for the school: " + e.getMessage(), e);
+        }
+    }
 }
+

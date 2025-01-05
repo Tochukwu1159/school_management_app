@@ -33,6 +33,9 @@ public class MedicalRecord{
     @Column(columnDefinition = "TEXT")
     private String details;
 
+    @Column(columnDefinition = "TEXT")
+    private String actionTaken;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

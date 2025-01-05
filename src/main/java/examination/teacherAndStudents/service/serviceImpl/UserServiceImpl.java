@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.service.serviceImpl;
 import com.cloudinary.Cloudinary;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import examination.teacherAndStudents.Security.CustomUserDetailService;
 import examination.teacherAndStudents.Security.JwtUtil;
 import examination.teacherAndStudents.Security.SecurityConfig;
@@ -250,7 +251,7 @@ public class UserServiceImpl implements UserService {
                 .contractType(userRequest.getContractType())
                 .academicQualification(userRequest.getAcademicQualification())
                 .admissionDate(userRequest.getAdmissionDate())
-                .uniqueRegistrationNumber(AccountUtils.generateTeacherId())
+                .uniqueRegistrationNumber(AccountUtils.generateStaffId())
                 .address(userRequest.getAddress())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .user(savedUser)
@@ -362,12 +363,11 @@ public class UserServiceImpl implements UserService {
                 .admissionDate(userRequest.getAdmissionDate())
                 .contractType(userRequest.getContractType())
                 .dateOfBirth(userRequest.getDateOfBirth())
-                .salary(userRequest.getSalary())
+                 .maritalStatus(userRequest.getMaritalStatus())
                 .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
                 .academicQualification(userRequest.getAcademicQualification())
                 .religion(userRequest.getReligion())
-                .admissionDate(userRequest.getAdmissionDate())
-                .uniqueRegistrationNumber(AccountUtils.generateTeacherId())
+                .uniqueRegistrationNumber(AccountUtils.generateStaffId())
                 .address(userRequest.getAddress())
                 .phoneNumber(userRequest.getPhoneNumber())
                 .user(savedUser)
@@ -436,7 +436,7 @@ public class UserServiceImpl implements UserService {
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool().getSubscriptionKey());
+            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool());
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -448,6 +448,8 @@ public class UserServiceImpl implements UserService {
         } catch (BadCredentialsException e) {
             // Handle the "Bad credentials" error here
             throw new AuthenticationFailedException("Wrong email or password");
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -470,7 +472,7 @@ public class UserServiceImpl implements UserService {
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool().getSubscriptionKey());
+            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool());
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -481,6 +483,8 @@ public class UserServiceImpl implements UserService {
         } catch (BadCredentialsException e) {
             // Handle the "Bad credentials" error here
             throw new AuthenticationFailedException("Wrong email or password");
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -508,7 +512,7 @@ public class UserServiceImpl implements UserService {
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool().getSubscriptionKey());
+            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool());
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -519,6 +523,8 @@ public class UserServiceImpl implements UserService {
         } catch (BadCredentialsException e) {
             // Handle the "Bad credentials" error here
             throw new AuthenticationFailedException("Wrong email or password");
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -635,26 +641,26 @@ public class UserServiceImpl implements UserService {
 
 
         // Generate a new token
-        String token = new JwtUtil().generateToken(user.getEmail(), user.getSchool().getSubscriptionKey());
+//        String token = new JwtUtil().generateToken(user.getEmail(), user.getSchool());
 
         // Check if the user already has a PasswordResetToken
         PasswordResetToken existingToken = passwordResetTokenRepository.findByUser(user);
 
         if (existingToken != null) {
             // Update the existing token
-            existingToken.setResetToken(token);
+//            existingToken.setResetToken(token);
 //            existingToken.setExpirationDate(new Date()); // Update expiration date if needed
         } else {
             // Create a new PasswordResetToken if none exists
             PasswordResetToken passwordResetTokenEntity = new PasswordResetToken();
-            passwordResetTokenEntity.setResetToken(token);
+//            passwordResetTokenEntity.setResetToken(token);
             passwordResetTokenEntity.setUser(user);
             passwordResetTokenRepository.save(passwordResetTokenEntity);
         }
 
 
         Map<String, Object> model = new HashMap<>();
-        model.put("passwordResetLink", "http://localhost:8080/api/users/resetPassword?token=" + token);
+//        model.put("passwordResetLink", "http://localhost:8080/api/users/resetPassword?token=" + token);
 
         EmailDetails emailDetails = EmailDetails.builder()
                 .recipient(forgotPasswordRequest.getEmail())

@@ -1,9 +1,6 @@
 package examination.teacherAndStudents.service;
 
-import examination.teacherAndStudents.dto.FundWalletRequest;
-import examination.teacherAndStudents.dto.SchoolRequest;
-import examination.teacherAndStudents.dto.SchoolResponse;
-import examination.teacherAndStudents.dto.SubscriptionRequest;
+import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.School;
 import examination.teacherAndStudents.entity.ServiceOffered;
 import examination.teacherAndStudents.utils.ServiceType;
@@ -22,6 +19,12 @@ public interface SchoolService {
      * @throws RuntimeException if an error occurs during onboarding.
      */
     SchoolResponse onboardSchool(SchoolRequest school);
+    SchoolLoginResponse loginSchool(LoginRequest loginRequest);
+    List<ProfileData> teacherProfilesForSchool(Long schoolId);
+    School updateSchool(Long schoolId, SchoolRequest schoolRequest);
+    List<ProfileData> studentsProfilesForSchool(Long schoolId);
+    List<ProfileData> adminProfilesForSchool(Long schoolId);
+    List<ProfileData> gateManProfilesForSchool(Long schoolId);
 
     BigDecimal getAmountToSubscribe(Long schoolId);
 

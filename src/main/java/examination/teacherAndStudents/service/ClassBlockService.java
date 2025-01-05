@@ -12,4 +12,5 @@ public interface ClassBlockService {
     ClassBlockResponse updateClassBlock(Long id, ClassBlockRequest request);
     void deleteClassBlock(Long id);
     ClassBlockResponse updateFormTeacher(Long id, Long formTeacherId);
+    ClassBlockResponse changeStudentClass(Long studentId, ClassBlockRequest request);
 }

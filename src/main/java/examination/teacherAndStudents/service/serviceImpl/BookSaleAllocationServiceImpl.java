@@ -1,20 +1,15 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.dto.BookPaymentResponse;
-import examination.teacherAndStudents.dto.PaymentResponse;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.NotFoundException;
-import examination.teacherAndStudents.error_handler.PaymentFailedException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.BookSaleAllocationService;
 import examination.teacherAndStudents.service.PaymentService;
-import examination.teacherAndStudents.utils.AllocationStatus;
 import examination.teacherAndStudents.utils.PaymentStatus;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,8 +23,6 @@ public class BookSaleAllocationServiceImpl implements BookSaleAllocationService 
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final UserRepository userRepository;
-    private final PaymentService paymentService;
-
     public List<BookSaleAllocation> getAllPurchases() {
         return bookSaleAllocationRepository.findAll();
     }

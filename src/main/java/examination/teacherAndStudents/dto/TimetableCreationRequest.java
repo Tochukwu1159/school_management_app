@@ -16,11 +16,9 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TimetableCreationRequest {
-    private Long  teacherId;
-    private Long schoolClassId;
-
     private Long term;
     private Long yearId;
+    private Long classBlockId;
     private DayOfWeek dayOfWeek;
     private TimetableType timetableType;
     private List<SubjectScheduleRequest> subjectSchedules;

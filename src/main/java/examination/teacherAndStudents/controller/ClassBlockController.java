@@ -39,6 +39,12 @@ public class ClassBlockController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/change-class/{studentId}")
+    public ResponseEntity<ClassBlockResponse> changeStudentClass(@PathVariable Long studentId, @RequestBody ClassBlockRequest request, @PathVariable String id) {
+        ClassBlockResponse response = classBlockService.changeStudentClass(studentId, request);
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteClassBlock(@PathVariable Long id) {
         classBlockService.deleteClassBlock(id);

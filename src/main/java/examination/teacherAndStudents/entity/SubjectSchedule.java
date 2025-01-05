@@ -52,7 +52,7 @@ public class SubjectSchedule {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")
-    private User teacher;
+    private Profile teacher;
 
 
     // Getters and setters

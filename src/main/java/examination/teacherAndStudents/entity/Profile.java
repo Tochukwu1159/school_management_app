@@ -75,7 +75,6 @@ public class  Profile {
     private String resume;
     @Enumerated(value = EnumType.STRING)
     private ContractType contractType;
-    private BigDecimal salary;
 
     @OneToOne
     @JoinColumn(name = "user_id")

@@ -64,29 +64,7 @@ public class AccountUtils {
             randomNumbers.append(randomNumber);
         }
 
-        return  "STU" + yearString + randomNumbers;
-    }
-
-    public static final String generateTeacherId() {
-        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-        String yearString = String.valueOf(currentYear);
-
-        SecureRandom random = new SecureRandom();
-        String teacherId;
-
-        do {
-            StringBuilder randomNumbers = new StringBuilder();
-            // Generate 3 random numbers
-            for (int i = 0; i < 3; i++) {
-                int randomNumber = random.nextInt(10);
-                randomNumbers.append(randomNumber);
-            }
-
-            // Combine "TECH" + current year + 3 random numbers
-            teacherId = "TECH" + yearString + randomNumbers;
-        } while (profileRepository.existsByUniqueRegistrationNumber(teacherId));
-
-        return teacherId;
+        return "STU" + yearString + randomNumbers;
     }
 
     public static final String generateAdminId() {

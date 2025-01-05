@@ -13,6 +13,7 @@ public class SchoolRequest {
     private String schoolAddress;
     private String schoolLogoUrl; // URL for the school's logo
     private String phoneNumber;
+    private String password;
     private String email;
     private String subscriptionType; // e.g., PREMIUM, BASIC
     private String subscriptionKey;  // Key associated with the subscription

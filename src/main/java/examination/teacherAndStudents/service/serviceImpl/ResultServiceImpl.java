@@ -203,53 +203,59 @@ public class ResultServiceImpl implements ResultService {
 
     @Transactional
     public void promoteStudents(Long sessionId, Long presentClassId, Long futureSessionId, Long futurePClassId, Long futureFClassId, int cutOff) {
+        try {
+            // Fetch the required entities
+            AcademicSession currentSession = academicSessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new NotFoundException("Current session not found with ID: " + sessionId));
+            ClassBlock presentClass = classBlockRepository.findById(presentClassId)
+                    .orElseThrow(() -> new NotFoundException("Present class not found with ID: " + presentClassId));
+            AcademicSession futureSession = academicSessionRepository.findById(futureSessionId)
+                    .orElseThrow(() -> new NotFoundException("Future session not found with ID: " + futureSessionId));
+            ClassBlock futurePClass = classBlockRepository.findById(futurePClassId)
+                    .orElseThrow(() -> new NotFoundException("Promoted class not found with ID: " + futurePClassId));
+            ClassBlock futureFClass = classBlockRepository.findById(futureFClassId)
+                    .orElseThrow(() -> new NotFoundException("Demoted class not found with ID: " + futureFClassId));
 
-        // Fetch current session, present class, future session, and classes
-        AcademicSession currentSession = academicSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Session not found"));
+            // Fetch session averages for students in the current session and class
+            List<SessionAverage> sessionAverages = sessionAverageRepository.findAllByClassBlockAndAcademicYear(presentClass, currentSession);
 
-        ClassBlock presentClass = classBlockRepository.findById(presentClassId)
-                .orElseThrow(() -> new NotFoundException("Present class not found"));
-
-        AcademicSession futureSession = academicSessionRepository.findById(futureSessionId)
-                .orElseThrow(() -> new NotFoundException("Future session not found"));
-
-        ClassBlock futurePClass = classBlockRepository.findById(futurePClassId)
-                .orElseThrow(() -> new NotFoundException("Promoted class not found"));
-
-        ClassBlock futureFClass = classBlockRepository.findById(futureFClassId)
-                .orElseThrow(() -> new NotFoundException("Demoted class not found"));
-
-        // Fetch session averages
-        List<SessionAverage> sessionAverages = sessionAverageRepository.findAllByClassBlockAndAcademicYear(
-                presentClass, currentSession);
-
-        if (sessionAverages.isEmpty()) {
-            throw new NotFoundException("No session averages found for the specified criteria");
-        }
-
-        sessionAverages.forEach(sessionAverage -> {
-            double averageScore = sessionAverage.getAverageScore();
-            Profile studentProfile = sessionAverage.getUserProfile();
-
-            if (averageScore >= cutOff) {
-                // Promote student to future promoted class
-                studentProfile.setClassBlock(futurePClass);
-                profileRepository.save(studentProfile);
-
-                // Update class count
-                futurePClass.setNumberOfStudents(futurePClass.getNumberOfStudents() + 1);
-                classBlockRepository.save(futurePClass);
-            } else {
-                // Demote student to future failed class
-                studentProfile.setClassBlock(futureFClass);
-                profileRepository.save(studentProfile);
-
-                // Update class count
-                futureFClass.setNumberOfStudents(futureFClass.getNumberOfStudents() + 1);
-                classBlockRepository.save(futureFClass);
+            if (sessionAverages.isEmpty()) {
+                throw new NotFoundException("No session averages found for present class ID: " + presentClassId + " in session ID: " + sessionId);
             }
-        });
+
+            int promotedCount = 0;
+            int demotedCount = 0;
+
+            for (SessionAverage sessionAverage : sessionAverages) {
+                double averageScore = sessionAverage.getAverageScore();
+                Profile studentProfile = sessionAverage.getUserProfile();
+
+                if (averageScore >= cutOff) {
+                    // Promote student
+                    studentProfile.setClassBlock(futurePClass);
+                    profileRepository.save(studentProfile);
+                    promotedCount++;
+                } else {
+                    // Demote student
+                    studentProfile.setClassBlock(futureFClass);
+                    profileRepository.save(studentProfile);
+                    demotedCount++;
+                }
+            }
+
+            // Update class student counts in bulk
+            futurePClass.setNumberOfStudents(futurePClass.getNumberOfStudents() + promotedCount);
+            futureFClass.setNumberOfStudents(futureFClass.getNumberOfStudents() + demotedCount);
+            classBlockRepository.save(futurePClass);
+            classBlockRepository.save(futureFClass);
+
+        } catch (NotFoundException e) {
+            // Re-throw custom exceptions for clarity
+            throw e;
+        } catch (Exception e) {
+            // Handle unexpected exceptions
+            throw new RuntimeException("An error occurred during student promotion: " + e.getMessage(), e);
+        }
     }
 
 

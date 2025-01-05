@@ -45,4 +45,6 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
                                                           Pageable pageable);
 
     List<Profile> findAllByClassBlockClassLevelClassNameAndProfileStatus(String className, ProfileStatus profileStatus);
+
+    List<Profile> findByUserIdIn(List<Long> teacherIds);
 }

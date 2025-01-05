@@ -45,10 +45,12 @@ public class TimetableServiceImpl implements TimetableService {
     private AcademicSessionRepository academicSessionRepository;
     @Autowired
     private StudentTermRepository studentTermRepository;
+    @Autowired
+    private ProfileRepository profileRepository;
 
     @Transactional
         @Override
-    public Timetable createTimetable(Long schoolClassId, Long teacherId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, TimetableType timetableType, Long termId, Long sessionId) {
+    public Timetable createTimetable(DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, TimetableType timetableType, Long termId, Long sessionId, Long classBlockId) {
         try {
             // Ensure the user has admin role
             String email = SecurityConfig.getAuthenticatedUserEmail();
@@ -58,16 +60,11 @@ public class TimetableServiceImpl implements TimetableService {
             }
 
             Optional<User> userDetails = userRepository.findByEmail(email);
-            // Find the teacher by ID
-            User teacher = userRepository.findByIdAndRoles(teacherId, Roles.TEACHER);
-            if (teacher == null) {
-                throw new CustomNotFoundException("Teacher not found");
-            }
 
 
-            Optional<ClassBlock> classBlock = classBlockRepository.findById(schoolClassId);
+            Optional<ClassBlock> classBlock = classBlockRepository.findById(classBlockId);
             if (classBlock.isEmpty()) {
-                throw new CustomNotFoundException("Class block with ID: " + schoolClassId + " not found");
+                throw new CustomNotFoundException("Class block with ID: " + classBlockId + " not found");
             }
 
             Optional<StudentTerm> studentTerm = studentTermRepository.findById(termId);
@@ -106,6 +103,12 @@ public class TimetableServiceImpl implements TimetableService {
                 subjectRepository.findById(subjectForSchedule.get().getSubject().getId())
                         .orElseThrow(() -> new CustomNotFoundException("Subject with ID " + scheduleRequest.getSubjectId() + " not found in the general subject."));
 
+                User teacher = userRepository.findById(scheduleRequest.getTeacherId())
+                        .orElseThrow(() -> new CustomNotFoundException("User with ID " + scheduleRequest.getTeacherId() + " not found."));
+
+          Profile teacherProfile = profileRepository.findByUser(teacher)
+                        .orElseThrow(() -> new CustomNotFoundException("Profile with ID " + scheduleRequest.getTeacherId() + " not found."));
+
 
                 // Set the Subject for the SubjectSchedule
                 SubjectSchedule schedule = new SubjectSchedule();
@@ -113,7 +116,7 @@ public class TimetableServiceImpl implements TimetableService {
                 schedule.setStartTime(scheduleRequest.getStartTime());
                 schedule.setTeachingStatus(TeachingStatus.PENDING);
                 schedule.setTopic(scheduleRequest.getTopic());
-                schedule.setTeacher(teacher);
+                schedule.setTeacher(teacherProfile);
                 schedule.setEndTime(scheduleRequest.getEndTime());
                 schedule.setTimetable(timetable);
                 schedules.add(schedule);
@@ -140,19 +143,13 @@ public class TimetableServiceImpl implements TimetableService {
 
 
    @Override
-    public Timetable updateTimetable(Long timetableId, Long teacherId, Long schoolClassId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, Long termId, Long sessionId) {
+    public Timetable updateTimetable(Long timetableId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, Long termId, Long sessionId) {
         try {
             // Ensure the user has admin role
             String email = SecurityConfig.getAuthenticatedUserEmail();
             User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
             if (admin == null) {
                 throw new CustomNotFoundException("Please login as an Admin");
-            }
-
-            // Find the teacher by ID
-            User teacher = userRepository.findByIdAndRoles(teacherId, Roles.TEACHER);
-            if (teacher == null) {
-                throw new CustomNotFoundException("Teacher not found");
             }
 
             // Retrieve the existing timetable
@@ -163,24 +160,13 @@ public class TimetableServiceImpl implements TimetableService {
             AcademicSession academicYear = academicYearOptional.orElseThrow(() ->
                     new CustomNotFoundException("Academic year with ID: " + sessionId + " not found"));
 
-            // Perform any validation or processing if needed
-            Optional<ClassBlock> classBlock = classBlockRepository.findById(schoolClassId);
-            if (classBlock.isEmpty()) {
-                throw new CustomNotFoundException("Class block with ID: " + schoolClassId + " not found");
-            }
+
             Optional<StudentTerm> studentTerm = studentTermRepository.findById(termId);
             if (studentTerm.isEmpty()) {
                 throw new CustomNotFoundException("Student with ID " + termId + " not found");
             }
 
-
-            // Perform any validation or processing if needed
-            Optional<ClassLevel> classLevel = classLevelRepository.findById(classBlock.get().getClassLevel().getId());
-            if (classLevel.isEmpty()) {
-                throw new CustomNotFoundException("Class Level not found for claass block with Id " + classBlock.get().getId() + " not found");
-            }
             // Update existingTimetable properties
-            existingTimetable.setClassBlock(classBlock.get());
             existingTimetable.setDayOfWeek(dayOfWeek);
             existingTimetable.setTerm(studentTerm.get());
             existingTimetable.setAcademicYear(academicYear);
@@ -196,15 +182,19 @@ public class TimetableServiceImpl implements TimetableService {
                     throw new CustomNotFoundException("Subject not found with ID: " + scheduleRequest.getSubjectId());
                 }
                 Optional<Subject> allSubject = subjectRepository.findById(subjectForSchedule.get().getSubject().getId());
-                if (subjectForSchedule.isEmpty()) {
-                    throw new CustomNotFoundException("Subject with ID " + scheduleRequest.getSubjectId() + " not found in the general subject.");
-                }
+
+                User teacher = userRepository.findById(scheduleRequest.getTeacherId())
+                        .orElseThrow(() -> new CustomNotFoundException("User with ID " + scheduleRequest.getTeacherId() + " not found."));
+
+                Profile teacherProfile = profileRepository.findByUser(teacher)
+                        .orElseThrow(() -> new CustomNotFoundException("Profile with ID " + scheduleRequest.getTeacherId() + " not found."));
+
 
                 // Set the Subject for the SubjectSchedule
                 schedule.setSubject(subjectForSchedule.get());
                 schedule.setStartTime(scheduleRequest.getStartTime());
                 schedule.setEndTime(scheduleRequest.getEndTime());
-                schedule.setTeacher(teacher);
+                schedule.setTeacher(teacherProfile);
                 schedule.setTimetable(existingTimetable);
                 schedules.add(schedule);
             }

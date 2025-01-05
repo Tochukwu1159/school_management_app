@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.entity;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import examination.teacherAndStudents.utils.ServiceType;
 import examination.teacherAndStudents.utils.SubscriptionType;
@@ -42,6 +43,9 @@ public class School {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
+    private String password;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "subscription_type")
     private SubscriptionType subscriptionType;
@@ -49,7 +53,9 @@ public class School {
     @Column(unique = true, nullable = false)
     private String subscriptionKey;
 
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime subscriptionExpiryDate;
+
 
 
     @Column(nullable = false)
@@ -75,6 +81,7 @@ public class School {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
 
     @PrePersist
     protected void onCreate() {

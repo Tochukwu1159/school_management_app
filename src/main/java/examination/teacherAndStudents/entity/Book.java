@@ -29,6 +29,8 @@ public class Book {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+
+
     @NotNull
     @Size(min = 1, max = 255)
     private String title;

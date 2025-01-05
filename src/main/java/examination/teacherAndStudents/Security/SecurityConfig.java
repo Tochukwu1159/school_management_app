@@ -3,6 +3,7 @@ import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -12,6 +13,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,7 +29,7 @@ import java.util.List;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
-    private final JwtFilter jwtRequestFilter;
+
     private final UserDetailsService userDetailsService;
 
     @Autowired
@@ -51,6 +53,7 @@ public class SecurityConfig {
                                         "/api/v1/services/**",
                                         "/api/v1/users/login",
                                         "/api/v1/schools/onboard",
+                                        "/api/v1/schools/login",
                                         "/api/v1/schools/**",
                                         "/api/v1/users/verify/**",
                                         "api/v1/users/resend-verify",
@@ -115,10 +118,10 @@ public class SecurityConfig {
     public static String getAuthenticatedUserEmail() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-        if (!(principal instanceof org.springframework.security.core.userdetails.UserDetails)) {
+        if (!(principal instanceof UserDetails)) {
             throw new CustomNotFoundException("user not found");
         }
-        return ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+        return ((UserDetails) principal).getUsername();
     }
 
     @Bean

@@ -15,6 +15,7 @@ public class SchoolResponse {
     private String schoolName;
     private String schoolAddress;
     private String schoolLogoUrl;
+    private String email;
 
     private String phoneNumber;
 
