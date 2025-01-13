@@ -41,8 +41,18 @@ public class  Profile {
     private String religion;
 
     private Boolean isVerified;
+
+
     private String address;
+
+    private String country;
+
+    private String state;
+
+    private String city;
+
     private Date dateOfBirth;
+
     private String academicQualification;
 
     private String courseOfStudy;

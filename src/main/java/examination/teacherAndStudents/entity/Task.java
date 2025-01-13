@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -30,7 +32,14 @@ public class Task {
 
     private String description;  // Task description
 
-    private LocalDateTime dateAssigned;  // Date when the task was assigned
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     private String feedback;  // Feedback from the assignee after task completion
     private String status;  // Status of the task (e.g., "pending", "in-progress", "done")
 

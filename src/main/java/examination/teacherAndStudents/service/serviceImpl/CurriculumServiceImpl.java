@@ -2,53 +2,85 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.dto.CurriculumRequest;
 import examination.teacherAndStudents.dto.CurriculumResponse;
-import examination.teacherAndStudents.entity.ClassSubject;
-import examination.teacherAndStudents.entity.Curriculum;
-import examination.teacherAndStudents.entity.Subject;
-import examination.teacherAndStudents.error_handler.NotFoundException;
-import examination.teacherAndStudents.repository.ClassSubjectRepository;
+import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.repository.CurriculumRepository;
-import examination.teacherAndStudents.repository.SubjectRepository;
 import examination.teacherAndStudents.service.CurriculumService;
+import examination.teacherAndStudents.utils.EntityFetcher;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CurriculumServiceImpl implements CurriculumService {
 
     private final CurriculumRepository curriculumRepository;
-    private final SubjectRepository subjectRepository;
-    private final ClassSubjectRepository classSubjectRepository;
+    private final EntityFetcher entityFetcher;
 
+    @Override
     public CurriculumResponse addCurriculumToClassSubject(Long classSubjectId, CurriculumRequest request) {
-        // Fetch the ClassSubject
-        ClassSubject classSubject = classSubjectRepository.findById(classSubjectId)
-                .orElseThrow(() -> new NotFoundException("ClassSubject with id " + classSubjectId + " not found"));
+        ClassSubject classSubject = entityFetcher.fetchClassSubject(classSubjectId);
+        ClassBlock classBlock = classSubject.getClassBlock();
+        StudentTerm studentTerm = entityFetcher.fetchStudentTerm(request.getTermId());
+        String email = entityFetcher.fetchLoggedInUser();
+        User teacher = entityFetcher.fetchUserFromEmail(email);
+        Profile techerProfile = entityFetcher.fetchProfileByUser(teacher);
 
-        // Fetch the subject for the curriculum
-        Subject subject = subjectRepository.findById(request.getSubjectId())
-                .orElseThrow(() -> new NotFoundException("Subject with id " + request.getSubjectId() + " not found"));
-
-        // Create the Curriculum
-        Curriculum curriculum = new Curriculum();
-        curriculum.setDescription(request.getDescription());
-        curriculum.setResources(request.getResources());
-        curriculum.setSubject(subject);
-        curriculum.setClassSubject(classSubject);
+        Curriculum curriculum = Curriculum.builder()
+                .title(request.getTitle())
+                .week(request.getWeek())
+                .classBlock(classBlock)
+                .term(studentTerm)
+                .teacher(techerProfile)
+                .description(request.getDescription())
+                .resources(request.getResources())
+                .classSubject(classSubject)
+                .build();
 
         curriculum = curriculumRepository.save(curriculum);
-
         return toResponse(curriculum);
+    }
+
+    @Override
+    public CurriculumResponse updateCurriculum(Long curriculumId, CurriculumRequest request) {
+        Curriculum curriculum = entityFetcher.fetchCurriculum(curriculumId);
+
+        curriculum.setTitle(request.getTitle());
+        curriculum.setDescription(request.getDescription());
+        curriculum.setResources(request.getResources());
+        curriculum = curriculumRepository.save(curriculum);
+        return toResponse(curriculum);
+    }
+
+    @Override
+    public CurriculumResponse getCurriculumById(Long curriculumId) {
+        Curriculum curriculum = entityFetcher.fetchCurriculum(curriculumId);
+        return toResponse(curriculum);
+    }
+
+    @Override
+    public List<CurriculumResponse> getAllCurriculums() {
+        List<Curriculum> curriculums = curriculumRepository.findAll();
+        return curriculums.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void deleteCurriculum(Long curriculumId) {
+        Curriculum curriculum = entityFetcher.fetchCurriculum(curriculumId);
+        curriculumRepository.delete(curriculum);
     }
 
     private CurriculumResponse toResponse(Curriculum curriculum) {
         return CurriculumResponse.builder()
                 .id(curriculum.getId())
+                .title(curriculum.getTitle())
                 .description(curriculum.getDescription())
                 .resources(curriculum.getResources())
-                .subjectId(curriculum.getSubject().getId())
-                .subjectName(curriculum.getSubject().getName())
+                .classSubjectId(curriculum.getClassSubject().getId())
                 .build();
     }
 }

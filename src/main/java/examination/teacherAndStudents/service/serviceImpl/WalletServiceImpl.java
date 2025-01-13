@@ -35,6 +35,7 @@ public class WalletServiceImpl implements WalletService {
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
     private final ProfileRepository profileRepository;
+    private final EntityFetcher entityFetcher;
 
     @Override
     public WalletResponse getProfileWalletBalance() {

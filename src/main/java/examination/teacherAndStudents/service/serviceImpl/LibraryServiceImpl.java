@@ -202,7 +202,7 @@ public class LibraryServiceImpl implements LibraryService {
             bookRepository.save(book);
 
             // Update the borrowing entry
-            borrowing.setReturnDate(LocalDateTime.now());
+            borrowing.setActualReturnDate(LocalDateTime.now());
             borrowing.setStatus(BorrowingStatus.RETURNED);
 
             return bookBorrowingRepository.save(borrowing);

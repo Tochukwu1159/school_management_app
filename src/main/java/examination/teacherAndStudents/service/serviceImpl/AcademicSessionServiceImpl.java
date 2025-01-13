@@ -11,6 +11,7 @@ import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.StudentTermRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.AcademicSessionService;
+import examination.teacherAndStudents.utils.EntityFetcher;
 import examination.teacherAndStudents.utils.ProfileStatus;
 import examination.teacherAndStudents.utils.Roles;
 import jakarta.transaction.Transactional;
@@ -31,24 +32,23 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
     private final StudentTermRepository studentTermRepository;
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
+    private final EntityFetcher entityFetcher;
 
     public AcademicSessionResponse  createAcademicSession(AcademicSessionRequest request) {
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+        User admin = entityFetcher.fetchLoggedInAdmin(email);
         if (admin == null) {
             throw new AuthenticationFailedException("Please login as an Admin");
         }
 
-        Optional<User> userDetails = userRepository.findByEmail(email);
-
         // Check if the subscription has expired
-        School school = userDetails.get().getSchool();
+        School school = admin.getSchool();
         AcademicSession session = AcademicSession.builder()
                 .name(request.getName())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
-                .school(userDetails.get().getSchool())
+                .school(admin.getSchool())
                 .build();
         AcademicSession savedSession = academicSessionRepository.save(session);
         createStudentTerms(request,savedSession);
@@ -56,8 +56,7 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
     }
 
     public AcademicSessionResponse updateAcademicSession(Long id, AcademicSessionRequest request) {
-        AcademicSession session = academicSessionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + id));
+        AcademicSession session = entityFetcher.fetchAcademicSession(id);
         session.setName(request.getName());
         session.setStartDate(request.getStartDate());
         session.setEndDate(request.getEndDate());
@@ -66,8 +65,7 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
     }
 
     public AcademicSessionResponse getAcademicSessionById(Long id) {
-        AcademicSession session = academicSessionRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + id));
+        AcademicSession session = entityFetcher.fetchAcademicSession(id);
         return mapToResponse(session);
     }
 
@@ -84,11 +82,10 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
     @Transactional
     public void graduateStudentsForSession(Long academicSessionId) {
         // Fetch the academic session
-        AcademicSession academicSession = academicSessionRepository.findById(academicSessionId)
-                .orElseThrow(() -> new RuntimeException("Academic session not found"));
+        AcademicSession session = entityFetcher.fetchAcademicSession(academicSessionId);
 
         // Check if the session has ended
-        if (academicSession.getEndDate().isAfter(LocalDate.now())) {
+        if (session.getEndDate().isAfter(LocalDate.now())) {
             throw new IllegalStateException("Academic session has not ended yet");
         }
         // Fetch all SS3 profiles with 'ACTIVE' status
@@ -100,7 +97,7 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
                 "primary6", ProfileStatus.ACTIVE);
 
         if (secondaryProfilesToGraduate.isEmpty() || primaryProfilesToGraduate.isEmpty()) {
-            System.out.println("No students found for graduation in session: " + academicSession.getName());
+            System.out.println("No students found for graduation in session: " + session.getName());
             return; // Early return if no profiles found
         }
         // Update the status of secondary profiles to 'GRADUATED'
@@ -113,7 +110,7 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
         profileRepository.saveAll(secondaryProfilesToGraduate);
         profileRepository.saveAll(primaryProfilesToGraduate);
 
-        System.out.println("Graduation process completed for session: " + academicSession.getName());
+        System.out.println("Graduation process completed for session: " + session.getName());
     }
 
     private AcademicSessionResponse mapToResponse(AcademicSession session) {

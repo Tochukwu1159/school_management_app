@@ -71,6 +71,7 @@ public class UserServiceImpl implements UserService {
     private final StaffLevelRepository staffLevelRepository;
 
     @Override
+    @Transactional
     public UserResponse createStudent(UserRequestDto userRequest) throws MessagingException {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
@@ -81,32 +82,16 @@ public class UserServiceImpl implements UserService {
 
         Optional<User> userDetails = userRepository.findByEmail(email);
 
+        School school = userDetails.get().getSchool();
 
-        if (userRepository.existsByEmail(userRequest.getEmail())) {
+        validateUserRequest(userRequest);
 
-           throw new UserAlreadyExistException("Email already exist");
+        ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
+                .orElseThrow(() -> new BadRequestException("Error: Class block not found"));
 
-        }
-        if (!AccountUtils.validatePassword(userRequest.getPassword(), userRequest.getConfirmPassword())){
-            throw new UserPasswordMismatchException("Password does not match");
-
-    }
-        if(existsByMail(userRequest.getEmail())){
-            throw new BadRequestException
-                    ("Error: Email is already taken!");
-        }
-
-        if(!isValidEmail(userRequest.getEmail())){
-            throw new BadRequestException("Error: Email must be valid");
-        }
-
-        if(userRequest.getPassword().length() < 8 || userRequest.getConfirmPassword().length() < 8 ){
-            throw new BadRequestException("Password is too short, should be minimum of 8 character long");
-        }
-        Optional<ClassBlock> studentClassBlock = classBlockRepository.findById(userRequest.getClassAssignedId());
-        ClassLevel classLevel = classLevelRepository.findByClassName(studentClassBlock.get().getClassLevel().getClassName());
+        ClassLevel classLevel = classLevelRepository.findByClassName(classBlock.getClassLevel().getClassName());
         if (classLevel == null) {
-            throw new BadRequestException("Error: Class level not found ");
+            throw new BadRequestException("Error: Class level not found");
         }
 //        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
 //        // Get the secure URL of the uploaded image from Cloudinary
@@ -116,7 +101,7 @@ public class UserServiceImpl implements UserService {
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
                 .middleName(userRequest.getMiddleName())
-                .school(userDetails.get().getSchool())
+                .school(school)
                 .email(userRequest.getEmail())
                 .roles(Roles.STUDENT)
                 .isVerified(true)
@@ -129,9 +114,10 @@ public class UserServiceImpl implements UserService {
 
         Profile userProfile =  Profile.builder()
                 .gender(userRequest.getGender())
-                .dateOfBirth(userRequest.getDateOfBirth())
                 .religion(userRequest.getReligion())
-                .admissionDate(userRequest.getAdmissionDate())
+                .city(userRequest.getCity())
+                .state(userRequest.getState())
+                .country(userRequest.getCountry())
                 .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
                 .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
                 .studentGuardianName(userRequest.getStudentGuardianName())
@@ -144,34 +130,26 @@ public class UserServiceImpl implements UserService {
                 .maritalStatus(userRequest.getMaritalStatus())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .admissionDate(userRequest.getAdmissionDate())
-                .classBlock(studentClassBlock.get())
+                .classBlock(classBlock)
 //                .profilePicture(imageUrl)
                 .phoneNumber(userRequest.getPhoneNumber())
                 .build();
         Profile saveUserProfile = profileRepository.save(userProfile);
 
-        studentClassBlock.get().setNumberOfStudents(studentClassBlock.get().getNumberOfStudents() + 1);
-        classBlockRepository.save(studentClassBlock.get());
+        // Increment class block and school student counts
+        classBlock.setNumberOfStudents(classBlock.getNumberOfStudents() + 1);
+        classBlockRepository.save(classBlock);
+
+      //update the school population
+        school.incrementActualNumberOfStudents();
+        schoolRepository.save(school);
+
         //create wallet
-        Wallet userWallet = new Wallet();
-        userWallet.setBalance(BigDecimal.ZERO);
-        userWallet.setTotalMoneySent(BigDecimal.ZERO);
-        userWallet.setUserProfile(saveUserProfile);
-        walletRepository.save(userWallet);
+        createWallet(saveUserProfile);
 
-        EmailDetails emailDetails = EmailDetails.builder()
-                .recipient(savedUser.getEmail())
-                .subject("SUCCESSFULLY REGISTRATION")
-                .templateName("email-template")  // Name of your Thymeleaf template
-                .model(createModelWithData(userRequest))
-                .build();
-        emailService.sendHtmlEmail(emailDetails);
+        sendRegistrationEmail(userRequest, savedUser);
 
-        AccountInfo accountInfo = AccountInfo.builder().
-                firstName(savedUser.getFirstName())
-                .lastName(savedUser.getLastName())
-                .email(savedUser.getEmail())
-                .gender(savedUser.getEmail()).build();
+        AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
 
 
         return new  UserResponse("200", "Student Successfully Created", accountInfo);
@@ -194,31 +172,10 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
+    @Transactional
     public UserResponse createAdmin(UserRequestDto userRequest) throws MessagingException {
 
-        School school = schoolRepository.findById(userRequest.getSchoolId())
-                .orElseThrow(() -> new CustomNotFoundException("School not found or school id not exist"));
-
-        if (userRepository.existsByEmail(userRequest.getEmail())) {
-
-            throw new UserAlreadyExistException("User with email already exist");
-
-        }
-        if (!AccountUtils.validatePassword(userRequest.getPassword(), userRequest.getConfirmPassword())){
-            throw new UserPasswordMismatchException("Password does not match");
-
-        }
-        if(existsByMail(userRequest.getEmail())){
-            throw new BadRequestException("Error: Email is already taken!");
-        }
-
-        if(!isValidEmail(userRequest.getEmail())){
-            throw new BadRequestException("Error: Email must be valid");
-        }
-
-        if(userRequest.getPassword().length() < 8 || userRequest.getConfirmPassword().length() < 8 ){
-            throw new BadRequestException("Password is too short, should be minimum of 8 character longt");
-        }
+        validateUserRequest(userRequest);
 
         //        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
 //        // Get the secure URL of the uploaded image from Cloudinary
@@ -230,7 +187,6 @@ public class UserServiceImpl implements UserService {
                 .lastName(userRequest.getLastName())
                 .middleName(userRequest.getMiddleName())
                 .email(userRequest.getEmail())
-                .school(school)
                 .password(passwordEncoder.encode(userRequest.getPassword()))
                 .isVerified(true)
                 .roles(Roles.ADMIN)
@@ -246,6 +202,9 @@ public class UserServiceImpl implements UserService {
                 .profileStatus(ProfileStatus.ACTIVE)
                 .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
                 .phoneNumber(userRequest.getPhoneNumber())
+                .city(userRequest.getCity())
+                .state(userRequest.getState())
+                .country(userRequest.getCountry())
                 .maritalStatus(userRequest.getMaritalStatus())
                 .courseOfStudy(userRequest.getCourseOfStudy())
                 .contractType(userRequest.getContractType())
@@ -262,32 +221,16 @@ public class UserServiceImpl implements UserService {
 
 
         //create wallet
-        Wallet userWallet = new Wallet();
-        userWallet.setBalance(BigDecimal.ZERO);
-        userWallet.setTotalMoneySent(BigDecimal.ZERO);
-        userWallet.setUserProfile(saveUserProfile);
-        walletRepository.save(userWallet);
+        createWallet(saveUserProfile);
 
-        EmailDetails emailDetails = EmailDetails.builder()
-                .recipient(savedUser.getEmail())
-                .subject("ACCOUNT CREATION")
-                .templateName("email-template-admin")
-                .model(Map.of("name", savedUser.getFirstName() + " " + savedUser.getLastName()))
-                .build();
-        emailService.sendHtmlEmail(emailDetails);
-
-        AccountInfo accountInfo = AccountInfo.builder().
-                firstName(savedUser.getFirstName())
-                .lastName(savedUser.getLastName())
-                .email(savedUser.getEmail())
-                .gender(savedUser.getEmail()).build();
-
+        AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
 
         return new  UserResponse("200", "Admin Successfully Created", accountInfo);
     }
 
 
     @Override
+    @Transactional
     public UserResponse createStaff(UserRequestDto userRequest) throws MessagingException {
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
@@ -299,48 +242,16 @@ public class UserServiceImpl implements UserService {
         StaffLevel staffLevel = staffLevelRepository.findById(userRequest.getStaffLevelId())
                 .orElseThrow(() -> new CustomNotFoundException("Staff level not found"));
 
-        Optional<User> userDetails = userRepository.findByEmail(email);
+         School school = admin.getSchool();
 
-        School school = schoolRepository.findById(userRequest.getSchoolId())
-                .orElseThrow(() -> new CustomNotFoundException("Please login as a student"));
 
-        // Check if ClassFormTeacherId is provided before fetching ClassBlock
-        if (userRequest.getClassFormTeacherId() != null) {
-            ClassBlock classBlockAssigned = classBlockRepository.findById(userRequest.getClassFormTeacherId())
-                    .orElseThrow(() -> new NotFoundException("Class not found with ID: " + userRequest.getClassFormTeacherId()));
-        }
+        validateUserRequest(userRequest);
 
-        // Check if SubjectAssignedId is provided before fetching Subject
-        if (userRequest.getSubjectAssignedId() != null) {
-            Subject assignedSubject = subjectRepository.findById(userRequest.getSubjectAssignedId())
-                    .orElseThrow(() -> new NotFoundException("Subject not found with ID: " + userRequest.getSubjectAssignedId()));
-        }
-
-        if (userRepository.existsByEmail(userRequest.getEmail())) {
-            throw new UserAlreadyExistException("User with email already exists");
-        }
-
-        if (!AccountUtils.validatePassword(userRequest.getPassword(), userRequest.getConfirmPassword())) {
-            throw new UserPasswordMismatchException("Password does not match");
-        }
-
-        if (existsByMail(userRequest.getEmail())) {
-            throw new BadRequestException("Error: Email is already taken!");
-        }
-
-        if (!isValidEmail(userRequest.getEmail())) {
-            throw new BadRequestException("Error: Email must be valid");
-        }
-
-        if (userRequest.getPassword().length() < 8 || userRequest.getConfirmPassword().length() < 8) {
-            throw new BadRequestException("Password is too short, should be a minimum of 8 characters long");
-        }
 
         // Create new user
         User newUser = User.builder()
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
-                .school(userDetails.get().getSchool())
                 .middleName(userRequest.getMiddleName())
                 .email(userRequest.getEmail())
                 .school(school)
@@ -351,68 +262,19 @@ public class UserServiceImpl implements UserService {
 
         User savedUser = userRepository.save(newUser);
 
-        // Create Profile with the condition that ClassBlock and Subject are assigned only if they are provided
-         Profile userProfile = Profile.builder()
-                .gender(userRequest.getGender())
-                .isVerified(true)
-                 .staffLevel(staffLevel)
-                .profileStatus(ProfileStatus.ACTIVE)
-                .dateOfBirth(userRequest.getDateOfBirth())
-                .courseOfStudy(userRequest.getCourseOfStudy())
-                .classOfDegree(userRequest.getClassOfDegree())
-                .admissionDate(userRequest.getAdmissionDate())
-                .contractType(userRequest.getContractType())
-                .dateOfBirth(userRequest.getDateOfBirth())
-                 .maritalStatus(userRequest.getMaritalStatus())
-                .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
-                .academicQualification(userRequest.getAcademicQualification())
-                .religion(userRequest.getReligion())
-                .uniqueRegistrationNumber(AccountUtils.generateStaffId())
-                .address(userRequest.getAddress())
-                .phoneNumber(userRequest.getPhoneNumber())
-                .user(savedUser)
-                .build();
+        Profile userProfile = buildStaffProfile(userRequest, savedUser, staffLevel);
+        Profile savedProfile = profileRepository.save(userProfile);
+        createWallet(savedProfile);
+        sendStaffCreationEmail(savedUser);
 
-        // Only assign class and subject if the IDs are provided
 
-        if (userRequest.getClassFormTeacherId() != null) {
-            ClassBlock classBlockAssigned = classBlockRepository.findById(userRequest.getClassFormTeacherId())
-                    .orElseThrow(() -> new NotFoundException("Class not found with ID: " + userRequest.getClassFormTeacherId()));
-            userProfile.setClassFormTeacher(classBlockAssigned);
-        }
-
-        if (userRequest.getSubjectAssignedId() != null) {
-            Subject assignedSubject = subjectRepository.findById(userRequest.getSubjectAssignedId())
-                    .orElseThrow(() -> new NotFoundException("Subject not found with ID: " + userRequest.getSubjectAssignedId()));
-            userProfile.setSubjectAssigned(assignedSubject);
-        }
-
-        Profile saveUserProfile = profileRepository.save(userProfile);
-
-        // Create wallet
-        Wallet userWallet = new Wallet();
-        userWallet.setBalance(BigDecimal.ZERO);
-        userWallet.setTotalMoneySent(BigDecimal.ZERO);
-        userWallet.setUserProfile(saveUserProfile);
-        walletRepository.save(userWallet);
-
-        // Send email
-        EmailDetails emailDetails = EmailDetails.builder()
-                .recipient(savedUser.getEmail())
-                .subject("ACCOUNT CREATION")
-                .templateName("email-template-teachers")
-                .model(Map.of("name", savedUser.getFirstName() + " " + savedUser.getLastName()))
-                .build();
-
-        emailService.sendHtmlEmail(emailDetails);
+        //update the school population
+        school.incrementActualNumberOfStaff();
+        schoolRepository.save(school);
 
         // Return the response
-        AccountInfo accountInfo = AccountInfo.builder()
-                .firstName(savedUser.getFirstName())
-                .lastName(savedUser.getLastName())
-                .email(savedUser.getEmail())
-                .gender(userProfile.getGender())
-                .build();
+        AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
+
 
         return new UserResponse("200", "Staff Successfully Created", accountInfo);
     }
@@ -500,20 +362,22 @@ public class UserServiceImpl implements UserService {
 
 
             Optional<User> userDetails = userRepository.findByEmail(loginRequest.getEmail());
-
-
-            // Check if the subscription has expired
-            School school = userDetails.get().getSchool();
-            if(school.getSubscriptionExpiryDate() == null){
-                throw new SubscriptionExpiredException("Not subscribe yet. Please  subscribe to enjoy the services.");
+            if (userDetails.isEmpty()) {
+                throw new UsernameNotFoundException("User not found");
             }
-            if (school != null && !school.isSubscriptionValid()) {
-                throw new SubscriptionExpiredException("Your subscription has expired. Please renew your subscription.");
+
+            // Check if the school exists
+            School school = userDetails.get().getSchool();
+            String token;
+            if (school == null) {
+                // Generate token with school as null
+                token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), null);
+            } else {
+                // Generate token with school
+                token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), school);
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool());
-
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
             userDto.setFirstName(userDetails.get().getFirstName());
@@ -679,45 +543,39 @@ public class UserServiceImpl implements UserService {
         return modelMapper.map(user, UserResponse.class);
     }
 
-
-
     @Override
     @Transactional
     public UserResponse resetPassword(PasswordResetRequest passwordRequest, String token) {
+        // Validate new password and confirm password match
         if (!passwordRequest.getNewPassword().equals(passwordRequest.getConfirmPassword())) {
-            throw new CustomNotFoundException("Password do not match");
+            throw new BadRequestException("Passwords do not match");
         }
 
-        String email = jwtUtil.extractUsername(token);
+        // Validate password length
+        if (passwordRequest.getNewPassword().length() < 8) {
+            throw new BadRequestException("Password is too short, must be at least 8 characters");
+        }
 
+        // Extract email and find user
+        String email = jwtUtil.extractUsername(token);
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        if (user == null) {
-            throw new UsernameNotFoundException("User not found");
-        }
-
-        if (passwordRequest.getNewPassword().length() < 8 || passwordRequest.getConfirmPassword().length() < 8) {
-            throw new BadRequestException("Error: Password is too short");
-        }
-
-        // Check if the token has expired
-//        Date tokenExpirationDate = jwtUtil. extractExpiration(token);
-//        Date currentDate = new Date();
-
-//        if (tokenExpirationDate != null && currentDate.after(tokenExpirationDate)) {
-            if(jwtUtil.isTokenExpired(token)){
+        // Check if the token is expired
+        if (jwtUtil.isTokenExpired(token)) {
             throw new TokenExpiredException("Token has expired");
         }
 
+        // Update user's password
         user.setPassword(passwordEncoder.encode(passwordRequest.getNewPassword()));
         userRepository.save(user);
 
+        // Delete the used reset token
         passwordResetTokenRepository.deleteByResetToken(token);
 
+        // Map and return response
         return modelMapper.map(user, UserResponse.class);
     }
-
 
     @Override
     public UserResponse updatePassword (ChangePasswordRequest changePasswordRequest) {
@@ -754,46 +612,6 @@ public class UserServiceImpl implements UserService {
 
         return modelMapper.map(optionalUsers.get(), UserResponse.class);
     }
-
-//    @Override
-//        public AllUserResponse getAllUsers() {
-//            try {
-//                List<User> userList = userRepository.findAll();
-//
-//                List<AccountInfo> accountInfoList = userList.stream()
-//                        .map(user -> new AccountInfo(
-//                                user.getFirstName(),
-//                                user.getLastName(),
-//                                user.getEmail(),
-//                                user.getPhoneNumber(),
-//                                user.getUniqueRegistrationNumber(),
-//                                user.getAge(),
-//                                user.getStudentGuardianPhoneNumber(),
-//                                user.getClassAssigned(),
-//                                user.getPhoneNumber(),
-//                                user.getGender(),
-//                                user.getAddress(),
-//                                user.getSubjectAssigned(),
-//                                user.getAcademicQualification(),
-//                                user.getUniqueRegistrationNumber()
-//                        ))
-//                        .collect(Collectors.toList());
-//
-//                return AllUserResponse.builder()
-//                        .responseCode(AccountUtils.FETCH_ALL_USERS_SUCCESSFUL_CODE)
-//                        .responseMessage(AccountUtils.FETCH_ALL_USERS_SUCCESSFUL_MESSAGE)
-//                        .accountInfo(accountInfoList)
-//                        .build();
-//            } catch (Exception e) {
-//                // Log the exception for further analysis
-//                e.printStackTrace();
-//                return AllUserResponse.builder()
-//                        .responseCode(AccountUtils.INTERNAL_SERVER_ERROR_CODE)
-//                        .responseMessage(AccountUtils.INTERNAL_SERVER_ERROR_MESSAGE)
-//                        .accountInfo(Collections.emptyList()) // Return an empty list in case of an error
-//                        .build();
-//            }
-//        }
 
     @Override
     public UserResponse getUser() {
@@ -931,6 +749,106 @@ public class UserServiceImpl implements UserService {
 
         // Query the repository to get the profiles
         return profileRepository.findProfilesByRoleAndStatus(roleEnum, statusEnum, pageable);
+    }
+
+
+    private void validateUserRequest(UserRequestDto userRequest) {
+        if (userRepository.existsByEmail(userRequest.getEmail())) {
+            throw new UserAlreadyExistException("Email already exists");
+        }
+
+        if (!AccountUtils.validatePassword(userRequest.getPassword(), userRequest.getConfirmPassword())) {
+            throw new UserPasswordMismatchException("Passwords do not match");
+        }
+
+        if (!AccountUtils.isValidEmail(userRequest.getEmail())) {
+            throw new BadRequestException("Invalid email address");
+        }
+
+        if (userRequest.getPassword().length() < 8) {
+            throw new BadRequestException("Password must be at least 8 characters long");
+        }
+    }
+
+    private void sendRegistrationEmail(UserRequestDto userRequest, User savedUser) throws MessagingException {
+        Map<String, Object> model = new HashMap<>();
+        model.put("name", savedUser.getFirstName() + " " + savedUser.getLastName());
+        model.put("email", savedUser.getEmail());
+        model.put("password", userRequest.getPassword());
+
+        EmailDetails emailDetails = EmailDetails.builder()
+                .recipient(savedUser.getEmail())
+                .subject("Successful Registration")
+                .templateName("email-template") // Thymeleaf template name
+                .model(model)
+                .build();
+        emailService.sendHtmlEmail(emailDetails);
+    }
+
+
+    private Profile buildStaffProfile(UserRequestDto userRequest, User savedUser, StaffLevel staffLevel) {
+        Profile.ProfileBuilder profileBuilder = Profile.builder()
+                .gender(userRequest.getGender())
+                .isVerified(true)
+                .staffLevel(staffLevel)
+                .profileStatus(ProfileStatus.ACTIVE)
+                .dateOfBirth(userRequest.getDateOfBirth())
+                .courseOfStudy(userRequest.getCourseOfStudy())
+                .classOfDegree(userRequest.getClassOfDegree())
+                .admissionDate(userRequest.getAdmissionDate())
+                .city(userRequest.getCity())
+                .state(userRequest.getState())
+                .country(userRequest.getCountry())
+                .contractType(userRequest.getContractType())
+                .maritalStatus(userRequest.getMaritalStatus())
+                .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
+                .academicQualification(userRequest.getAcademicQualification())
+                .religion(userRequest.getReligion())
+                .uniqueRegistrationNumber(AccountUtils.generateStaffId())
+                .address(userRequest.getAddress())
+                .phoneNumber(userRequest.getPhoneNumber())
+                .user(savedUser);
+
+        if (userRequest.getClassFormTeacherId() != null) {
+            ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassFormTeacherId())
+                    .orElseThrow(() -> new NotFoundException("Class not found with ID: " + userRequest.getClassFormTeacherId()));
+            profileBuilder.classFormTeacher(classBlock);
+        }
+
+        if (userRequest.getSubjectAssignedId() != null) {
+            Subject subject = subjectRepository.findById(userRequest.getSubjectAssignedId())
+                    .orElseThrow(() -> new NotFoundException("Subject not found with ID: " + userRequest.getSubjectAssignedId()));
+            profileBuilder.subjectAssigned(subject);
+        }
+
+        return profileBuilder.build();
+    }
+
+    private void createWallet(Profile userProfile) {
+        Wallet userWallet = new Wallet();
+        userWallet.setBalance(BigDecimal.ZERO);
+        userWallet.setTotalMoneySent(BigDecimal.ZERO);
+        userWallet.setUserProfile(userProfile);
+        walletRepository.save(userWallet);
+    }
+
+    private void sendStaffCreationEmail(User savedUser) throws MessagingException {
+        EmailDetails emailDetails = EmailDetails.builder()
+                .recipient(savedUser.getEmail())
+                .subject("ACCOUNT CREATION")
+                .templateName("email-template-teachers")
+                .model(Map.of("name", savedUser.getFirstName() + " " + savedUser.getLastName()))
+                .build();
+        emailService.sendHtmlEmail(emailDetails);
+    }
+
+    private AccountInfo buildAccountInfo(User savedUser, Profile userProfile) {
+        return AccountInfo.builder()
+                .firstName(savedUser.getFirstName())
+                .lastName(savedUser.getLastName())
+                .email(savedUser.getEmail())
+                .gender(userProfile.getGender())
+                .build();
     }
 
 

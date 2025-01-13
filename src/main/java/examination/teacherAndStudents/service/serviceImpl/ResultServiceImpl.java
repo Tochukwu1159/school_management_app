@@ -5,8 +5,11 @@ import examination.teacherAndStudents.error_handler.CustomInternalServerExceptio
 import examination.teacherAndStudents.error_handler.EntityNotFoundException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.*;
+import examination.teacherAndStudents.service.GradeService;
+import examination.teacherAndStudents.service.RatingService;
 import examination.teacherAndStudents.service.ResultService;
 import examination.teacherAndStudents.service.ScoreService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +22,7 @@ import java.util.stream.Collectors;
 @Service
 public class ResultServiceImpl implements ResultService {
 
+
     private final ScoreService scoreService;
     private final UserRepository userRepository;
     private final ScoreRepository scoreRepository;
@@ -30,12 +34,15 @@ public class ResultServiceImpl implements ResultService {
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final SessionAverageRepository sessionAverageRepository;
+    private final GradeService gradeService;
+    private final RatingService ratingService;
+
 
     @Autowired
     public ResultServiceImpl(ScoreService scoreService, UserRepository userRepository, ScoreRepository scoreRepository,
                              ResultRepository resultRepository,
                              PositionRepository positionRepository,
-                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository) {
+                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository, GradeService gradeService, RatingService ratingService) {
         this.scoreService = scoreService;
         this.userRepository = userRepository;
         this.scoreRepository = scoreRepository;
@@ -47,6 +54,8 @@ public class ResultServiceImpl implements ResultService {
         this.academicSessionRepository = academicSessionRepository;
         this.studentTermRepository = studentTermRepository;
         this.sessionAverageRepository = sessionAverageRepository;
+        this.gradeService = gradeService;
+        this.ratingService = ratingService;
     }
 
 
@@ -76,11 +85,17 @@ public class ResultServiceImpl implements ResultService {
                 throw new NotFoundException("Score not found for the specified criteria");
             }
 
+            // Retrieve school information
+            School school = student.getSchool();
 
-            // Calculate total marks and grade based on your logic
+            //            // Calculate total marks and grade based on your logic
             double totalMarks = calculateTotalMarks(score.getExamScore(), score.getAssessmentScore());
-            String grade = calculateGrade(totalMarks);
-            String rating =calculateRating(totalMarks);
+
+            // Fetch grade and rating
+            Grade grade = gradeService.calculateGrade(school, totalMarks);
+            Rating rating = ratingService.calculateRating(school, totalMarks);
+
+
 
             // Check if a result already exists for the student and subject
             Result existingResult = resultRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, studentClass.getId() ,subjectName,academicSession, studentTerm);
@@ -88,11 +103,8 @@ public class ResultServiceImpl implements ResultService {
             if (existingResult != null) {
                 // Update the existing result
                 existingResult.setTotalMarks(totalMarks);
-                existingResult.setClassBlock(studentClass);
-                existingResult.setGrade(grade);
-                existingResult.setAcademicYear(academicSession);
-                existingResult.setUserProfile(userProfile);
-                existingResult.setStudentTerm(studentTerm);
+                existingResult.setGrade(grade.getGrade());
+                existingResult.setRating(rating.getRating());
                 resultRepository.save(existingResult);
                 return existingResult;
             }
@@ -101,11 +113,11 @@ public class ResultServiceImpl implements ResultService {
             result.setTotalMarks(totalMarks);
             result.setUserProfile(userProfile);
             result.setClassBlock(studentClass);
-            result.setRating(rating);
             result.setAcademicYear(academicSession);
-            result.setSubjectName(subjectName);
             result.setStudentTerm(studentTerm);
-            result.setGrade(grade);
+            result.setSubjectName(subjectName);
+            result.setGrade(grade.getGrade());
+            result.setRating(rating.getRating());
             resultRepository.save(result);
 
             return result;
@@ -121,33 +133,6 @@ public class ResultServiceImpl implements ResultService {
     }
 
 
-    private String calculateGrade(double totalMarks) {
-        if (totalMarks >= 90) {
-            return "A";
-        } else if (totalMarks >= 80) {
-            return "B";
-        } else if (totalMarks >= 70) {
-            return "C";
-        } else if (totalMarks >= 60) {
-            return "D";
-        } else {
-            return "F";
-        }
-    }
-
-    private String calculateRating(double totalMarks) {
-        if (totalMarks >= 90) {
-            return "Excellent";
-        } else if (totalMarks >= 80) {
-            return "Good Performance";
-        } else if (totalMarks >= 70) {
-            return "Average Performance";
-        } else if (totalMarks >= 60) {
-            return "Below Average Performance";
-        } else {
-            return "Unsatisfactory";
-        }
-    }
 @Transactional
     public void calculateAverageResult(Long sessionId, Long classLevelId, Long termId) {
         AcademicSession academicYear = academicSessionRepository.findById(sessionId)

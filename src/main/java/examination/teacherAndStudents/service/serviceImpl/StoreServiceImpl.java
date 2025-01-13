@@ -1,12 +1,19 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.StoreRequest;
 import examination.teacherAndStudents.dto.StoreResponse;
+import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.School;
 import examination.teacherAndStudents.entity.StoreItem;
+import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.SchoolRepository;
 import examination.teacherAndStudents.repository.StoreRepository;
+import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.StoreService;
+import examination.teacherAndStudents.utils.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,11 +28,21 @@ public class StoreServiceImpl implements StoreService {
 
     @Autowired
     private SchoolRepository schoolRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private ProfileRepository profileRepository;
 
     // Create a store
-    public StoreResponse createStore(Long schoolId, StoreRequest request) {
-        School school = schoolRepository.findById(schoolId)
-                .orElseThrow(() -> new RuntimeException("School not found"));
+    public StoreResponse createStore(StoreRequest request) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+        if (admin == null) {
+            throw new CustomNotFoundException("Please login as an Admin");
+        };
+
+        Profile profile = profileRepository.findByUser(admin)
+                .orElseThrow(() -> new CustomNotFoundException("Staff not found"));
 
         StoreItem storeItem = new StoreItem();
         storeItem.setName(request.getName());
@@ -33,7 +50,7 @@ public class StoreServiceImpl implements StoreService {
         storeItem.setPhoto(request.getPhoto());
         storeItem.setSizes(request.getSizes());
         storeItem.setPrice(request.getPrice());
-        storeItem.setSchool(school);
+        storeItem.setSchool(profile.getUser().getSchool());
 
         storeItem = storeRepository.save(storeItem);
 

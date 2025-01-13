@@ -114,8 +114,6 @@ public class TimetableServiceImpl implements TimetableService {
                 SubjectSchedule schedule = new SubjectSchedule();
                 schedule.setSubject(subjectForSchedule.get());
                 schedule.setStartTime(scheduleRequest.getStartTime());
-                schedule.setTeachingStatus(TeachingStatus.PENDING);
-                schedule.setTopic(scheduleRequest.getTopic());
                 schedule.setTeacher(teacherProfile);
                 schedule.setEndTime(scheduleRequest.getEndTime());
                 schedule.setTimetable(timetable);

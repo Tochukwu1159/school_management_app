@@ -36,6 +36,9 @@ public class UserRequestDto {
     private String middleName;
 
     private Long staffLevelId;
+    private String country;
+    private String state;
+    private String city;
 
     private LocalDate admissionDate;
     private String studentGuardianOccupation;

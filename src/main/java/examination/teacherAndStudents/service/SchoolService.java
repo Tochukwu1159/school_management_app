@@ -19,7 +19,6 @@ public interface SchoolService {
      * @throws RuntimeException if an error occurs during onboarding.
      */
     SchoolResponse onboardSchool(SchoolRequest school);
-    SchoolLoginResponse loginSchool(LoginRequest loginRequest);
     List<ProfileData> teacherProfilesForSchool(Long schoolId);
     School updateSchool(Long schoolId, SchoolRequest schoolRequest);
     List<ProfileData> studentsProfilesForSchool(Long schoolId);

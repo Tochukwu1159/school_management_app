@@ -8,22 +8,11 @@ import java.time.LocalDateTime;
 public class StaffPayrollRequest {
 
     @NotNull
-    private String name;
-
-    @NotNull
-    private String uniqueRegistrationNumber;
-
-    @NotNull
-    private double baseSalary;
-
-    @NotNull
     private double bonuses;
 
     @NotNull
     private double deductions;
 
-    @NotNull
-    private double hmo;
 
     private String remarks;
 
@@ -31,13 +20,6 @@ public class StaffPayrollRequest {
     private Long staffId; // ID of the staff member
 
 
-    public double getGrossPay() {
-        return this.baseSalary + this.bonuses - this.deductions + this.hmo;
-    }
-
-    public double getNetPay() {
-        double grossPay = getGrossPay();
-        double tax = grossPay * 0.05;  // Assuming 5% tax, adjust based on your requirement
-        return grossPay - tax;
-    }
 }
+
+

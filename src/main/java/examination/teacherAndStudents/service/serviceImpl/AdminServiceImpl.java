@@ -6,6 +6,7 @@ import examination.teacherAndStudents.error_handler.CustomInternalServerExceptio
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.AdminService;
+import examination.teacherAndStudents.utils.EntityFetcher;
 import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,14 +16,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
     private final UserRepository userRepository;
+    private final EntityFetcher entityFetcher;
     @Override
     public List<User> getAllStudents() {
         try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
-            }
+            String email = entityFetcher.fetchEmail();
+            User admin = entityFetcher.fetchLoggedInAdmin(email);
 
             return userRepository.findUserByRoles(Roles.STUDENT);
         } catch (Exception e) {

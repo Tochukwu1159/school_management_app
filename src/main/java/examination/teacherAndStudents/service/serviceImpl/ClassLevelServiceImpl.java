@@ -5,6 +5,7 @@ import examination.teacherAndStudents.dto.ClassLevelRequest;
 import examination.teacherAndStudents.dto.ClassLevelRequestUrl;
 import examination.teacherAndStudents.entity.AcademicSession;
 import examination.teacherAndStudents.entity.ClassLevel;
+import examination.teacherAndStudents.entity.Rating;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
@@ -83,12 +84,12 @@ public class ClassLevelServiceImpl implements ClassLevelService {
             }
 
             Optional<User> userDetails = userRepository.findByEmail(email);
-            Optional<AcademicSession> academicSession = academicSessionRepository.findById(classLevel.getAcademicSessionId());
-
+            AcademicSession academicSession = academicSessionRepository.findById(classLevel.getAcademicSessionId())
+                    .orElseThrow(() -> new NotFoundException("Academic session not found"));
 
             ClassLevel newClass = new ClassLevel();
             newClass.setClassName(classLevel.getClassName());
-            newClass.setAcademicYear(academicSession.get());
+            newClass.setAcademicYear(academicSession);
             newClass.setSchool(userDetails.get().getSchool());
             return classLevelRepository.save(newClass);
 

@@ -14,9 +14,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Data
 @AllArgsConstructor
@@ -40,11 +38,29 @@ public class School {
     @Column(nullable = false, unique = true)
     private String phoneNumber;
 
-    @Column(nullable = false, unique = true)
-    private String email;
+    @Column(nullable = false)
+    private String country;
 
     @Column(nullable = false)
-    private String password;
+    private String state;
+
+    @Column(nullable = false)
+    private String city;
+
+    @Column(nullable = false)
+    private String schoolMotto;
+
+    @Column(nullable = false)
+    private Integer establishedYear;
+
+    @Column(nullable = false, unique = true)
+    private String schoolIdentificationNumber;
+
+    @Column(unique = true)
+    private String alternatePhoneNumber;
+
+    @Column(nullable = false, unique = true)
+    private String email;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "subscription_type")
@@ -70,10 +86,26 @@ public class School {
     )
     private List<ServiceOffered> selectedServices = new ArrayList<>();
 
+    @ElementCollection
+    @CollectionTable(name = "social_media_links", joinColumns = @JoinColumn(name = "school_id"))
+    @MapKeyColumn(name = "platform")
+    @Column(name = "url")
+    private Map<String, String> socialMediaLinks = new HashMap<>();
+
 
     @JsonManagedReference
     @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<User> users;
+
+
+    @Column(nullable = false)
+    private Integer numberOfStudents = 0;
+
+    @Column(nullable = false)
+    private Integer actualNumberOfStudents = 0;
+
+    @Column(nullable = false)
+    private Integer actualNumberOfStaff = 0;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -96,5 +128,20 @@ public class School {
 
     public boolean isSubscriptionValid() {
         return subscriptionExpiryDate.isAfter(LocalDateTime.now());
+    }
+
+    public void incrementActualNumberOfStudents() {
+        this.actualNumberOfStudents++;
+    }
+
+    public void incrementActualNumberOfStaff() {
+        this.actualNumberOfStaff++;
+    }
+
+
+    public void decrementActualNumberOfStudents() {
+        if (this.actualNumberOfStudents > 0) {
+            this.actualNumberOfStudents--;
+        }
     }
 }

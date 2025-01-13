@@ -42,13 +42,7 @@ public class SubjectSchedule {
     @Future(message = "End time must be in the future")
     private LocalDateTime endTime;
 
-    @Size(min = 3, max = 255, message = "Topic must be between 3 and 255 characters")
-    private String topic;
-    private LocalDateTime teachersUpdatedTime;
 
-    @Enumerated(EnumType.STRING)
-    @NotNull(message = "Teaching status must not be null")
-    private TeachingStatus teachingStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")

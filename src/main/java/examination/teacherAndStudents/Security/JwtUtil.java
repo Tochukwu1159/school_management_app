@@ -60,15 +60,37 @@ public class JwtUtil {
             byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
             return Keys.hmacShaKeyFor(keyBytes);
         }
+//    public String generateToken(String email, School school) throws JsonProcessingException {
+//        Map<String, Object> extraClaims = new HashMap<>();
+//        SchoolDto schoolDto = new SchoolDto(school.getId(), school.getSchoolName(),school.getSelectedServices(), school.getSubscriptionExpiryDate(),school.getSchoolAddress(), school.getPhoneNumber(),school.getSubscriptionKey(), school.getSubscriptionType());
+//        String serializedSchool = objectMapper.writeValueAsString(schoolDto);
+//        extraClaims.put("school", serializedSchool);
+//        return generateToken(extraClaims, email);
+//    }
+
     public String generateToken(String email, School school) throws JsonProcessingException {
         Map<String, Object> extraClaims = new HashMap<>();
-        SchoolDto schoolDto = new SchoolDto(school.getId(), school.getSchoolName(),school.getSelectedServices(), school.getSubscriptionExpiryDate(),school.getSchoolAddress(), school.getPhoneNumber(),school.getSubscriptionKey(), school.getSubscriptionType());
-        String serializedSchool = objectMapper.writeValueAsString(schoolDto);
-        extraClaims.put("school", serializedSchool);
+        if (school != null) {
+            SchoolDto schoolDto = new SchoolDto(
+                    school.getId(),
+                    school.getSchoolName(),
+                    school.getSelectedServices(),
+                    school.getSubscriptionExpiryDate(),
+                    school.getSchoolAddress(),
+                    school.getPhoneNumber(),
+                    school.getSubscriptionKey(),
+                    school.getSubscriptionType()
+            );
+            String serializedSchool = objectMapper.writeValueAsString(schoolDto);
+            extraClaims.put("school", serializedSchool);
+        } else {
+            extraClaims.put("school", null);
+        }
         return generateToken(extraClaims, email);
     }
 
-        public String generateToken(Map<String,Object> extraClaims
+
+    public String generateToken(Map<String,Object> extraClaims
                 , String email){
             return Jwts.builder()
                     .setClaims(extraClaims)
@@ -88,7 +110,7 @@ public class JwtUtil {
             return extractExpiration(token).before(new Date());
         }
 
-        private Date extractExpiration(String token) {
+        public Date extractExpiration(String token) {
             return extractClaim(token, Claims::getExpiration);
         }
     }

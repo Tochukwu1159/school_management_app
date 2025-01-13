@@ -37,7 +37,9 @@ public class BookBorrowing {
     @NotNull
     private LocalDateTime borrowDate;  // Date and time when the book was borrowed
 
-    private LocalDateTime returnDate;  // Date and time when the book is expected/was returned
+    private LocalDateTime supposedReturnedDate;  // Date and time when the book is expected/was returned
+
+    private LocalDateTime actualReturnDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -52,8 +54,8 @@ public class BookBorrowing {
 
     @PreUpdate
     protected void onUpdate() {
-        if (status == BorrowingStatus.RETURNED && returnDate == null) {
-            returnDate = LocalDateTime.now();  // Set returnDate when the status is 'RETURNED'
+        if (status == BorrowingStatus.RETURNED && actualReturnDate == null) {
+            actualReturnDate = LocalDateTime.now();  // Set returnDate when the status is 'RETURNED'
         }
     }
 }

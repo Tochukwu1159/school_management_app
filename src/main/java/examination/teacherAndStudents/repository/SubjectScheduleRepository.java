@@ -12,6 +12,4 @@ import java.util.List;
 public interface SubjectScheduleRepository extends JpaRepository<SubjectSchedule, Long> {
 
     SubjectSchedule findByIdAndTimetableDayOfWeek(Long scheduleId, DayOfWeek dayOfWeek);
-
-    List<SubjectSchedule> findAllByTeachingStatus(TeachingStatus notTaught);
 }

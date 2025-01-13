@@ -52,7 +52,6 @@ public class SecurityConfig {
                                         "/api/v1/users/create",
                                         "/api/v1/services/**",
                                         "/api/v1/users/login",
-                                        "/api/v1/schools/onboard",
                                         "/api/v1/schools/login",
                                         "/api/v1/schools/**",
                                         "/api/v1/users/verify/**",

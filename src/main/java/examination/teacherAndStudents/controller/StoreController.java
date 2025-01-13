@@ -17,10 +17,10 @@ public class StoreController {
     @Autowired
     private StoreService storeService;
 
-    @PostMapping("/{schoolId}")
-    public ResponseEntity<StoreResponse> createStore(@PathVariable Long schoolId,
+    @PostMapping("/create")
+    public ResponseEntity<StoreResponse> createStore(
                                                      @RequestBody StoreRequest request) {
-        StoreResponse response = storeService.createStore(schoolId, request);
+        StoreResponse response = storeService.createStore(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

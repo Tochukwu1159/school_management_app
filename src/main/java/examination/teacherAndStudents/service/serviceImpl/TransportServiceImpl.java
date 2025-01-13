@@ -57,14 +57,15 @@ public class TransportServiceImpl implements TransportService {
             Optional<User> userDetails = userRepository.findByEmail(email);
             Optional<BusRoute> busRoute = busRouteRepository.findById(transportRequest.getBusRouteId());
 
-            Optional<Profile> driver = profileRepository.findById(transportRequest.getDriverId());
+            Profile driver = profileRepository.findById(transportRequest.getDriverId())
+                    .orElseThrow(() -> new CustomInternalServerException("Driver not found with ID: " + transportRequest.getDriverId()));
 
             Transport transport = new Transport();
             transport.setVehicleNumber(transportRequest.getVehicleNumber());
             transport.setAvailable(true);
             transport.setVehicleName(transportRequest.getVehicleName());
             transport.setCapacity(transportRequest.getCapacity());
-            transport.setDriver(driver.get());
+            transport.setDriver(driver);
             transport.setLicenceNumber(transportRequest.getLicenceNumber());
             transport.setSchool(userDetails.get().getSchool());
             transport.setBusRoute(busRoute.get());

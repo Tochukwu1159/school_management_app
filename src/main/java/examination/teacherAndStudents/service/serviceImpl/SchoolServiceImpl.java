@@ -2,6 +2,7 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import examination.teacherAndStudents.Security.JwtUtil;
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.*;
@@ -56,6 +57,12 @@ public class SchoolServiceImpl implements SchoolService {
     public SchoolResponse onboardSchool(SchoolRequest schoolRequest) {
         try {
             String generatedSubscriptionKey = UUID.randomUUID().toString();
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+
+            if (admin == null) {
+                throw new AuthenticationFailedException("Please login as an Admin");
+            }
 
             if (schoolRepository.existsByEmail(schoolRequest.getEmail())) {
 
@@ -74,13 +81,21 @@ public class SchoolServiceImpl implements SchoolService {
 
             }
 
+            if (schoolRepository.existsBySchoolIdentificationNumber(schoolRequest.getSchoolIdentificationNumber())) {
+                throw new UserAlreadyExistException("School Identification Number already exists");
+            }
+
             // Map SchoolRequest to School
             School newSchool = modelMapper.map(schoolRequest, School.class);
             newSchool.setIsActive(false);
+            newSchool.setNumberOfStudents(schoolRequest.getNumberOfStudents());
             newSchool.setSubscriptionKey(generatedSubscriptionKey);
 
-            String encryptedPassword = passwordEncoder.encode(schoolRequest.getPassword());
-            newSchool.setPassword(encryptedPassword);
+
+            // Set social media links if provided
+            if (schoolRequest.getSocialMediaLinks() != null) {
+                newSchool.setSocialMediaLinks(schoolRequest.getSocialMediaLinks());
+            }
 
             // Fetch and associate selected services
             List<ServiceOffered> services = serviceOfferedRepository.findAllById(schoolRequest.getSelectedServices());
@@ -89,42 +104,14 @@ public class SchoolServiceImpl implements SchoolService {
             // Save the school entity
             School savedSchool = schoolRepository.save(newSchool);
 
+            //update the admin
+            admin.setSchool(savedSchool);
+            userRepository.save(admin);
+
+
             return modelMapper.map(savedSchool, SchoolResponse.class);
         } catch (Exception e) {
             throw new RuntimeException("Error onboarding school: " + e.getMessage(), e);
-        }
-    }
-
-
-    public SchoolLoginResponse loginSchool(LoginRequest loginRequest) {
-        try {
-//            Authentication authenticate = authenticationManager.authenticate(
-//                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
-//            );
-//
-//            if (!authenticate.isAuthenticated()) {
-//                throw new UserPasswordMismatchException("Wrong email or password");
-//            }
-
-
-            Optional<School> optionalSchool = schoolRepository.findByEmail(loginRequest.getEmail());
-
-            School school = optionalSchool.get();
-
-//            SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), school);
-
-            // Create a UserDto object containing user details
-            SchoolResponse schoolResponse = new SchoolResponse();
-            schoolResponse.setSchoolName(school.getSchoolName());
-            schoolResponse.setSchoolAddress(school.getSchoolAddress());
-            schoolResponse.setEmail(school.getEmail());
-            return new SchoolLoginResponse(token, schoolResponse);
-        } catch (BadCredentialsException e) {
-            // Handle the "Bad credentials" error here
-            throw new AuthenticationFailedException("Wrong email or password");
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
         }
     }
 

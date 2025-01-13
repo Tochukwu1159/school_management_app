@@ -117,11 +117,4 @@ public class AdminController {
         }
     }
 
-    @PutMapping("/update-teaching-status")
-    public ResponseEntity<SubjectSchedule> updateTeachingStatus(
-            @RequestBody SubjectScheduleTeacherUpdateDto updateDto
-          ) {
-        SubjectSchedule updatedSchedule = teacherAttendanceService.updateTeachingStatus(updateDto);
-        return new ResponseEntity<>(updatedSchedule, HttpStatus.OK);
-    }
 }

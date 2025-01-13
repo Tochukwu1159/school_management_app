@@ -19,7 +19,4 @@ public interface StaffAttendanceService {
             LocalDate startDate,
             LocalDate endDate);
 
-    SubjectSchedule updateStaffStatus(SubjectScheduleTeacherUpdateDto updateDto);
-
-
 }

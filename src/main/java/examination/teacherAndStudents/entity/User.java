@@ -1,6 +1,7 @@
 package examination.teacherAndStudents.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import examination.teacherAndStudents.utils.ProfileStatus;
 import examination.teacherAndStudents.utils.Roles;
 import examination.teacherAndStudents.utils.Status;
 import jakarta.persistence.*;
@@ -38,17 +39,22 @@ public class User {
     private String middleName;
 
     @JsonBackReference
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "school_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id")
     private School school;
 
     @Column(unique = true, nullable = false)
     private String email;
 
-    //    @Size(min = 6, message = "Password should have at least 6 characters")
+    @Size(min = 6, message = "Password should have at least 6 characters")
     private String password;
+
     @Enumerated(value = EnumType.STRING)
     private Roles roles;
+
+    @Enumerated(EnumType.STRING)
+    private ProfileStatus profileStatus = ProfileStatus.ACTIVE;
+
     private Boolean isVerified;
 
 

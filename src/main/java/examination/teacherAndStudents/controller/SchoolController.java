@@ -28,12 +28,6 @@ public class SchoolController {
         return new ResponseEntity<>(onboardedSchool, HttpStatus.CREATED);
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<SchoolLoginResponse>   loginSchool(@RequestBody LoginRequest school) {
-        SchoolLoginResponse loginSchool = schoolService.loginSchool(school );
-        return new ResponseEntity<>(loginSchool, HttpStatus.CREATED);
-    }
-
     @GetMapping("/{id}/services")
     public ResponseEntity<List<ServiceOffered>> getSelectedServices(@PathVariable Long id) {
         List<ServiceOffered> selectedServices = schoolService.getSelectedServices(id);

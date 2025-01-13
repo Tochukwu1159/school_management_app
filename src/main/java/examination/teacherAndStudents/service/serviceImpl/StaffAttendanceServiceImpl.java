@@ -49,7 +49,7 @@ public class StaffAttendanceServiceImpl implements StaffAttendanceService {
             }
             Optional<Profile> staffProfile = profileRepository.findByUser(staff);
 
-            if (staffProfile == null) {
+            if (staffProfile.isEmpty()) {
                 throw new CustomNotFoundException("Staff not found"); // Improved error message
             }
 
@@ -197,50 +197,6 @@ public class StaffAttendanceServiceImpl implements StaffAttendanceService {
 
 
 
-    }
-    
-
-
-    @Transactional
-    public SubjectSchedule updateStaffStatus(SubjectScheduleTeacherUpdateDto updateDto) {
-        try {
-            // Retrieve the subject schedule by ID
-            SubjectSchedule subjectSchedule = subjectScheduleRepository.findByIdAndTimetableDayOfWeek(updateDto.getScheduleId(), updateDto.getDayOfWeek());
-            if(subjectSchedule == null){
-                throw  new CustomNotFoundException("Ensure the time table day match the schedule for the day");
-            }
-            Timetable timetable = timetableRepository.findBySubjectSchedules(subjectSchedule);
-
-           //  Check if the class has already been taught
-            if (subjectSchedule.getTeachingStatus() == TeachingStatus.COMPLETED) {
-                throw new CustomInternalServerException("This class has already been taught.");
-            }
-            // Update the topic and teaching status
-            subjectSchedule.setTopic(updateDto.getTopic());
-            subjectSchedule.setSubject(subjectSchedule.getSubject());
-            subjectSchedule.setStartTime(subjectSchedule.getStartTime());
-            subjectSchedule.setEndTime(subjectSchedule.getEndTime());
-            subjectSchedule.setTimetable(timetable);
-            subjectSchedule.setTeachingStatus(TeachingStatus.COMPLETED);
-            subjectSchedule.setTeachersUpdatedTime(LocalDateTime.now());
-
-            // Save the updated subject schedule
-            return subjectScheduleRepository.save(subjectSchedule);
-        } catch (Exception e) {
-            // Handle or log the exception as needed
-            throw new CustomInternalServerException("An error occurred while updating teacher taught topic: " + e.getMessage());
-        }
-    }
-
-
-    @Transactional
-    public List<SubjectSchedule> getAllNotTaughtSubjectSchedules() {
-        return subjectScheduleRepository.findAllByTeachingStatus(TeachingStatus.COMPLETED);
-    }
-
-    @Transactional
-    public List<SubjectSchedule> getAllTaughtSubjectSchedules() {
-        return subjectScheduleRepository.findAllByTeachingStatus(TeachingStatus.MISSED);
     }
 
 

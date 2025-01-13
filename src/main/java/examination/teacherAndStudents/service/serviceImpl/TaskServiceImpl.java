@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.TaskRequest;
 import examination.teacherAndStudents.dto.TaskResponse;
 import examination.teacherAndStudents.entity.Profile;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,8 +27,11 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public TaskResponse saveTask(TaskRequest request) {
-        Profile assignedBy = profileRepository.findById(request.getAssignedById())
-                .orElseThrow(() -> new RuntimeException("Teacher not found"));
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        Optional<User> asignedBy = userRepository.findByEmail(email);
+
+        Profile assignedBy = profileRepository.findByUser(asignedBy.get())
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
         Profile assignedTo = profileRepository.findById(request.getAssignedToId())
                 .orElseThrow(() -> new RuntimeException("Profile not found"));
 
@@ -34,7 +39,6 @@ public class TaskServiceImpl implements TaskService {
         task.setAssignedBy(assignedBy);
         task.setAssignedTo(assignedTo);
         task.setDescription(request.getDescription());
-        task.setDateAssigned(request.getDateAssigned());
         task.setFeedback(request.getFeedback());
         task.setStatus(request.getStatus());
 
@@ -48,15 +52,6 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
 
-        Profile assignedBy = profileRepository.findById(request.getAssignedById())
-                .orElseThrow(() -> new RuntimeException("Teacher not found"));
-        Profile assignedTo = profileRepository.findById(request.getAssignedToId())
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
-
-        task.setAssignedBy(assignedBy);
-        task.setAssignedTo(assignedTo);
-        task.setDescription(request.getDescription());
-        task.setDateAssigned(request.getDateAssigned());
         task.setFeedback(request.getFeedback());
         task.setStatus(request.getStatus());
 
@@ -100,7 +95,6 @@ public class TaskServiceImpl implements TaskService {
                 .assignedToId(task.getAssignedTo().getId())
                 .assignedToName(assignedTo.getFirstName() + " " + assignedTo.getLastName())
                 .description(task.getDescription())
-                .dateAssigned(task.getDateAssigned())
                 .feedback(task.getFeedback())
                 .status(task.getStatus())
                 .build();

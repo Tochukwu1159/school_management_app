@@ -20,8 +20,6 @@ public interface TeacherAttendanceService {
             Long teacherId,
             LocalDate startDate,
             LocalDate endDate);
-
-    SubjectSchedule updateTeachingStatus(SubjectScheduleTeacherUpdateDto updateDto);
     List<TeacherAttendanceResponse> calculateTeacherAttendancePercentage(Long sessionId, Long termId);
 
 
