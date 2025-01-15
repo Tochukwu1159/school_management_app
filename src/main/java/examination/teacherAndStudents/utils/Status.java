@@ -1,4 +1,7 @@
-package examination.teacherAndStudents.utils;
-
-public enum Status {
-}
+//package examination.teacherAndStudents.utils;
+//
+//public enum Status {
+//    PENDING,
+//    APPROVED,
+//    REJECTED
+//}

@@ -1,7 +1,7 @@
+// ENTITY
 package examination.teacherAndStudents.entity;
-
 import jakarta.persistence.*;
-        import lombok.AllArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,28 +10,41 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
-
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@NoArgsConstructor
 @Entity
-@Table(name = "store_item_tracker")
-public class StoreItemTracker {
+@Builder
+public class StaffMovement {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "store_item_id", nullable = false)
-    private StoreItem storeItem;
+    @JoinColumn(name = "staff_id", nullable = false)
+    private Profile staff;
+
+    @Column(nullable = false)
+    private String purpose;
+
+    @Enumerated(EnumType.STRING)
+    private Status status;
+
+    public enum Status {
+        PENDING,
+        APPROVED,
+        REJECTED
+    }
 
     @ManyToOne
-    @JoinColumn(name = "academic_year_id", nullable = false)
-    private AcademicSession academicYear;
+    @JoinColumn(name = "approvedBy_id", nullable = false)
+    private Profile approvedBy;
 
-    @Column(name = "store_item_remaining", nullable = false)
-    private int storeItemRemaining;
+    @Column(nullable = false)
+    private LocalDateTime expectedReturnTime;
+
+    private LocalDateTime actualReturnTime;
 
     @CreationTimestamp
     @Column(name = "created_date", updatable = false, nullable = false)
@@ -40,10 +53,4 @@ public class StoreItemTracker {
     @UpdateTimestamp
     @Column(name = "updated_date")
     private LocalDateTime updatedDate;
-
-    @PrePersist
-    protected void onCreate() {
-        this.storeItemRemaining = 0;
-    }
-
 }
