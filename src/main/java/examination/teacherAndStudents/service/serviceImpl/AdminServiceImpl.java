@@ -20,7 +20,7 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<User> getAllStudents() {
         try {
-            String email = entityFetcher.fetchEmail();
+            String email = entityFetcher.fetchLoggedInUser();
             User admin = entityFetcher.fetchLoggedInAdmin(email);
 
             return userRepository.findUserByRoles(Roles.STUDENT);

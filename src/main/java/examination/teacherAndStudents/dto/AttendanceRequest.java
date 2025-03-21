@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
  @Data
     public class AttendanceRequest {
-        private LocalDate date;
+        private LocalDateTime date;
         private Long studentTermId;
         private AttendanceStatus status;
         private Long studentId;

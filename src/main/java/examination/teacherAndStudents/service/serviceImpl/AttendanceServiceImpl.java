@@ -8,6 +8,7 @@ import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.AttendanceAlreadyTakenException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.EntityNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.AttendanceService;
 import examination.teacherAndStudents.utils.AttendanceStatus;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -61,6 +63,20 @@ public class AttendanceServiceImpl implements AttendanceService {
             AcademicSession academicSession  = studentTerm.get().getAcademicSession();
 
 
+            if (studentTerm.isEmpty()) {
+                throw new EntityNotFoundException("StudentTerm not found with ID: " + attendanceRequest.getStudentTermId());
+            }
+
+            // Check if attendanceDate is within the startDate and endDate of StudentTerm
+            LocalDate attendanceDate = attendanceRequest.getDate().toLocalDate();
+            LocalDate startDate = studentTerm.get().getStartDate();
+            LocalDate endDate = studentTerm.get().getEndDate();
+
+            if (attendanceDate.isBefore(startDate) || attendanceDate.isAfter(endDate)) {
+                throw new IllegalArgumentException("Attendance date " + attendanceDate + " is outside the StudentTerm period (" + startDate + " to " + endDate + ")");
+            }
+
+
             // Check if attendance for the given date and student already exists
             Attendance existingAttendance = attendanceRepository.findByUserProfileAndDateAndAcademicYearAndStudentTerm(studentProfle, attendanceRequest.getDate(), academicSession, studentTerm);
             if (existingAttendance != null) {
@@ -95,7 +111,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     @Override
 
-    public AttendanceResponse getStudentAttendance(Long studentId, LocalDate startDate, LocalDate endDate) {
+    public AttendanceResponse getStudentAttendance(Long studentId, LocalDateTime startDate, LocalDateTime endDate) {
         try {
             // Retrieve the student from the database
             User student = userRepository.findById(studentId)
@@ -142,7 +158,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         }
     }
 
-    public List<Attendance> getAllStudentsAttendance(Long studentId, LocalDate startDate, LocalDate endDate) {
+    public List<Attendance> getAllStudentsAttendance(Long studentId, LocalDateTime startDate, LocalDateTime endDate) {
         try {
             // Retrieve the student from the database
             User student = userRepository.findById(studentId)
@@ -162,7 +178,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         }
     }
 
-    public List<Attendance> getStudentAttendanceByClass(Long classId, LocalDate startDate, LocalDate endDate) {
+    public List<Attendance> getStudentAttendanceByClass(Long classId, LocalDateTime startDate, LocalDateTime endDate) {
         try {
             List<Profile> studentsInClass = profileRepository.findByClassBlockId(classId);
             return attendanceRepository.findByUserProfileInAndDateBetween(studentsInClass, startDate, endDate);

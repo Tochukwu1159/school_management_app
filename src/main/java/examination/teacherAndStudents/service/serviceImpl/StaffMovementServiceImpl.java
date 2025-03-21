@@ -98,6 +98,37 @@ public class StaffMovementServiceImpl implements StaffMovementService {
         return toResponse(staffMovement);
     }
 
+    @Override
+    public StaffMovementResponse updateStaffMovementStatus(Long id, String status) {
+        StaffMovement staffMovement = staffMovementRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Staff Movement with id " + id + " not found"));
+
+        String email = entityFetcher.fetchLoggedInUser();
+        User loggedInUser = entityFetcher.fetchUserFromEmail(email);
+        Profile profile = entityFetcher.fetchProfileByUser(loggedInUser);
+
+        // Check status and update accordingly
+        switch (StaffMovement.Status.valueOf(status)) {
+            case RETURNED:
+                staffMovement.setActualReturnTime(LocalDateTime.now());
+                staffMovement.setStatus(StaffMovement.Status.RETURNED);
+                break;
+            case VERIFIED:
+                if (!StaffMovement.Status.RETURNED.equals(staffMovement.getStatus())) {
+                    throw new IllegalStateException("Staff movement must be marked as RETURNED before it can be VERIFIED");
+                }
+                staffMovement.setStatus(StaffMovement.Status.VERIFIED);
+                staffMovement.setVerifiedBy(profile);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid status update for staff movement");
+        }
+
+        staffMovement = staffMovementRepository.save(staffMovement);
+        return toResponse(staffMovement);
+    }
+
+
     private StaffMovementResponse toResponse(StaffMovement staffMovement) {
         return StaffMovementResponse.builder()
                 .id(staffMovement.getId())

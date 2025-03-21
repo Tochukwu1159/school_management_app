@@ -2,11 +2,11 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.DuesRequest;
-import examination.teacherAndStudents.entity.Dues;
-import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.DuesRepository;
 import examination.teacherAndStudents.repository.StudentTermRepository;
@@ -57,19 +57,22 @@ public class DuesServiceImpl implements DuesService {
             throw new AuthenticationFailedException("Please login as an Admin");
         }
         Optional<User> userDetails = userRepository.findByEmail(email);
-        Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(duesRequest.getStudentTerm());
-        Optional<examination.teacherAndStudents.entity.AcademicSession> academicSession = academicSessionRepository.findById(duesRequest.getAcademicYear());
 
+        StudentTerm studentTerm = studentTermRepository.findById(duesRequest.getStudentTerm())
+                .orElseThrow(() -> new NotFoundException("Student Term with id " + duesRequest.getStudentTerm() + " not found"));
+
+        AcademicSession academicSession = academicSessionRepository.findById(duesRequest.getAcademicYear())
+                .orElseThrow(() -> new NotFoundException("Academic Session with id " + duesRequest.getAcademicYear() + " not found"));
 
         // Validate duesRequest fields
         validateDuesRequest(duesRequest);
 
         Dues studentDues = new Dues();
-        studentDues.setStudentTerm(studentTerm.get());
+        studentDues.setStudentTerm(studentTerm);
         studentDues.setPurpose(duesRequest.getPurpose());
         studentDues.setAmount(duesRequest.getAmount());
         studentDues.setSchool(userDetails.get().getSchool());
-        studentDues.setAcademicYear(academicSession.get());
+        studentDues.setAcademicYear(academicSession);
         return duesRepository.save(studentDues);
     }
     private void validateDuesRequest(DuesRequest duesRequest) {
@@ -86,9 +89,12 @@ public class DuesServiceImpl implements DuesService {
         if (admin == null) {
             throw new AuthenticationFailedException("Please login as an Admin");
         }
-        Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(updatedDues.getStudentTerm());
-        Optional<examination.teacherAndStudents.entity.AcademicSession> academicSession  = academicSessionRepository.findById(updatedDues.getAcademicYear());
 
+        StudentTerm studentTerm = studentTermRepository.findById(updatedDues.getStudentTerm())
+                .orElseThrow(() -> new NotFoundException("Student Term with id " + updatedDues.getStudentTerm() + " not found"));
+
+        AcademicSession academicSession = academicSessionRepository.findById(updatedDues.getAcademicYear())
+                .orElseThrow(() -> new NotFoundException("Academic Session with id " + updatedDues.getAcademicYear() + " not found"));
 
         // Validate updatedDues fields
         validateDuesRequest(updatedDues);
@@ -97,8 +103,8 @@ public class DuesServiceImpl implements DuesService {
 
         existingDues.setPurpose(updatedDues.getPurpose());
         existingDues.setAmount(updatedDues.getAmount());
-        existingDues.setAcademicYear(academicSession.get());
-        existingDues.setStudentTerm(studentTerm.get());
+        existingDues.setAcademicYear(academicSession);
+        existingDues.setStudentTerm(studentTerm);
         return duesRepository.save(existingDues);
     }
     public boolean deleteDues(Long id) {

@@ -17,15 +17,15 @@ import java.util.Optional;
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
-    List<Attendance> findByUserProfileAndDateBetween(Profile student, LocalDate startDate, LocalDate endDate);
+    List<Attendance> findByUserProfileAndDateBetween(Profile student, LocalDateTime startDate, LocalDateTime endDate);
 
 
-    List<Attendance> findByUserProfileInAndDateBetween(Collection<Profile> userProfile, LocalDate date, LocalDate date2);
+    List<Attendance> findByUserProfileInAndDateBetween(Collection<Profile> userProfile, LocalDateTime date, LocalDateTime date2);
 
     long countByUserProfileIdAndStudentTerm(Long profileId, StudentTerm studentTerm);
 
     long countByUserProfileIdAndStudentTermAndStatus(Long profileId, StudentTerm studentTerm, AttendanceStatus attendanceStatus);
 
 
-    Attendance findByUserProfileAndDateAndAcademicYearAndStudentTerm(Profile studentProfle, LocalDate date, AcademicSession academicSession, Optional<StudentTerm> studentTerm);
+    Attendance findByUserProfileAndDateAndAcademicYearAndStudentTerm(Profile studentProfle, LocalDateTime date, AcademicSession academicSession, Optional<StudentTerm> studentTerm);
 }

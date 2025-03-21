@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.entity;
 
-import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -10,7 +9,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "class_block") // Renamed for better clarity
+@Table(name = "class_block")
 @Entity
 @Builder
 public class ClassBlock {

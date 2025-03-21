@@ -79,11 +79,16 @@ public class RatingServiceImpl implements RatingService {
                 .collect(Collectors.toList());
     }
     public Rating calculateRating(School school, double totalMarks) {
-        return ratingRepository.findBySchool(school).stream()
-                .filter(r -> totalMarks >= r.getMinMarks() && totalMarks <= r.getMaxMarks())
-                        .findFirst()
-                        .orElseThrow(() -> new NotFoundException("Rating not found for the specified marks"));
-    }
+        List<Rating> ratings = ratingRepository.findBySchool(school);
+
+        if (ratings == null || ratings.isEmpty()) {
+            throw new CustomNotFoundException("No ratings found for this school");
+        }
+
+        return ratings.stream()
+                .filter(r -> totalMarks >= (double) r.getMinMarks() && totalMarks <= (double) r.getMaxMarks())
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Rating not found for the specified marks"));}
 
 
     private RatingResponse mapToRatingResponse(Rating rating) {

@@ -29,7 +29,7 @@ public interface UserService {
     //    AllUserResponse getAllUsers();
     UserResponse getUser();
     ResponseEntity<Void> deleteUser(Long userId);
-    UserResponse geenerateIdCard(String uniqueRegistrationNumber);
+    UserResponse generateIdCard(String uniqueRegistrationNumber);
     String updateUserStatus(Long userId, ProfileStatus newStatus, LocalDate suspensionEndDate);
 
     Page<UserResponse> getAllStudentsFilteredAndPaginated(Long classCategoryId, Long subClassId, Long academicYearId, int page, int size,String sortBy);

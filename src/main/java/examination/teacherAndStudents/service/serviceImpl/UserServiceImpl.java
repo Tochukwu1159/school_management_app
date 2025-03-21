@@ -10,6 +10,7 @@ import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.UserService;
+import examination.teacherAndStudents.templateService.IdCardService;
 import examination.teacherAndStudents.utils.AccountUtils;
 import examination.teacherAndStudents.utils.MaritalStatus;
 import examination.teacherAndStudents.utils.ProfileStatus;
@@ -64,6 +65,8 @@ public class UserServiceImpl implements UserService {
     private final ProfileRepository profileRepository;
     private final ModelMapper modelMapper;
     private final AcademicSessionRepository academicSessionRepository;
+
+    private final IdCardService idCardService;
 
     private  final  AccountUtils accountUtils;
     private final SubjectRepository subjectRepository;
@@ -651,20 +654,25 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponse geenerateIdCard(String uniqueRegistrationNumber) {
+    public UserResponse generateIdCard(String uniqueRegistrationNumber) {
         try{
             Optional<Profile> user = profileRepository.findByUniqueRegistrationNumber(uniqueRegistrationNumber);
             if(user.isPresent()){
+                String schoolName = user.get().getUser().getSchool().getSchoolName();
+
+                String idCard = idCardService.generateIdCard(schoolName, user.get().getUser(), user.get() );
+                System.out.println(idCard);
                 return modelMapper.map(user.get(), UserResponse.class);
             }else {
                 throw new ResourceNotFoundException("User not found");
             }
-
         }catch (Exception e){
             throw new RuntimeException("Error generating ID card");
 
         }
     }
+
+
     public Page<UserResponse> getAllStudentsFilteredAndPaginated(
             Long classCategoryId,
             Long subClassId,

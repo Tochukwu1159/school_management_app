@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -42,8 +43,8 @@ public class AttendanceController {
     @GetMapping("/students/{studentId}")
     public ResponseEntity<AttendanceResponse> getStudentAttendance(
             @PathVariable Long studentId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime endDate) {
         try {
             // Retrieve the student from the database
             return new ResponseEntity<>(attendanceService.getStudentAttendance(studentId,startDate, endDate), HttpStatus.OK);
@@ -69,8 +70,8 @@ public class AttendanceController {
     @GetMapping("/students-by-class")
     public ResponseEntity<List<Attendance>> getStudentAttendanceByClass(
             @RequestParam Long classId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime endDate) {
         List<Attendance> studentAttendanceList = attendanceService.getStudentAttendanceByClass(classId, startDate, endDate);
         return ResponseEntity.ok(studentAttendanceList);
     }

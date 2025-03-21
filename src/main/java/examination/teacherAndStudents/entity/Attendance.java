@@ -39,7 +39,7 @@ public class Attendance {
     private AcademicSession academicYear;
 
     @Column(name = "attendance_date", nullable = false)
-    private LocalDate date;
+    private LocalDateTime date;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

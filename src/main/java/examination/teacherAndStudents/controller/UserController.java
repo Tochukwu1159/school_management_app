@@ -106,9 +106,9 @@ public class UserController {
         }
     }
 
-    @DeleteMapping("/delete/{uniqueRegistrationNumber}")
-    public ResponseEntity<UserResponse> geenerateIdCard(@PathVariable String uniqueRegistrationNumber) {
-        UserResponse userResponse = userService.geenerateIdCard(uniqueRegistrationNumber);
+    @GetMapping("/card/{uniqueRegistrationNumber}")
+    public ResponseEntity<UserResponse> generateIdCard(@PathVariable String uniqueRegistrationNumber) {
+        UserResponse userResponse = userService.generateIdCard(uniqueRegistrationNumber);
         return new ResponseEntity<>(userResponse, HttpStatus.OK);
 
     }

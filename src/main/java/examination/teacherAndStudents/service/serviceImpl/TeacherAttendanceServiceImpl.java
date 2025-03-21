@@ -63,6 +63,21 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
             Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(attendanceRequest.getStudentTermId());
             Optional<examination.teacherAndStudents.entity.AcademicSession> session = academicSessionRepository.findById(attendanceRequest.getSessionId());
 
+
+            if (studentTerm.isEmpty()) {
+                throw new EntityNotFoundException("StudentTerm not found with ID: " + attendanceRequest.getStudentTermId());
+            }
+
+            // Check if attendanceDate is within the startDate and endDate of StudentTerm
+            LocalDate attendanceDate = attendanceRequest.getAttendanceDate().toLocalDate();
+            LocalDate startDate = studentTerm.get().getStartDate();
+            LocalDate endDate = studentTerm.get().getEndDate();
+
+            if (attendanceDate.isBefore(startDate) || attendanceDate.isAfter(endDate)) {
+                throw new IllegalArgumentException("Attendance date " + attendanceDate + " is outside the Student term period (" + startDate + " to " + endDate + ")");
+            }
+
+
             TeacherAttendance existingAttendance = teacherAttendanceRepository.findByTeacherAndDateAndAcademicYearAndStudentTerm(teacherProfile.get(), attendanceRequest.getAttendanceDate(),session.get(),studentTerm.get());
 
 
@@ -80,8 +95,6 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
 
                 teacherAttendanceRepository.save(attendanceRecord);
             }
-            // After recording attendance, update the attendance percentage
-//            calculateAttendancePercentage(teacher.getId(),studentTerm.get().getId());
 
         } catch (CustomNotFoundException e) {
             throw new CustomNotFoundException("Error occurred " + e.getMessage());
@@ -103,7 +116,7 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
             Optional<AcademicSession> session = academicSessionRepository.findById(sessionId);
             Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(term);
 
-            Optional<Profile> teacherProfile = profileRepository.findById(userId);
+            Optional<Profile> teacherProfile = profileRepository.findByUser(optionalTeacher.get());
 
             if (teacherProfile.isEmpty()) {
                 throw new NotFoundException("Teacher not found");

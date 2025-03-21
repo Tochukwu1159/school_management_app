@@ -2,6 +2,7 @@ package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.StaffMovementRequest;
 import examination.teacherAndStudents.dto.StaffMovementResponse;
+import examination.teacherAndStudents.entity.StaffMovement;
 import examination.teacherAndStudents.service.StaffMovementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -42,7 +43,16 @@ public class StaffMovementController {
         return ResponseEntity.ok(staffMovementService.getStaffMovementById(id));
     }
 
+
     @PatchMapping("/{id}/status")
+    public ResponseEntity<StaffMovementResponse> updateStaffMovementStatus(
+            @PathVariable Long id,
+            @RequestParam String status) {
+        StaffMovementResponse response = staffMovementService.updateStaffMovementStatus(id, status);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/update/{id}/status")
     public ResponseEntity<StaffMovementResponse> approveOrDeclineStaffMovement(@PathVariable Long id, @RequestParam String status) {
         return ResponseEntity.ok(staffMovementService.approveOrDeclineStaffMovement(id, status));
     }

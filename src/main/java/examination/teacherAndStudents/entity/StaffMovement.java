@@ -31,9 +31,17 @@ public class StaffMovement {
     @Enumerated(EnumType.STRING)
     private Status status;
 
+    @ManyToOne
+    @JoinColumn(name = "verified_id", nullable = false)
+    private Profile verifiedBy;
+
+
+
     public enum Status {
         PENDING,
         APPROVED,
+        RETURNED,
+        VERIFIED,
         REJECTED
     }
 
