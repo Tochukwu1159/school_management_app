@@ -8,7 +8,10 @@ import java.util.List;
 public interface ClassBlockService {
     ClassBlockResponse createClassBlock(ClassBlockRequest request);
     ClassBlockResponse getClassBlockById(Long id);
-    List<ClassBlockResponse> getAllClassBlocks();
+    List<ClassBlockResponse> getAllClassBlocks(
+            Long classId,
+            Long subClassId,
+            Long academicYearId);
     ClassBlockResponse updateClassBlock(Long id, ClassBlockRequest request);
     void deleteClassBlock(Long id);
     ClassBlockResponse updateFormTeacher(Long id, Long formTeacherId);

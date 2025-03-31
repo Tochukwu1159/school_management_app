@@ -4,6 +4,7 @@ import examination.teacherAndStudents.dto.TransportRequest;
 import examination.teacherAndStudents.dto.TransportResponse;
 import examination.teacherAndStudents.entity.StudentTransportAllocation;
 import examination.teacherAndStudents.entity.Transport;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -15,7 +16,16 @@ public interface TransportService {
     void deleteTransport(Long transportId);
     StudentTransportAllocation payForTransport(Long dueId, Long sessionId, Long termId);
 
-    List<TransportResponse> getAllTransports();
+    Page<TransportResponse> getAllTransports(
+            Long id,
+            String vehicleNumber,
+            String licenceNumber,
+            Long driverId,
+            Boolean available,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection);
     TransportResponse addStudentToTransport(Long transportTrackerId, Long studentId, Long transportId,
                                             Long academicYearId, Long termId);
 

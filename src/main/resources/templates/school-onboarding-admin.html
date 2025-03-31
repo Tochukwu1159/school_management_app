@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>School Onboarding Confirmation</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --secondary: #4895ef;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4cc9f0;
+        }
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            background-color: #ffffff;
+            max-width: 600px;
+            margin: 30px auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: var(--primary);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+        .content {
+            padding: 30px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .success-banner {
+            background-color: #f0fdf4;
+            border-left: 4px solid #4ade80;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .details-card {
+            background-color: var(--light);
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            border: 1px solid #e9ecef;
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 12px;
+        }
+        .detail-label {
+            font-weight: 600;
+            width: 160px;
+            color: var(--dark);
+        }
+        .detail-value {
+            flex: 1;
+        }
+        .action-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            margin: 20px 0;
+            transition: background-color 0.3s;
+        }
+        .action-btn:hover {
+            background-color: var(--primary-dark);
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .next-steps {
+            margin-top: 30px;
+        }
+        .next-steps li {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>School Onboarding Complete</h1>
+    </div>
+    <div class="content">
+        <p>Dear <span th:text="${adminName}"></span>,</p>
+
+        <div class="success-banner">
+            <strong>Success!</strong> You have successfully onboarded <span th:text="${schoolName}"></span> to our platform.
+        </div>
+
+        <p>Here are your school's details:</p>
+
+        <div class="details-card">
+            <div class="detail-row">
+                <div class="detail-label">School Name:</div>
+                <div class="detail-value" th:text="${schoolName}"></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Onboarding Date:</div>
+                <div class="detail-value" th:text="${#temporals.format(onboardingDate, 'MMMM dd, yyyy')}"></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">School ID:</div>
+                <div class="detail-value" th:text="${schoolId}"></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Status:</div>
+                <div class="detail-value" style="color: var(--primary); font-weight: 600;">Active</div>
+            </div>
+        </div>
+
+        <h3>Next Steps:</h3>
+        <ul class="next-steps">
+            <li>Set up your school's academic calendar</li>
+            <li>Add teachers and staff members</li>
+            <li>Configure your school's classes and subjects</li>
+            <li>Upload student records</li>
+        </ul>
+
+        <div class="text-center">
+            <a th:href="${dashboardUrl}" class="action-btn">GO TO DASHBOARD</a>
+        </div>
+
+        <p>Need help getting started? Contact our support team at
+            <a href="mailto:support@edumanager.com">support@edumanager.com</a>
+            or call <strong>+234 800 123 4567</strong>.</p>
+    </div>
+    <div class="footer">
+        <p>© <span th:text="${#temporals.year(T(java.time.LocalDate).now())}"></span> EduManager. All rights reserved.</p>
+        <p>This is an automated message - please do not reply directly to this email.</p>
+    </div>
+</div>
+</body>
+</html>

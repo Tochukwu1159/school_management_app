@@ -6,6 +6,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+
 @Repository
 public interface PositionRepository extends JpaRepository<Position, Long> {
     Position findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(Profile user, ClassBlock userClass,AcademicSession academicSession, StudentTerm term);
@@ -14,4 +16,5 @@ public interface PositionRepository extends JpaRepository<Position, Long> {
 
     Collection<Position> findByClassBlockAndAcademicYearAndStudentTerm(ClassBlock classBlock, AcademicSession academicYear, StudentTerm studentTerm);
 
+        Collection<Position> findByClassBlockAndAcademicYearAndStudentTermAndUserProfileIn(ClassBlock classBlock, AcademicSession academicYear, StudentTerm studentTerm, Collection<Profile> userProfile);
 }

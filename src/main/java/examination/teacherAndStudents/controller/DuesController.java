@@ -1,9 +1,12 @@
 package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.DuesRequest;
+import examination.teacherAndStudents.dto.DuesResponse;
 import examination.teacherAndStudents.entity.Dues;
 import examination.teacherAndStudents.service.DuesService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +23,26 @@ public class DuesController {
         this.duesService = duesService;
     }
 
-    @GetMapping("/all")
-    public ResponseEntity<List<Dues>> getAllDues() {
-        List<Dues> duesList = duesService.getAllDues();
-        return ResponseEntity.ok(duesList);
+    @GetMapping
+    public ResponseEntity<Page<DuesResponse>> getAllDues(
+            @RequestParam(required = false) Long id,
+            @RequestParam(required = false) Long studentTermId,
+            @RequestParam(required = false) Long academicYearId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        Page<DuesResponse> duesPage = duesService.getAllDues(
+                id,
+                studentTermId,
+                academicYearId,
+                page,
+                size,
+                sortBy,
+                sortDirection);
+
+        return new ResponseEntity<>(duesPage, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")

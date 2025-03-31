@@ -66,8 +66,12 @@ public class School {
     @Column(name = "subscription_type")
     private SubscriptionType subscriptionType;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String subscriptionKey;
+
+    private String schoolPrimaryColour;
+
+    private String schoolSecondaryColour;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime subscriptionExpiryDate;
@@ -106,6 +110,8 @@ public class School {
 
     @Column(nullable = false)
     private Integer actualNumberOfStaff = 0;
+
+    private LocalDateTime lastRenewalDate;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

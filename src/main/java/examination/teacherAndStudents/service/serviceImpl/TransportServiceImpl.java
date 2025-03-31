@@ -17,6 +17,10 @@ import examination.teacherAndStudents.utils.Roles;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -49,10 +53,9 @@ public class TransportServiceImpl implements TransportService {
     public TransportResponse createTransport(TransportRequest transportRequest) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new RuntimeException("Service not found"));
+
 
             Optional<User> userDetails = userRepository.findByEmail(email);
             Optional<BusRoute> busRoute = busRouteRepository.findById(transportRequest.getBusRouteId());
@@ -85,10 +88,8 @@ public class TransportServiceImpl implements TransportService {
     public TransportResponse updateTransport(Long transportId, TransportRequest updatedTransport) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Transport transport = transportRepository.findById(transportId)
                     .orElseThrow(() -> new CustomInternalServerException("Transport not found with ID: " + transportId));
@@ -116,10 +117,8 @@ public class TransportServiceImpl implements TransportService {
     public void deleteTransport(Long transportId) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Transport transport = transportRepository.findById(transportId)
                     .orElseThrow(() -> new CustomInternalServerException("Transport not found with ID: " + transportId));
@@ -130,20 +129,42 @@ public class TransportServiceImpl implements TransportService {
     }
 
     @Override
-    public List<TransportResponse> getAllTransports() {
+    public Page<TransportResponse> getAllTransports(
+            Long id,
+            String vehicleNumber,
+            String licenceNumber,
+            Long driverId,
+            Boolean available,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection) {
+
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-            List<Transport> transports = transportRepository.findAll();
-            return transports.stream()
-                    .map(this::mapToTransportResponse)
-                    .collect(Collectors.toList());
+            // Create Pageable object
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            // Fetch filtered transports
+            Page<Transport> transportsPage = transportRepository.findAllBySchoolWithFilters(
+                    admin.getSchool().getId(),
+                    id,
+                    vehicleNumber,
+                    licenceNumber,
+                    driverId,
+                    available,
+                    pageable);
+
+            // Map to response DTO
+            return transportsPage.map(this::mapToTransportResponse);
+        } catch (CustomNotFoundException e) {
+            throw e;
         } catch (Exception e) {
-            throw new CustomInternalServerException("Unexpected error fetching all transports " + e.getMessage());
+            throw new CustomInternalServerException("Error fetching transports: " + e.getMessage());
         }
     }
 
@@ -151,10 +172,8 @@ public class TransportServiceImpl implements TransportService {
     public TransportResponse getTransportById(Long transportId) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Transport transport = transportRepository.findById(transportId)
                     .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
@@ -185,7 +204,7 @@ public class TransportServiceImpl implements TransportService {
             DuePayment duePayment = duePaymentRepository
                     .findByDueIdAndAcademicYearAndStudentTermAndProfile(dueId,academicSession, term, profile);
             if(duePayment!= null) {
-                throw new CustomInternalServerException("You have paid for transport for the month");
+                throw new CustomInternalServerException("You have paid for transport for the term");
             }
             // Check if allocation already made
             StudentTransportAllocation existingTracker = studentTransportTrackerRepository
@@ -227,10 +246,8 @@ public class TransportServiceImpl implements TransportService {
                                                    Long academicYearId, Long termId) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             // Find the transport by ID
             Transport transport = transportRepository.findById(transportId)
                     .orElseThrow(() -> new NotFoundException("Transport not found with ID: " + transportId));
@@ -267,7 +284,9 @@ public class TransportServiceImpl implements TransportService {
                 }
                 if (existingAllocation1.getPaymentStatus() != PaymentStatus.SUCCESS) {
                     throw new RuntimeException("Payment not made for the allocation or pending");
-                }}
+                }
+
+            }
 
                 // Check if a tracker exists for the transport, if not, create one
             TransportTracker tracker = transportTrackerRepository.findByTransport(transport)
@@ -327,10 +346,8 @@ public class TransportServiceImpl implements TransportService {
     public TransportResponse addStudentsToTransport(Long transportId, List<Long> studentIds) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             // Find the transport by ID
             Transport transport = transportRepository.findById(transportId)
@@ -411,10 +428,8 @@ public class TransportServiceImpl implements TransportService {
     @Override
     public TransportResponse removeStudentFromTransport(Long transportId, Long studentId) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-        if (admin == null) {
-            throw new CustomNotFoundException("Please login as an Admin");
-        }
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
         Transport transport = transportRepository.findById(transportId)
                 .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
@@ -466,13 +481,4 @@ public class TransportServiceImpl implements TransportService {
         return transportResponse;
     }
 
-//    private TransportResponse mapToTransportResponseTracker(StudentTransportAllocation
-//                                                                    transport) {
-//        TransportResponseTracker transportResponse = new TransportResponse();
-//        transportResponse.setId(transport.getId());
-//        transportResponse.setVehicleName(transport.());
-//        transportResponse.setVehicleNumber(transport.getVehicleNumber());
-//        transportResponse.setLicenceNumber(transport.getLicenceNumber());
-//        return transportResponse;
-//    }
 }

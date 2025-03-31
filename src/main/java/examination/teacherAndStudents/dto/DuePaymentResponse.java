@@ -3,16 +3,24 @@ package examination.teacherAndStudents.dto;
 import examination.teacherAndStudents.utils.PaymentStatus;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 @Data
-@AllArgsConstructor
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class DuePaymentResponse {
     private Long id;
     private Long dueId;
-    private Long userId;
+    private String duePurpose;
+    private Long profileId;
+    private String profileName;
+    private Long studentTermId;
+    private String studentTermName;
+    private Long academicYearId;
+    private String academicYearName;
     private PaymentStatus paymentStatus;
+    private BigDecimal amount;
     private LocalDateTime createdAt;
-
-    // Getters and Setters duePayment.getId(),
+    private LocalDateTime updatedAt;
 }

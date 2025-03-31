@@ -3,23 +3,23 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.CustomInternalServerException;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.PayStackPaymentService;
 import examination.teacherAndStudents.service.WalletService;
 import examination.teacherAndStudents.utils.*;
+import jakarta.mail.MessagingException;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @Transactional
@@ -29,157 +29,200 @@ public class WalletServiceImpl implements WalletService {
     private final EmailService emailService;
 
     private final PayStackPaymentService paymentService;
-    //    private final TransactionDao transactionDao;
     private final WalletRepository walletRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
     private final ProfileRepository profileRepository;
-    private final EntityFetcher entityFetcher;
+
+    private static final Logger logger = LoggerFactory.getLogger(TimetableServiceImpl.class);
+
 
     @Override
     public WalletResponse getProfileWalletBalance() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        Optional<User> student = userRepository.findByEmail(email);
-        if (student.isEmpty()) {
-            throw new CustomNotFoundException("Student with Id " + student.get().getId() + " is not valid");
-        }
 
-        Optional<Profile> studentProfile = profileRepository.findByUser(student.get());
-        if (studentProfile.isEmpty()) {
-            throw new CustomNotFoundException("Student with Id " + student.get().getId() + " is not valid");
+        Optional<Profile> profile = profileRepository.findByUserEmail(email);
+        if (profile.isEmpty()) {
+            throw new CustomNotFoundException("Student with Id " + profile.get().getUniqueRegistrationNumber() + " is not valid");
         }
         // Validate profile status
-        AccountUtils.validateProfileStatus(studentProfile.get());
+        AccountUtils.validateProfileStatus(profile.get());
 
-        Wallet wallet = walletRepository.findWalletByUserProfile(studentProfile.get());
-        if (wallet == null) {
-            throw new CustomNotFoundException("Wallet not found or phone number missing");
-        }
+
+        Wallet wallet =  walletRepository.findWalletByUserProfile(profile.get())
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found or phone number missing"));
 
 
         return new WalletResponse(wallet.getBalance(), wallet.getTotalMoneySent());
 
     }
 
-    @Override
-    public PaymentResponse fundWallet(FundWalletRequest fundWalletRequest) throws Exception {
+
+    @Transactional
+    public PaymentResponse fundWallet(FundWalletRequest fundWalletRequest) {
+        // Validate input
+        validateFundRequest(fundWalletRequest);
+
+        // Process payment
+        PaymentResult paymentResult = processPayment(fundWalletRequest);
+
+        // Handle wallet operations
+        WalletOperationResult walletResult = handleWalletOperations(
+                paymentResult.email(),
+                paymentResult.amountInNaira(),
+                paymentResult.transactionResponse()
+        );
+
+        // Send notifications
+        sendNotifications(walletResult);
+
+        return new PaymentResponse(paymentResult.authorizationUrl());
+    }
+
+    // Helper methods
+    private void validateFundRequest(FundWalletRequest request) {
+        if (request == null || request.getAmount() == null || request.getAmount().isEmpty()) {
+            throw new IllegalArgumentException("Invalid funding request");
+        }
+
         try {
-            fundWalletRequest.setAmount(String.valueOf(Integer.parseInt(fundWalletRequest.getAmount()) * 100));
+            double amount = Double.parseDouble(request.getAmount());
+            if (amount <= 0) {
+                throw new IllegalArgumentException("Amount must be positive");
+            }
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid amount format");
+        }
+    }
+
+    private PaymentResult processPayment(FundWalletRequest request) {
+        try {
+            int amountInKobo = (int) (Double.parseDouble(request.getAmount()) * 100);
             String email = SecurityConfig.getAuthenticatedUserEmail();
 
-            PayStackTransactionRequest payStackTransactionRequest = PayStackTransactionRequest.builder()
+            PayStackTransactionRequest paymentRequest = PayStackTransactionRequest.builder()
                     .email(email)
-                    .amount(new BigDecimal(fundWalletRequest.getAmount()))
+                    .amount(BigDecimal.valueOf(amountInKobo))
                     .build();
-            PayStackTransactionResponse transactionResponse = paymentService.initTransaction(payStackTransactionRequest);
 
-            if (!transactionResponse.isStatus()) {
-                throw new Exception("Payment not authorized");
+            PayStackTransactionResponse response = paymentService.initTransaction(paymentRequest);
+
+            if (!response.isStatus()) {
+                throw new PaymentProcessingException("Payment initialization failed: " + response.getMessage());
             }
 
-            Optional<User> user = userRepository.findByEmail(email);
-            User student = user.get();
-
-            Optional<Profile> studentProfile = profileRepository.findByUser(student);
-
-            if (studentProfile.isEmpty()) {
-                throw new CustomNotFoundException("Student with email " + email + " is not valid");
-            }
-
-            fundWalletRequest.setAmount(String.valueOf(Integer.parseInt(fundWalletRequest.getAmount()) / 100));
-            double amount = Double.parseDouble(fundWalletRequest.getAmount());
-            DecimalFormat formatter = new DecimalFormat("#,###.00");
-
-            Wallet wallet = walletRepository.findWalletByUserProfile(studentProfile.get());
-
-            if (wallet == null) {
-                createNewWalletAndTransaction(student, fundWalletRequest.getAmount(), transactionResponse, formatter);
-                sendWalletFundingEmail(student, fundWalletRequest.getAmount());
-                return new PaymentResponse("Success");
-            }
-
-            updateExistingWalletAndTransaction(student, fundWalletRequest.getAmount(), transactionResponse, formatter, wallet);
-            sendWalletFundingEmail(student, fundWalletRequest.getAmount());
-
-            return new PaymentResponse(transactionResponse.getData().getAuthorization_url());
-        } catch (Exception ex) {
-            throw new Exception("Failure funding wallet");
+            return new PaymentResult(
+                    email,
+                    Double.parseDouble(request.getAmount()),
+                    response,
+                    response.getData().getAuthorization_url()
+            );
+        } catch (Exception e) {
+            throw new PaymentProcessingException("Payment processing error " +e);
         }
     }
 
-    private void createNewWalletAndTransaction(User student, String amount, PayStackTransactionResponse transactionResponse, DecimalFormat formatter) {
-        Optional<Profile> user = profileRepository.findByUser(student);
+    private WalletOperationResult handleWalletOperations(String email, double amount,
+                                                         PayStackTransactionResponse transactionResponse) {
 
-        if (user.isEmpty()) {
-            throw new CustomNotFoundException("Student profile does not exist");
-        }
-        Wallet walletDao1 = Wallet.builder()
-                .balance(new BigDecimal(amount))
-                .userProfile(user.get())
-                .build();
-        walletRepository.save(walletDao1);
+        Profile profile = profileRepository.findByUserEmail(email)
+                .orElseThrow(() -> new NotFoundException("Profile not found for: " + email));
 
-        Transaction transaction = Transaction.builder()
-                .transactionType(TransactionType.CREDIT)
-                .user(user.get())
-                .amount(new BigDecimal(amount))
-                .description(transactionResponse.getMessage())
-                .build();
-        transactionRepository.save(transaction);
+        Wallet wallet = walletRepository.findWalletByUserProfile(profile)
+                .orElseGet(() -> createNewWallet(profile));
 
-        Notification notification = Notification.builder()
-                .notificationType(NotificationType.CREDIT_NOTIFICATION)
-                .user(user.get())
-                .notificationStatus(NotificationStatus.UNREAD)
-                .transaction(transaction)
-                .message("You funded your wallet with ₦" + formatter.format(Double.parseDouble(amount)))
-                .build();
-        notificationRepository.save(notification);
-    }
-
-    private void updateExistingWalletAndTransaction(User student, String amount, PayStackTransactionResponse transactionResponse, DecimalFormat formatter, Wallet wallet) {
-        Optional<Profile> user = profileRepository.findByUser(student);
-
-
-        if (user.isEmpty()) {
-            throw new CustomNotFoundException("Student profile does not exist");
-        }
-        BigDecimal result = wallet.getBalance().add(new BigDecimal(amount));
-        wallet.setBalance(result);
-        wallet.setUserProfile(user.get());
+        BigDecimal amountDecimal = BigDecimal.valueOf(amount);
+        wallet.credit(amountDecimal);
         walletRepository.save(wallet);
 
-        Transaction transaction = Transaction.builder()
-                .transactionType(TransactionType.CREDIT)
-                .user(user.get())
-                .amount(new BigDecimal(amount))
-                .description(transactionResponse.getMessage())
-                .build();
+        Transaction transaction = createTransaction(profile, amountDecimal, transactionResponse);
         transactionRepository.save(transaction);
+
+        return new WalletOperationResult(profile.getUser(), profile, wallet, transaction, amount);
+    }
+
+    private Wallet createNewWallet(Profile profile) {
+        return walletRepository.save(
+                Wallet.builder()
+                        .userProfile(profile)
+                        .balance(BigDecimal.ZERO)
+                        .totalMoneyReceived(BigDecimal.ZERO)
+                        .build()
+        );
+    }
+
+    private Transaction createTransaction(Profile profile, BigDecimal amount,
+                                          PayStackTransactionResponse response) {
+        return Transaction.builder()
+                .transactionType(TransactionType.CREDIT)
+                .user(profile)
+                .amount(amount)
+                .description(response.getMessage())
+                .status(TransacStatus.SUCCESS)
+                .paymentReference(response.getData().getReference())
+                .build();
+    }
+
+    private void sendNotifications(WalletOperationResult result) {
+        try {
+            createNotification(result);
+            sendEmailNotification(result);
+        } catch (Exception e) {
+            logger.error("Failed to send notifications for wallet funding", e);
+        }
+    }
+
+    private void createNotification(WalletOperationResult result) {
+        DecimalFormat formatter = new DecimalFormat("#,###.00");
+        String message = String.format(
+                "You funded your wallet with ₦%s",
+                formatter.format(result.amount())
+        );
 
         Notification notification = Notification.builder()
                 .notificationType(NotificationType.CREDIT_NOTIFICATION)
-                .user(user.get())
+                .user(result.profile())
                 .notificationStatus(NotificationStatus.UNREAD)
-                .transaction(transaction)
-                .message("You funded your wallet with ₦" + formatter.format(Double.parseDouble(amount)))
+                .transaction(result.transaction())
+                .message(message)
                 .build();
+
         notificationRepository.save(notification);
     }
 
-    private void sendWalletFundingEmail(User student, String amount) {
+    private void sendEmailNotification(WalletOperationResult result) throws MessagingException {
         Map<String, Object> model = new HashMap<>();
-        model.put("amount", amount);
-        model.put("name", student.getFirstName() + " " + student.getLastName());
+        model.put("amount", result.amount());
+        model.put("name", result.user().getFirstName() + " " + result.user().getLastName());
+        model.put("balance", result.wallet().getBalance());
+
         EmailDetails emailDetails = EmailDetails.builder()
-                .recipient(student.getEmail())
-                .subject("Wallet funding status")
-                .templateName("email-template-wallet")
+                .recipient(result.user().getEmail())
+                .subject("Wallet Funding Confirmation")
+                .templateName("wallet-funding-confirmation")
                 .model(model)
                 .build();
-        emailService.sendEmails(emailDetails);
+
+        emailService.sendHtmlEmail(emailDetails);
     }
+
+    // Record classes for better data structure
+    private record PaymentResult(
+            String email,
+            double amountInNaira,
+            PayStackTransactionResponse transactionResponse,
+            String authorizationUrl
+    ) {}
+
+    private record WalletOperationResult(
+            User user,
+            Profile profile,
+            Wallet wallet,
+            Transaction transaction,
+            double amount
+    ) {}
+
 
     public SchoolBalanceResponse schoolTotalWallet() {
         try {
@@ -213,7 +256,8 @@ public class WalletServiceImpl implements WalletService {
             throw new CustomInternalServerException("Error fetching school wallet balance"+ e);
         }
     }
+    }
 
 
 
-}
+

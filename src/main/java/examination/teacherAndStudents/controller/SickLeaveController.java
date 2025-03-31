@@ -30,7 +30,7 @@ public class SickLeaveController {
     @PutMapping("/approve-reject/{sickLeaveId}")
     public ResponseEntity<String> updateSickLeave(@PathVariable Long sickLeaveId,
                                                   @RequestBody SickLeaveRequestDto updatedSickLeave) {
-        String responseMessage = sickLeaveService.approveOrRejectSickLeaveRequest(sickLeaveId, updatedSickLeave);
+        String responseMessage = sickLeaveService.processSickLeaveRequest(sickLeaveId, updatedSickLeave);
         return ResponseEntity.ok(responseMessage);
     }
 
@@ -42,7 +42,7 @@ public class SickLeaveController {
 
     @GetMapping("all")
     public ResponseEntity<List<Leave>> getAllSickLeave() {
-        List<Leave> sickLeaveList = sickLeaveService.getAllSickLeave();
+        List<Leave> sickLeaveList = sickLeaveService.getAllSickLeaves();
         return ResponseEntity.ok(sickLeaveList);
     }
 }

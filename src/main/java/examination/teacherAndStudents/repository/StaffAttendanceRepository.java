@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.repository;
 
+import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.StaffAttendance;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.utils.AttendanceStatus;
@@ -18,8 +19,7 @@ public interface StaffAttendanceRepository extends JpaRepository<StaffAttendance
 
     Page<StaffAttendance> findAllByCheckInTimeBetween(LocalDateTime startDateTime, LocalDateTime endDateTime, Pageable pageable);
 
+    Optional<StaffAttendance> findFirstByStaffAndCheckOutTimeIsNullOrderByCheckInTimeDesc(Profile user);
 
-    Optional<StaffAttendance> findFirstByStaffAndCheckInTimeBetweenOrderByCheckInTimeDesc(User teacher, LocalDateTime atStartOfDay, LocalDateTime atTime);
-
-    Optional<StaffAttendance> findFirstByStaffOrderByCheckInTimeDesc(User teacher);
+    boolean existsByStaffAndCheckOutTimeIsNull(Profile staff);
 }

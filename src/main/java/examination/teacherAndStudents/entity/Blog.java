@@ -31,6 +31,8 @@ public class Blog {
     @Size(min = 3, max = 255)
     private String title;
 
+    private String imageUrl;
+
     @NotNull
     @Column(columnDefinition = "TEXT")
     private String content;
@@ -39,6 +41,9 @@ public class Blog {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
+
+    @ManyToOne
+    private Profile author;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -54,5 +59,11 @@ public class Blog {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateDetails(String title, String content, String imageUrl) {
+        this.title = title;
+        this.content = content;
+        this.imageUrl = imageUrl;
     }
 }

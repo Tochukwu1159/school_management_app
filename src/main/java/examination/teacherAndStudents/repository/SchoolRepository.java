@@ -20,11 +20,11 @@ public interface SchoolRepository extends JpaRepository<School, Long> {
 
     boolean existsBySchoolName(String schoolName);
 
-    List<School> findBySubscriptionExpiryDateBeforeAndIsActiveTrue(LocalDateTime now);
-
-    List<School> findBySubscriptionExpiryDateBetweenAndIsActiveTrue(LocalDateTime localDateTime, LocalDateTime localDateTime1);
 
     Optional<School> findByEmail(String email);
 
     boolean existsBySchoolIdentificationNumber(String schoolIdentificationNumber);
+
+    List<School> findByIsActiveTrueAndSubscriptionExpiryDateAfter(LocalDateTime now);
+
 }

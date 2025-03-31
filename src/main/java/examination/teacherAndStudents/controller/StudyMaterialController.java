@@ -7,6 +7,8 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
+import examination.teacherAndStudents.dto.StudyMaterialRequest;
+import examination.teacherAndStudents.dto.StudyMaterialResponse;
 import examination.teacherAndStudents.entity.StudyMaterial;
 import examination.teacherAndStudents.service.StudyMaterialService;
 import lombok.RequiredArgsConstructor;
@@ -38,18 +40,21 @@ public class StudyMaterialController {
     @Value("${google.drive.folder.id}")
     private String googleDriveFolderId;
 
+    @Value("${google.credentials.path}")
+    private String googleCredentialsPath;
+
 
     private final StudyMaterialService studyMaterialService;
 
     @GetMapping
-    public ResponseEntity<List<StudyMaterial>> getAllMaterials() {
-        List<StudyMaterial> materials = studyMaterialService.getAllMaterials();
+    public ResponseEntity<List<StudyMaterialResponse>> getAllMaterials() {
+        List<StudyMaterialResponse> materials = studyMaterialService.getAllMaterials();
         return new ResponseEntity<>(materials, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<StudyMaterial> getMaterialById(@PathVariable Long id) {
-        StudyMaterial material = studyMaterialService.getMaterialById(id);
+    public ResponseEntity<StudyMaterialResponse> getMaterialById(@PathVariable Long id) {
+        StudyMaterialResponse material = studyMaterialService.getMaterialById(id);
         if (material != null) {
             return new ResponseEntity<>(material, HttpStatus.OK);
         } else {
@@ -58,23 +63,23 @@ public class StudyMaterialController {
     }
 
     @PostMapping("/material")
-    public ResponseEntity<StudyMaterial> uploadStudyMaterial(@RequestParam("file") MultipartFile file,
+    public ResponseEntity<StudyMaterialResponse> uploadStudyMaterial(@RequestParam("file") MultipartFile file,
                                                         @RequestParam("title") String title) {
 //        "/Users/mac/Documents/ResultStatement.pdf"
         String filePath = "/Users/mac/Documents/" + file.getOriginalFilename();
 
-        StudyMaterial material = new StudyMaterial();
+        StudyMaterialRequest material = new StudyMaterialRequest();
         material.setTitle(title);
         material.setFilePath(filePath);
 
-        studyMaterialService.saveMaterial(material);
+        StudyMaterialResponse response =     studyMaterialService.saveMaterial(material);
 
-        return new ResponseEntity<>(material, HttpStatus.CREATED);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteMaterial(@PathVariable Long id) {
-        StudyMaterial material = studyMaterialService.getMaterialById(id);
+        StudyMaterialResponse material = studyMaterialService.getMaterialById(id);
         if (material != null) {
             studyMaterialService.deleteMaterial(id);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -85,7 +90,7 @@ public class StudyMaterialController {
 
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> downloadMaterial(@PathVariable Long id) {
-        StudyMaterial material = studyMaterialService.getMaterialById(id);
+        StudyMaterialResponse material = studyMaterialService.getMaterialById(id);
 
         if (material != null) {
             // Load the file as a resource
@@ -118,7 +123,7 @@ public class StudyMaterialController {
 
 
 
-        @PostMapping("/upload")
+        @PostMapping("/upload/google")
         public ResponseEntity<String> uploadMaterial(@RequestParam("file") MultipartFile file,
                                                      @RequestParam("title") String title) {
 
@@ -156,16 +161,15 @@ public class StudyMaterialController {
             }
         }
 
-        private Drive getDriveService() throws IOException, GeneralSecurityException {
-            // Load the credentials JSON file you downloaded from Google Cloud Console
-            // Note: Replace "/path/to/your/credentials.json" with the actual path or use InputStream
-            java.io.File credentialsFile = new java.io.File("/path/to/your/credentials.json");
-            GoogleCredential credential = GoogleCredential.fromStream(new FileInputStream(credentialsFile))
-                    .createScoped(Collections.singletonList(DriveScopes.DRIVE_FILE));
-            return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(), JacksonFactory.getDefaultInstance(), credential)
-                    .setApplicationName("Your Application Name")
-                    .build();
-        }
+    private Drive getDriveService() throws IOException, GeneralSecurityException {
+        GoogleCredential credential = GoogleCredential.fromStream(new FileInputStream(googleCredentialsPath))
+                .createScoped(Collections.singletonList(DriveScopes.DRIVE_FILE));
+
+        return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(),
+                JacksonFactory.getDefaultInstance(), credential)
+                .setApplicationName("Your Application Name")
+                .build();
+    }
 
 
 

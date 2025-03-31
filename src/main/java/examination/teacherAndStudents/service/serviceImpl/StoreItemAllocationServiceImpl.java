@@ -6,23 +6,46 @@ import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.StoreItemAllocationService;
 import examination.teacherAndStudents.utils.PaymentStatus;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
+@Transactional
 public class StoreItemAllocationServiceImpl implements StoreItemAllocationService {
+
+    private static final String STORE_ITEM_NOT_FOUND = "Store Item not found";
+    private static final String STUDENT_NOT_FOUND = "Student not found";
+    private static final String PROFILE_NOT_FOUND = "Profile not found";
+    private static final String ACADEMIC_YEAR_NOT_FOUND = "Academic year not found";
+    private static final String TERM_NOT_FOUND = "Student term not found";
+    private static final String ALLOCATION_NOT_FOUND = "Store Item Allocation not found";
+    private static final String INSUFFICIENT_ITEMS = "Insufficient items available for size: ";
+
     private final StoreItemAllocationRepository storeItemAllocationRepository;
-    private final StoreRepository storeRepository;
+    private final StoreItemRepository storeRepository;
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final StoreItemTrackerRepository storeItemTrackerRepository;
 
-
-    public StoreItemAllocationServiceImpl(StoreItemAllocationRepository storeItemAllocationRepository, StoreRepository storeRepository, ProfileRepository profileRepository, UserRepository userRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, StoreItemTrackerRepository storeItemTrackerRepository) {
+    public StoreItemAllocationServiceImpl(
+            StoreItemAllocationRepository storeItemAllocationRepository,
+            StoreItemRepository storeRepository,
+            ProfileRepository profileRepository,
+            UserRepository userRepository,
+            AcademicSessionRepository academicSessionRepository,
+            StudentTermRepository studentTermRepository,
+            StoreItemTrackerRepository storeItemTrackerRepository) {
         this.storeItemAllocationRepository = storeItemAllocationRepository;
         this.storeRepository = storeRepository;
         this.profileRepository = profileRepository;
@@ -34,68 +57,163 @@ public class StoreItemAllocationServiceImpl implements StoreItemAllocationServic
 
     @Override
     public StoreItemAllocation allocateStoreItem(Long bookId, Long academicYearId, Long termId, Long storeItemAllocationId) {
+        log.info("Allocating store item with ID: {} for allocation ID: {}", bookId, storeItemAllocationId);
+
         StoreItemAllocation storeItemAllocation = validateBookAllocation(storeItemAllocationId);
         StoreItem item = validateStoreItem(bookId);
         AcademicSession academicYear = validateAcademicYear(academicYearId);
         StudentTerm studentTerm = validateStudentTerm(termId);
 
-
         StoreItemTracker storeItemTracker = storeItemTrackerRepository.findByStoreItemAndAcademicYear(item, academicYear)
-                .orElseGet(() -> storeItemTrackerRepository.save(
+                .orElseGet(() -> createNewStoreItemTracker(item, academicYear));
 
-                        StoreItemTracker.builder()
-                                .storeItem(item)
-                                .academicYear(academicYear)
-                                .storeItemRemaining(0)
-                                .build()
-                ));
+        validateAndUpdateItemQuantities(item, storeItemTracker);
 
-        // Check size-based allocation
-        Map<Integer, Integer> sizes = item.getSizes();
-        for (Map.Entry<Integer, Integer> entry : sizes.entrySet()) {
-            Integer size = entry.getKey();
-            Integer quantityRequired = entry.getValue();
-
-            int remaining = storeItemTracker.getStoreItemRemaining();
-            if (remaining < quantityRequired) {
-                throw new NotFoundException("Insufficient items available for size: " + size);
-            }
-
-            // Update remaining quantity for each size
-            storeItemTracker.setStoreItemRemaining(remaining - quantityRequired);
-        }
-
-        // Save updated tracker
-        storeItemTrackerRepository.save(storeItemTracker);
-
-        StoreItemAllocation allocation = StoreItemAllocation.builder()
-                .profile(storeItemAllocation.getProfile())
-                .storeItems(List.of(item))
-                .academicYear(academicYear)
-                .studentTerm(studentTerm)
-                .paymentStatus(PaymentStatus.SUCCESS)
-                .build();
+        StoreItemAllocation allocation = buildStoreItemAllocation(storeItemAllocation, item, academicYear, studentTerm);
 
         return storeItemAllocationRepository.save(allocation);
     }
 
     @Override
     public StoreItemPaymentResponse payForStoreItem(List<Long> storeItemIds, Long studentId, Long academicYearId, Long termId) {
-        // Validate books
-        List<StoreItem> storeItems = validateStoreItem(storeItemIds);
+        log.info("Processing payment for store items: {} by student: {}", storeItemIds, studentId);
 
-        // Validate student and profile
+        List<StoreItem> storeItems = validateStoreItemsExist(storeItemIds);
         Profile profile = validateStudentProfile(studentId);
-
-        // Validate academic year and term
         AcademicSession academicYear = validateAcademicYear(academicYearId);
         StudentTerm studentTerm = validateStudentTerm(termId);
 
-        // Calculate total amount
         double totalAmountPaid = calculateTotalAmountPaid(storeItems);
 
-        // Create and save book allocation
-        StoreItemAllocation allocation = StoreItemAllocation.builder()
+        StoreItemAllocation allocation = buildStoreItemAllocationForPayment(profile, academicYear, studentTerm, totalAmountPaid, storeItems);
+        StoreItemAllocation savedAllocation = storeItemAllocationRepository.save(allocation);
+
+        log.info("Successfully processed payment of {} for {} items", totalAmountPaid, storeItems.size());
+
+        return buildPaymentResponse(savedAllocation, storeItems);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StoreItemAllocation> getPurchasesByProfile(Long profileId) {
+        log.info("Fetching purchases for profile ID: {}", profileId);
+        return storeItemAllocationRepository.findByProfileId(profileId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StoreItemAllocation> getAllPurchases() {
+        log.info("Fetching all purchases");
+        return storeItemAllocationRepository.findAll();
+    }
+
+    // Helper Methods
+    private List<StoreItem> validateStoreItemsExist(List<Long> storeItemIds) {
+        List<StoreItem> storeItems = storeRepository.findAllById(storeItemIds);
+
+        if (storeItems.size() != storeItemIds.size()) {
+            Set<Long> foundIds = storeItems.stream()
+                    .map(StoreItem::getId)
+                    .collect(Collectors.toSet());
+
+            List<Long> missingIds = storeItemIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .toList();
+
+            throw new NotFoundException("Store items not found with IDs: " + missingIds);
+        }
+        return storeItems;
+    }
+
+    private StoreItem validateStoreItem(Long storeItemId) {
+        return storeRepository.findById(storeItemId)
+                .orElseThrow(() -> new NotFoundException(STORE_ITEM_NOT_FOUND));
+    }
+
+    private Profile validateStudentProfile(Long studentId) {
+        User user = userRepository.findById(studentId)
+                .orElseThrow(() -> new NotFoundException(STUDENT_NOT_FOUND));
+
+        return profileRepository.findByUser(user)
+                .orElseThrow(() -> new NotFoundException(PROFILE_NOT_FOUND));
+    }
+
+    private AcademicSession validateAcademicYear(Long academicYearId) {
+        return academicSessionRepository.findById(academicYearId)
+                .orElseThrow(() -> new NotFoundException(ACADEMIC_YEAR_NOT_FOUND));
+    }
+
+    private StudentTerm validateStudentTerm(Long termId) {
+        return studentTermRepository.findById(termId)
+                .orElseThrow(() -> new NotFoundException(TERM_NOT_FOUND));
+    }
+
+    private StoreItemAllocation validateBookAllocation(Long storeItemAllocationId) {
+        return storeItemAllocationRepository.findById(storeItemAllocationId)
+                .orElseThrow(() -> new NotFoundException(ALLOCATION_NOT_FOUND));
+    }
+
+    private double calculateTotalAmountPaid(List<StoreItem> storeItems) {
+        return storeItems.stream()
+                .map(StoreItem::getPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.CEILING)
+                .doubleValue();
+    }
+
+    private StoreItemTracker createNewStoreItemTracker(StoreItem item, AcademicSession academicYear) {
+        return storeItemTrackerRepository.save(
+                StoreItemTracker.builder()
+                        .storeItem(item)
+                        .academicYear(academicYear)
+                        .storeItemRemaining(0)
+                        .build()
+        );
+    }
+
+    private void validateAndUpdateItemQuantities(StoreItem item, StoreItemTracker storeItemTracker) {
+        Map<String, Integer> sizes = item.getSizes();
+        int remaining = storeItemTracker.getStoreItemRemaining();
+
+        for (Map.Entry<String, Integer> entry : sizes.entrySet()) {
+            String size = entry.getKey();
+            Integer quantityRequired = entry.getValue();
+
+            if (remaining < quantityRequired) {
+                throw new NotFoundException(INSUFFICIENT_ITEMS + size);
+            }
+
+            remaining -= quantityRequired;
+        }
+
+        storeItemTracker.setStoreItemRemaining(remaining);
+        storeItemTrackerRepository.save(storeItemTracker);
+    }
+
+    private StoreItemAllocation buildStoreItemAllocation(
+            StoreItemAllocation existingAllocation,
+            StoreItem item,
+            AcademicSession academicYear,
+            StudentTerm studentTerm) {
+
+        return StoreItemAllocation.builder()
+                .profile(existingAllocation.getProfile())
+                .storeItems(List.of(item))
+                .academicYear(academicYear)
+                .storeId(item.getStore().getId())
+                .studentTerm(studentTerm)
+                .paymentStatus(PaymentStatus.SUCCESS)
+                .build();
+    }
+
+    private StoreItemAllocation buildStoreItemAllocationForPayment(
+            Profile profile,
+            AcademicSession academicYear,
+            StudentTerm studentTerm,
+            double totalAmountPaid,
+            List<StoreItem> storeItems) {
+
+        return StoreItemAllocation.builder()
                 .paymentStatus(PaymentStatus.SUCCESS)
                 .academicYear(academicYear)
                 .studentTerm(studentTerm)
@@ -103,67 +221,15 @@ public class StoreItemAllocationServiceImpl implements StoreItemAllocationServic
                 .profile(profile)
                 .storeItems(storeItems)
                 .build();
+    }
 
-        // Save allocation (books will be saved automatically due to CascadeType.PERSIST)
+    private StoreItemPaymentResponse buildPaymentResponse(
+            StoreItemAllocation allocation,
+            List<StoreItem> storeItems) {
 
-        StoreItemAllocation savedAllocation = storeItemAllocationRepository.save(allocation);
-
-        return  StoreItemPaymentResponse.builder()
-                .totalAmountPaid(savedAllocation.getAmountPaid())
+        return StoreItemPaymentResponse.builder()
+                .totalAmountPaid(allocation.getAmountPaid())
                 .storeItems(storeItems)
                 .build();
     }
-
-    @Override
-    public List<StoreItemAllocation> getPurchasesByProfile(Long profileId) {
-        return storeItemAllocationRepository.findByProfileId(profileId);    }
-
-    @Override
-    public List<StoreItemAllocation> getAllPurchases() {
-        return storeItemAllocationRepository.findAll();
-    }
-
-
-    // Helper Methods
-    private List<StoreItem> validateStoreItem(List<Long> storeItemIds) {
-        List<StoreItem> storeItems = storeRepository.findAllById(storeItemIds);
-        if (storeItems.isEmpty() || storeItems.size() != storeItemIds.size()) {
-            throw new NotFoundException("One or more store items not found");
-        }
-        return storeItems;
-    }
-
-    private StoreItem validateStoreItem(Long storeItem) {
-        return storeRepository.findById(storeItem)
-                .orElseThrow(() -> new NotFoundException("Store Item not found"));
-    }
-
-    private Profile validateStudentProfile(Long studentId) {
-        return profileRepository.findByUser(
-                userRepository.findById(studentId)
-                        .orElseThrow(() -> new NotFoundException("Student not found"))
-        ).orElseThrow(() -> new NotFoundException("Profile not found"));
-    }
-
-    private AcademicSession validateAcademicYear(Long academicYearId) {
-        return academicSessionRepository.findById(academicYearId)
-                .orElseThrow(() -> new NotFoundException("Academic year not found"));
-    }
-
-    private StudentTerm validateStudentTerm(Long termId) {
-        return studentTermRepository.findById(termId)
-                .orElseThrow(() -> new NotFoundException("Student term not found"));
-    }
-
-    private StoreItemAllocation validateBookAllocation(Long storeItemAllocationId) {
-        return storeItemAllocationRepository.findById(storeItemAllocationId)
-                .orElseThrow(() -> new NotFoundException("Store Item Allocation not found"));
-    }
-
-    private double calculateTotalAmountPaid(List<StoreItem> storeItems) {
-        return Math.ceil(storeItems.stream()
-                .mapToDouble(StoreItem::getPrice)
-                .sum());
-    }
-
 }

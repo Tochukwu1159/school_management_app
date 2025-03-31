@@ -9,6 +9,7 @@ import examination.teacherAndStudents.entity.Transaction;
 import examination.teacherAndStudents.dto.NotificationResponse;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.NotificationRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.TransactionRepository;
@@ -16,12 +17,16 @@ import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.NotificationService;
 import examination.teacherAndStudents.utils.AccountUtils;
 import examination.teacherAndStudents.utils.NotificationStatus;
+import examination.teacherAndStudents.utils.NotificationType;
 import examination.teacherAndStudents.utils.Roles;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -87,7 +92,8 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<NotificationResponse> allNotificationsOfA_StudentById() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User student = userRepository.findByEmailAndRoles(email, Roles.STUDENT);
+        User student = userRepository.findByEmailAndRoles(email, Roles.STUDENT)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         List<Notification> notificationEntity = notificationRepository.findNotificationByUserOrderByCreatedAtDesc(student);
 
         if (notificationEntity.isEmpty()) {
@@ -102,7 +108,8 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<NotificationResponse> allUnreadNotificationsOfAStudentById() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User student = userRepository.findByEmailAndRoles(email, Roles.STUDENT);
+        User student = userRepository.findByEmailAndRoles(email, Roles.STUDENT)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         List<Notification> unreadNotifications = notificationRepository.findNotificationByUserAndNotificationStatusOrderByCreatedAtDesc(student, NotificationStatus.UNREAD);
 
         if (unreadNotifications.isEmpty()) {
@@ -113,6 +120,51 @@ public class NotificationServiceImpl implements NotificationService {
                 .map(n -> new NotificationResponse(n.getMessage(), AccountUtils.localDateTimeConverter(n.getCreatedAt())))
                 .toList();
     }
+
+    @Transactional
+    public Notification createSystemNotification(Long userId, String title, String message) {
+        return createSystemNotification(userId, title, message, null, null);
+    }
+
+
+    @Transactional
+    public Notification createSystemNotification(Long userId, String title, String message,
+                                                 Long transactionId, NotificationType type) {
+        // Validate input
+        Objects.requireNonNull(userId, "User ID cannot be null");
+        Objects.requireNonNull(title, "Title cannot be null");
+        Objects.requireNonNull(message, "Message cannot be null");
+
+        // Find user profile
+        Profile userProfile = profileRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User profile not found with ID: " + userId));
+
+        // Resolve transaction if provided
+        Transaction transaction = null;
+        if (transactionId != null) {
+            transaction = transactionRepository.findById(transactionId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Transaction not found with ID: " + transactionId));
+        }
+
+        // Determine notification type
+        NotificationType notificationType = type != null ? type : NotificationType.SYSTEM;
+
+        // Build and save notification
+        Notification notification = Notification.builder()
+                .message(formatNotificationMessage(title, message))
+                .notificationType(notificationType)
+                .notificationStatus(NotificationStatus.UNREAD)
+                .user(userProfile)
+                .transaction(transaction)
+                .build();
+
+        return notificationRepository.save(notification);
+    }
+
+    private String formatNotificationMessage(String title, String message) {
+        return String.format("%s: %s", title, message);
+    }
+
 
 
     @Override

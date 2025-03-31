@@ -1,12 +1,15 @@
 package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.HostelRequest;
+import examination.teacherAndStudents.dto.HostelResponse;
 import examination.teacherAndStudents.entity.Hostel;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.InsufficientBalanceException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.service.HostelService;
+import examination.teacherAndStudents.utils.AvailabilityStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,26 +25,42 @@ public class HostelController {
     private HostelService hostelService;
 
     @GetMapping
-    public ResponseEntity<List<Hostel>> getAllHostels() {
-        List<Hostel> hostels = hostelService.getAllHostels();
-        return ResponseEntity.ok(hostels);
+    public ResponseEntity<Page<HostelResponse>> getAllHostels(
+            @RequestParam(required = false) String hostelName,
+            @RequestParam(required = false) AvailabilityStatus availabilityStatus,
+            @RequestParam(required = false) Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "hostelName") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        Page<HostelResponse> hostelsPage = hostelService.getAllHostels(
+                hostelName,
+                availabilityStatus,
+                id,
+                page,
+                size,
+                sortBy,
+                sortDirection);
+
+        return ResponseEntity.ok(hostelsPage);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Hostel> getHostelById(@PathVariable Long id) {
-        Optional<Hostel> hostel = hostelService.getHostelById(id);
-        return ResponseEntity.ok(hostel.get());
+    public ResponseEntity<HostelResponse> getHostelById(@PathVariable Long id) {
+        HostelResponse hostel = hostelService.getHostelById(id);
+        return ResponseEntity.ok(hostel);
     }
 
     @PostMapping("/add")
-    public ResponseEntity<Hostel> createHostel(@RequestBody HostelRequest hostel) {
-        Hostel createdHostel = hostelService.createHostel(hostel);
+    public ResponseEntity<HostelResponse> createHostel(@RequestBody HostelRequest hostel) {
+        HostelResponse createdHostel = hostelService.createHostel(hostel);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdHostel);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Hostel> updateHostel(@PathVariable Long id, @RequestBody HostelRequest updatedHostel) {
-        Hostel hostel = hostelService.updateHostel(id, updatedHostel);
+    public ResponseEntity<HostelResponse> updateHostel(@PathVariable Long id, @RequestBody HostelRequest updatedHostel) {
+        HostelResponse hostel = hostelService.updateHostel(id, updatedHostel);
         return ResponseEntity.ok(hostel);
     }
 
@@ -51,16 +70,4 @@ public class HostelController {
         return ResponseEntity.ok("Hostel deleted successfully");
     }
 
-
-    @GetMapping("/available")
-    public ResponseEntity<List<Hostel>> getAllAvailableHostels() {
-        try {
-            List<Hostel> availableHostels = hostelService.getAllAvailableHostels();
-            return new ResponseEntity<>(availableHostels, HttpStatus.OK);
-        } catch (CustomNotFoundException e) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED); // Return unauthorized status for non-admin users
-        } catch (RuntimeException e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
 }

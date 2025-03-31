@@ -33,10 +33,8 @@ public class AdminServiceImpl implements AdminService {
         public List<User> getAllTeachers () {
             try {
                 String email = SecurityConfig.getAuthenticatedUserEmail();
-                User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-                if (admin == null) {
-                    throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
-                }
+                User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                        .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
                 return userRepository.findUserByRoles(Roles.TEACHER);
             } catch (Exception e) {

@@ -107,6 +107,12 @@ public class ExceptionController {
         return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.CONFLICT);
     }
 
+
+    @ExceptionHandler(ScratchCardException.class)
+    public ResponseEntity<?> ScratchCardException(ScratchCardException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(UsernameNotFoundException.class)
     public ResponseEntity<?> UsernameNotFoundException(UsernameNotFoundException ex) {
         return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.NOT_FOUND);
@@ -150,6 +156,11 @@ public class ExceptionController {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<?> WorkshopNotFoundException(UnauthorizedException ex) {
         return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(PaymentProcessingException.class)
+    public ResponseEntity<?> PaymentProcessingException(PaymentProcessingException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(EntityNotFoundException.class)

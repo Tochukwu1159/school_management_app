@@ -45,12 +45,6 @@ public class UserRequestDto {
 
     private Long schoolId;
 
-    @NotNull(message = "Password is required")
-    @NotEmpty(message = "Password cannot be empty")
-    private  String password;
-    @NotNull(message = "Confirm Password is required")
-    @NotEmpty(message = "Confirm Password cannot be empty")
-    private String confirmPassword;
     @NotNull(message = "Email is required")
     @Email
     private String email;

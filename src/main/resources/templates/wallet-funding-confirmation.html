@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wallet Funding Confirmation</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --success: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #212529;
+        }
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            background-color: #ffffff;
+            max-width: 600px;
+            margin: 30px auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: var(--primary);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+        .content {
+            padding: 30px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .receipt-card {
+            background-color: var(--light);
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid var(--success);
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 12px;
+        }
+        .detail-label {
+            font-weight: 600;
+            width: 160px;
+            color: var(--dark);
+        }
+        .detail-value {
+            flex: 1;
+        }
+        .success-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: #d1fae5;
+            color: #065f46;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Wallet Funding Confirmation</h1>
+    </div>
+    <div class="content">
+        <p>Dear <span th:text="${name}"></span>,</p>
+
+        <p>Your wallet has been successfully funded. Below are your transaction details:</p>
+
+        <div class="receipt-card">
+            <div class="detail-row">
+                <div class="detail-label">Transaction Type:</div>
+                <div class="detail-value">Wallet Funding</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Amount Credited:</div>
+                <div class="detail-value">
+                    <div class="amount" th:text="'₦' + ${#numbers.formatDecimal(amount, 1, 2, 'COMMA')}"></div>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">New Balance:</div>
+                <div class="detail-value" th:text="'₦' + ${#numbers.formatDecimal(balance, 1, 2, 'COMMA')}"></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Status:</div>
+                <div class="detail-value">
+                    <span class="success-badge">Completed</span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Date/Time:</div>
+                <div class="detail-value" th:text="${#temporals.format(#dates.createNow(), 'MMMM dd, yyyy hh:mm a')}"></div>
+            </div>
+        </div>
+
+        <p>You can now use your wallet balance for payments on our platform.</p>
+
+        <div class="text-center">
+            <a th:href="${dashboardUrl}" style="
+                display: inline-block;
+                padding: 12px 24px;
+                background-color: var(--primary);
+                color: white;
+                text-decoration: none;
+                border-radius: 4px;
+                font-weight: 600;
+                margin: 20px 0;
+            ">VIEW WALLET</a>
+        </div>
+
+        <p>If you didn't initiate this transaction, please contact our support team immediately at
+            <a href="mailto:support@edumanager.com">support@edumanager.com</a>.</p>
+    </div>
+    <div class="footer">
+        <p>© <span th:text="${#temporals.year(#dates.createNow())}"></span> EduManager. All rights reserved.</p>
+        <p>This is an automated message - please do not reply directly to this email.</p>
+    </div>
+</div>
+</body>
+</html>

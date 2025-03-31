@@ -8,6 +8,10 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.ClassSubjectService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,7 +27,7 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     private final SubjectRepository subjectRepository;
     private final ClassBlockRepository classBlockRepository;
     private final AcademicSessionRepository academicSessionRepository;
-    private final StudentTermRepository studentTermRepository;
+
 
     public ClassSubjectResponse saveClassSubject(ClassSubjectRequest request) {
         // Fetch the required entities from the repositories
@@ -66,11 +70,30 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
         }
     }
 
-    public List<ClassSubjectResponse> getAllClassSubjects() {
-        List<ClassSubject> classSubjects = classSubjectRepository.findAll();
-        return classSubjects.stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+    public Page<ClassSubjectResponse> getAllClassSubjects(
+            Long academicYearId,
+            Long subjectId,
+            Long classSubjectId,
+            String subjectName,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection) {
+
+        // Create Pageable object
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // Fetch filtered and paginated results
+        Page<ClassSubject> classSubjects = classSubjectRepository.findAllWithFilters(
+                academicYearId,
+                subjectId,
+                classSubjectId,
+                subjectName,
+                pageable);
+
+        // Map to response DTO
+        return classSubjects.map(this::toResponse);
     }
 
     public void deleteClassSubject(Long id) {

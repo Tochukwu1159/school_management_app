@@ -50,13 +50,25 @@ public class UserController {
 
     @GetMapping("/findAll")
     public ResponseEntity<Page<UserResponse>> findAllStudentsFilteredAndPaginated(
-            @RequestParam Long classCategoryId,
-            @RequestParam Long subClassId,
-            @RequestParam Long academicYearId,
+            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long subClassId,
+            @RequestParam(required = false) Long academicYearId,
+            @RequestParam(required = false) String uniqueRegistrationNumber,
+            @RequestParam(required = false) String firstName,
             @RequestParam(defaultValue = "0") int pageNo,
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(defaultValue = "id") String sortBy) {
-        Page<UserResponse> allStudents = userService.getAllStudentsFilteredAndPaginated(classCategoryId, subClassId, academicYearId, pageNo, pageSize, sortBy);
+
+        Page<UserResponse> allStudents = userService.getAllStudentsFilteredAndPaginated(
+                classId,
+                subClassId,
+                academicYearId,
+                uniqueRegistrationNumber,
+                firstName,
+                pageNo,
+                pageSize,
+                sortBy);
+
         return new ResponseEntity<>(allStudents, HttpStatus.OK);
     }
 

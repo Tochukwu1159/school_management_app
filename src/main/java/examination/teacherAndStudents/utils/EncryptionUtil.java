@@ -1,11 +1,12 @@
 package examination.teacherAndStudents.utils;
 
+import org.springframework.stereotype.Component;
+
 import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 
+@Component
 public class EncryptionUtil {
 
     private static final String SECRET_KEY = "1234567890abcdef";  // 16-byte key (128-bit key)

@@ -19,6 +19,7 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -138,7 +139,7 @@ public class EmailServiceImpl implements EmailService {
 
             if (emailDetails.getAttachmentPath() != null) {
                 FileSystemResource attachment = new FileSystemResource(emailDetails.getAttachmentPath());
-                messageHelper.addAttachment(attachment.getFilename(), attachment);
+                messageHelper.addAttachment(Objects.requireNonNull(attachment.getFilename()), attachment);
             }
 
             javaMailSender.send(mimeMessage);

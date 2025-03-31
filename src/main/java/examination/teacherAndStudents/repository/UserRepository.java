@@ -2,6 +2,7 @@ package examination.teacherAndStudents.repository;
 
 import examination.teacherAndStudents.entity.AcademicSession;
 import examination.teacherAndStudents.entity.ClassBlock;
+import examination.teacherAndStudents.entity.School;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.utils.Roles;
 import org.springframework.data.domain.Page;
@@ -20,9 +21,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     User findByIdAndRoles(Long studentId, Roles roles);;
     Page<User> findAllByFirstNameContainingIgnoreCaseAndLastNameContainingIgnoreCaseOrId(String firstName, String lastName, Long id, Pageable pageable);
 
-    User findByEmailAndRoles(String email, Roles roles);
+    Optional<User> findByEmailAndRoles(String email, Roles roles);
 
     List<User> findAllByRoles(Roles teacher);
 
     List<User> findByRolesAndSchoolId(Roles teacher, Long schoolId);
+
+    List<User> findBySchoolAndRolesIn(School school, List<Object> objects);
+
+    Optional<User> findByIdAndSchoolId(Long id, Long id1);
 }

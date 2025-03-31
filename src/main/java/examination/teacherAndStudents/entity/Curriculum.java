@@ -46,6 +46,10 @@ public class Curriculum {
     @JoinColumn(name = "term_id", nullable = false)
     private StudentTerm term;
 
+    @ManyToOne
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
     @CreationTimestamp
     private LocalDateTime createdAt; // Automatically populate creation timestamp
 

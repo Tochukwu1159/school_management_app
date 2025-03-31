@@ -5,6 +5,7 @@ import examination.teacherAndStudents.entity.School;
 import examination.teacherAndStudents.entity.ServiceOffered;
 import examination.teacherAndStudents.service.SchoolService;
 import examination.teacherAndStudents.utils.ServiceType;
+import examination.teacherAndStudents.utils.SubscriptionType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -34,11 +35,16 @@ public class SchoolController {
         return ResponseEntity.ok(selectedServices);
     }
 
-    @PutMapping("/{id}/subscribe")
+    @PutMapping("/subscribe")
     public ResponseEntity<School> subscribeSchool(
-            @PathVariable Long id,
             @RequestBody SubscriptionRequest subscriptionRequest) throws Exception {
-        return ResponseEntity.ok(schoolService.subscribeSchool(id, subscriptionRequest));
+        return ResponseEntity.ok(schoolService.subscribeSchool(subscriptionRequest));
+    }
+
+    @PutMapping("/renew-subscribe")
+    public ResponseEntity<School> renewSubscribeSchool(
+            @RequestBody SubscriptionType subscriptionRequest) throws Exception {
+        return ResponseEntity.ok(schoolService.renewSubscription(subscriptionRequest));
     }
 
 

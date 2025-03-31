@@ -2,6 +2,7 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.BookRequest;
+import examination.teacherAndStudents.dto.BookResponse;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
@@ -13,7 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,7 +32,6 @@ public class LibraryServiceImpl implements LibraryService {
     @Autowired
     private BookBorrowingRepository bookBorrowingRepository;
 
-    private final LibraryMemberRepository libraryMemberRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -40,10 +42,8 @@ public class LibraryServiceImpl implements LibraryService {
     public Book addBook(BookRequest book) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             Optional<User> userDetails = userRepository.findByEmail(email);
             Book newBook = new Book();
             // Set the initial quantity available to the total quantity
@@ -61,10 +61,8 @@ public class LibraryServiceImpl implements LibraryService {
     public Book updateBookQuantity(Long bookId, int quantityToAdd) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             Optional<Book> optionalBook = bookRepository.findById(bookId);
 
             if (optionalBook.isPresent()) {
@@ -89,10 +87,8 @@ public class LibraryServiceImpl implements LibraryService {
     public Book editBook(Long bookId, BookRequest updatedBook) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             Book existingBook = bookRepository.findById(bookId)
                     .orElseThrow(() -> new CustomInternalServerException("Book not found"));
 
@@ -111,10 +107,8 @@ public class LibraryServiceImpl implements LibraryService {
     public void deleteBook(Long bookId) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             bookRepository.deleteById(bookId);
         } catch (Exception e) {
             throw new CustomInternalServerException("Error deleting book: " + e.getMessage());
@@ -122,90 +116,140 @@ public class LibraryServiceImpl implements LibraryService {
     }
 
 
-    @Override
-    public Page<Book> getAllBooks(int pageNo, int pageSize, String sortBy)  {
-        String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-        if (admin == null) {
-            throw new CustomNotFoundException("Please login as an Admin");
-        }
+    public Page<BookResponse> getAllBooks(
+            Long id,
+            String title,
+            String author,
+            LocalDateTime createdAt,
+            int pageNo,
+            int pageSize,
+            String sortBy,
+            String sortDirection) {
+
         try {
-            Pageable paging = PageRequest.of(pageNo, pageSize);
-            return bookRepository.findAll(paging);
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
+
+            // Create Pageable object with sorting
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+            Pageable paging = PageRequest.of(pageNo, pageSize, sort);
+
+            // Fetch filtered books
+            Page<Book> booksPage = bookRepository.findAllBySchoolWithFilters(
+                    admin.getSchool().getId(),
+                    id,
+                    title,
+                    author,
+                    createdAt,
+                    paging);
+
+            // Map to response DTO
+            return booksPage.map(this::mapToBookResponse);
+        } catch (CustomNotFoundException e) {
+            throw e;
         } catch (Exception e) {
-            throw new CustomInternalServerException("Error fetching all books: " + e.getMessage());
+            throw new CustomInternalServerException("Error fetching books: " + e.getMessage());
         }
     }
 
+    private BookResponse mapToBookResponse(Book book) {
+        return BookResponse.builder()
+                .id(book.getId())
+                .title(book.getTitle())
+                .author(book.getAuthor())
+                .rackNo(book.getRackNo())
+                .quantityAvailable(book.getQuantityAvailable())
+                .createdAt(book.getCreatedAt())
+                .updatedAt(book.getUpdatedAt())
+                .build();
+    }
+
+    @Transactional
     @Override
-    public BookBorrowing borrowBook(Long memberId, Long bookId) {
-
+    public BookBorrowing borrowBook(Long memberId, Long bookId, LocalDateTime dueDate) {
         try {
-            User user = userRepository.findById(memberId)
-                    .orElseThrow(() -> new CustomInternalServerException("User not found"));
-            Profile profile = profileRepository.findByUser(user)
-                    .orElseThrow(() -> new CustomInternalServerException("User profile not found"));
+            Profile profile = profileRepository.findByUserId(memberId)
+                    .orElseThrow(() -> new CustomNotFoundException("Member profile not found"));
 
+            // Validate book
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new CustomNotFoundException("Book not found"));
 
-            // Check if the student has already borrowed the book with a status other than RETURNED
+            // Check school consistency
+            if (!book.getSchool().getId().equals(profile.getUser().getSchool().getId())) {
+                throw new NotFoundException("Book not available in your school");
+            }
+
+            // Check if already borrowed
             BookBorrowing existingBorrowing = bookBorrowingRepository.findByStudentProfileAndBookAndStatusNot(
-                   profile, book, BorrowingStatus.RETURNED);
-
+                    profile, book, BorrowingStatus.RETURNED);
             if (existingBorrowing != null) {
-                throw new EntityAlreadyExistException("You have already borrowed this book.");
+                throw new EntityAlreadyExistException("You have already borrowed this book");
             }
 
-            // Check if there are available copies
-            if (book.getQuantityAvailable() > 0) {
-                // Decrement the quantity available
-                book.setQuantityAvailable(book.getQuantityAvailable() - 1);
-
-                // Save the updated book
-                bookRepository.save(book);
-
-                // Create a borrowing entry
-                BookBorrowing borrowing = new BookBorrowing();
-                borrowing.setStudentProfile(profile);
-                borrowing.setBook(book);
-                borrowing.setBorrowDate(LocalDateTime.now());
-                borrowing.setStatus(BorrowingStatus.BORROWED);
-
-                return bookBorrowingRepository.save(borrowing);
-            } else {
-                throw new CustomInternalServerException("No available copies of the book");
+            // Check availability
+            if (book.getQuantityAvailable() <= 0) {
+                throw new BadRequestException("No available copies of the book");
             }
+
+            // Update book quantity
+            book.setQuantityAvailable(book.getQuantityAvailable() - 1);
+            bookRepository.save(book);
+
+            // Create borrowing record
+            BookBorrowing borrowing = BookBorrowing.builder()
+                    .studentProfile(profile)
+                    .book(book)
+                    .borrowDate(LocalDateTime.now())
+                    .dueDate(dueDate) // 2 weeks loan period
+                    .status(BorrowingStatus.BORROWED)
+                    .build();
+
+            return bookBorrowingRepository.save(borrowing);
+        } catch (CustomNotFoundException  |
+                 EntityAlreadyExistException e) {
+            throw e;
         } catch (Exception e) {
             throw new CustomInternalServerException("Error borrowing book: " + e.getMessage());
         }
     }
 
 
-
+    @Transactional
     @Override
     public BookBorrowing returnBook(Long borrowingId) {
         try {
+            // Validate borrowing record
             BookBorrowing borrowing = bookBorrowingRepository.findById(borrowingId)
-                    .orElseThrow(() -> new CustomInternalServerException("Borrowing entry not found"));
+                    .orElseThrow(() -> new CustomNotFoundException("Borrowing record not found"));
 
-            // Check if the book is already returned
-            if (borrowing.getStatus() == BorrowingStatus.RETURNED) {
-                throw new CustomInternalServerException("Book already returned");
+            // Check current status
+            if (borrowing.getStatus() != BorrowingStatus.BORROWED) {
+                throw new BadRequestException("Book is not currently borrowed");
             }
 
-            // Increment the quantity available
+            // Get associated book
             Book book = borrowing.getBook();
-            book.setQuantityAvailable(book.getQuantityAvailable() + 1);
 
-            // Save the updated book
+            // Update book quantity
+            book.setQuantityAvailable(book.getQuantityAvailable() + 1);
             bookRepository.save(book);
 
-            // Update the borrowing entry
-            borrowing.setActualReturnDate(LocalDateTime.now());
+            // Update borrowing record
+            LocalDateTime returnDate = LocalDateTime.now();
+            borrowing.setActualReturnDate(returnDate);
             borrowing.setStatus(BorrowingStatus.RETURNED);
 
+            // Check for late return
+            if (returnDate.isAfter(borrowing.getDueDate())) {
+                borrowing.setLate(true);
+                // Could add late fee calculation here
+            }
+
             return bookBorrowingRepository.save(borrowing);
+        } catch (CustomNotFoundException | BadRequestException e) {
+            throw e;
         } catch (Exception e) {
             throw new CustomInternalServerException("Error returning book: " + e.getMessage());
         }

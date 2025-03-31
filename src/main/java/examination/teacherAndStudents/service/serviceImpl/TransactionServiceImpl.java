@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -39,32 +40,25 @@ public class TransactionServiceImpl implements TransactionService {
     public List<TransactionResponse> getProfileTransactions(int offset, int pageSize) throws Exception {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            Optional<User> studentOptional = userRepository.findByEmail(email);
+            User student = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new CustomNotFoundException("Profile with email " + email + " is not valid"));
 
-            if (studentOptional.isEmpty()) {
-                throw new CustomNotFoundException("Profile with email " + email + " is not valid");
-            }
-
-            Profile profile = profileRepository.findByUser(studentOptional.get())
+            Profile profile = profileRepository.findByUser(student)
                     .orElseThrow(() -> new NotFoundException("Profile not found"));
 
-            User student = studentOptional.get();
+
             Pageable pageable = PageRequest.of(offset, pageSize);
-            Page<Transaction> pageList = transactionRepository.findTransactionByUserOrderByCreatedAtDesc(pageable, profile);
+            Page<Transaction> transactions = transactionRepository.findTransactionByUserOrderByCreatedAtDesc(pageable, profile);
 
-            List<TransactionResponse> transactionResponses = new ArrayList<>();
+            return transactions.stream()
+                    .map(transaction -> TransactionResponse.builder()
+                            .transactionType(transaction.getTransactionType().name())
+                            .amount(transaction.getAmount())
+                            .description(transaction.getDescription())
+                            .createdAt(AccountUtils.localDateTimeConverter(transaction.getCreatedAt()))
+                            .build())
+                    .collect(Collectors.toList());
 
-            pageList.forEach(page -> {
-                TransactionResponse transactionResponse1 = TransactionResponse.builder()
-                        .transactionType(page.getTransactionType().name())
-                        .amount(page.getAmount())
-                        .description(page.getDescription())
-                        .createdAt(AccountUtils.localDateTimeConverter(page.getCreatedAt()))
-                        .build();
-                transactionResponses.add(transactionResponse1);
-            });
-
-            return transactionResponses;
         } catch (Exception ex) {
             throw new CustomInternalServerException("Error retrieving student transactions");
         }

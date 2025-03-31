@@ -1,12 +1,16 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import com.google.api.client.util.Value;
 import examination.teacherAndStudents.Security.SecurityConfig;
+import examination.teacherAndStudents.dto.BiometricVerificationResult;
 import examination.teacherAndStudents.dto.SubjectScheduleTeacherUpdateDto;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.EntityNotFoundException;
+import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.*;
+import examination.teacherAndStudents.service.BiometricService;
 import examination.teacherAndStudents.service.StaffAttendanceService;
 import examination.teacherAndStudents.utils.AttendanceStatus;
 import examination.teacherAndStudents.utils.Roles;
@@ -30,104 +34,87 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class StaffAttendanceServiceImpl implements StaffAttendanceService {
     private final StaffAttendanceRepository staffAttendanceRepository;
-
-    private final UserRepository userRepository;
-    private final SubjectScheduleRepository subjectScheduleRepository;
-    private final TimetableRepository timetableRepository;
-    private final AttendancePercentRepository attendancePercentRepository;
-    private final StaffAttendancePercentRepository staffAttendancePercentRepository;
     private final ProfileRepository profileRepository;
+    private final BiometricService biometricService;
+    private final BiometricTemplateRepository biometricTemplateRepository;
 
+    @Value("${biometric_verification_threshold:0.7}")
+    private double verificationThreshold;
 
-    public void checkIn(String location) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User staff = userRepository.findByEmailAndRoles(email, Roles.TEACHER);
+    @Transactional
+    public void checkIn(byte[] thumbprintData, String deviceId) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        Profile staffProfile = profileRepository.findByUserEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("Staff profile not found"));
 
-            if (staff == null) {
-                throw new CustomNotFoundException("Please log in as a teacher."); // Improved error message
-            }
-            Optional<Profile> staffProfile = profileRepository.findByUser(staff);
+        // Verify thumbprint
+        BiometricVerificationResult result = biometricService.verifyThumbprint(
+                thumbprintData,
+                staffProfile.getId()
+        );
 
-            if (staffProfile.isEmpty()) {
-                throw new CustomNotFoundException("Staff not found"); // Improved error message
-            }
-
-            LocalDateTime checkInTime = LocalDateTime.now();
-
-            // Check if the teacher has already checked in for the day
-            StaffAttendance existingAttendance = staffAttendanceRepository
-                    .findFirstByStaffAndCheckInTimeBetweenOrderByCheckInTimeDesc(
-                            staff,
-                            LocalDate.now().atStartOfDay(),
-                            LocalDate.now().atTime(23, 59, 59)
-                    )
-                    .orElse(null);
-
-            if (existingAttendance != null && existingAttendance.getCheckOutTime() == null) {
-                throw new RuntimeException("Teacher has already checked in for the day.");
-            }
-
-            StaffAttendance attendance = new StaffAttendance();
-            attendance.setStaffUniqueRegNumber(staffProfile.get().getUniqueRegistrationNumber());
-            attendance.setCheckInTime(checkInTime);
-            attendance.setCheckInLocation(location);
-            attendance.setStaff(staffProfile.get());
-            attendance.setStatus(AttendanceStatus.PRESENT);
-//            GeoLocation geoLocation =
-            staffAttendanceRepository.save(attendance);
-        } catch (Exception e) {
-            // Handle exceptions appropriately (log, rethrow, etc.)
-            throw new RuntimeException("Error during check-in process.", e);
+        if (!result.isVerified() || result.getScore() < verificationThreshold) {
+            throw new CustomInternalServerException(
+                    "Thumbprint verification failed. Score: " + result.getScore()
+            );
         }
+
+        // Check for existing attendance
+        if (hasActiveCheckIn(staffProfile)) {
+            throw new NotFoundException("Staff has active check-in without check-out");
+        }
+
+        StaffAttendance attendance = new StaffAttendance();
+        attendance.setStaffUniqueRegNumber(staffProfile.getUniqueRegistrationNumber());
+        attendance.setCheckInTime(LocalDateTime.now());
+        attendance.setStaff(staffProfile);
+        attendance.setStatus(AttendanceStatus.PRESENT);
+        attendance.setThumbprintHash(result.getTemplateHash());
+        attendance.setBiometricDeviceId(deviceId);
+        attendance.setVerificationScore(result.getScore());
+
+        staffAttendanceRepository.save(attendance);
     }
 
-    public void checkOut(String location) {
-        List<String> errors = new ArrayList<>();
+    @Transactional
+    public void checkOut(byte[] thumbprintData, String deviceId) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        Profile staffProfile = profileRepository.findByUserEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("Staff profile not found"));
 
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User staff = userRepository.findByEmailAndRoles(email, Roles.TEACHER);
+        // Verify thumbprint
+        BiometricVerificationResult result = biometricService.verifyThumbprint(
+                thumbprintData,
+                Long.valueOf(staffProfile.getUniqueRegistrationNumber())
+        );
 
-            if (staff == null) {
-                errors.add("Please log in as a teacher.");
-            }
-
-            LocalDateTime checkOutTime = LocalDateTime.now();
-
-            // Find the latest attendance record for the teacher
-            StaffAttendance attendance = staffAttendanceRepository
-                    .findFirstByStaffOrderByCheckInTimeDesc(staff)
-                    .orElseThrow(() -> new RuntimeException("Staff has not checked in."));
-
-            // Check if the teacher has already checked out
-            if (attendance.getCheckOutTime() != null) {
-                errors.add("Staff has already checked out.");
-            }
-
-            // Check if the teacher has checked in before allowing check-out
-            if (attendance.getCheckInTime() == null) {
-                errors.add("Staff has not checked in.");
-            }
-
-            if (!errors.isEmpty()) {
-                throw new RuntimeException(String.join(" ", errors));
-            }
-
-            attendance.setCheckOutTime(checkOutTime);
-            attendance.setCheckOutLocation(location);
-
-            staffAttendanceRepository.save(attendance);
-        } catch (Exception e) {
-            errors.add("Error during check-out process.");
-            // Log the exception or handle it based on your requirements
-        } finally {
-            if (!errors.isEmpty()) {
-                throw new RuntimeException(String.join(" ", errors));
-            }
+        if (!result.isVerified() || result.getScore() < verificationThreshold) {
+            throw new NotFoundException(
+                    "Thumbprint verification failed. Score: " + result.getScore()
+            );
         }
+
+        Optional<StaffAttendance> attendance1 = staffAttendanceRepository
+                .findFirstByStaffAndCheckOutTimeIsNullOrderByCheckInTimeDesc(staffProfile);
+
+       StaffAttendance attendance = attendance1.get();
+
+        attendance.setCheckOutTime(LocalDateTime.now());
+        attendance.setCheckOutThumbprintHash(result.getTemplateHash());
+        attendance.setCheckOutBiometricDeviceId(deviceId);
+        attendance.setCheckOutVerificationScore(result.getScore());
+
+        staffAttendanceRepository.save(attendance);
     }
 
+    public boolean hasActiveCheckIn(Profile staff) {
+        if (staff == null) {
+            throw new IllegalArgumentException("Staff cannot be null");
+        }
+
+        // Check for any attendance record without check-out time
+        return staffAttendanceRepository.existsByStaffAndCheckOutTimeIsNull(staff);
+    }
 
 
 
@@ -182,7 +169,7 @@ public class StaffAttendanceServiceImpl implements StaffAttendanceService {
             LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
             // Fetch teacher by ID
             Optional<Profile> staff = profileRepository.findByUniqueRegistrationNumber(staffId);
-            if (staff == null) {
+            if (staff.isEmpty()) {
                 throw new EntityNotFoundException("Teacher not found with ID: " + staffId);
             }
             // Fetch teacher attendance records

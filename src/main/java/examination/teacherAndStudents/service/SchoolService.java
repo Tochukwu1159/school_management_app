@@ -4,6 +4,7 @@ import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.School;
 import examination.teacherAndStudents.entity.ServiceOffered;
 import examination.teacherAndStudents.utils.ServiceType;
+import examination.teacherAndStudents.utils.SubscriptionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -66,11 +67,10 @@ public interface SchoolService {
     /**
      * Subscribes a school to a new expiry date.
      *
-     * @param schoolId the school ID.
      * @return the updated school.
      * @throws RuntimeException if an error occurs or the school is not found.
      */
-    School subscribeSchool(Long schoolId, SubscriptionRequest subscriptionRequest) throws Exception;
+    School subscribeSchool(SubscriptionRequest subscriptionRequest) throws Exception;
 
     /**
      * Finds a school by its subscription key.
@@ -80,4 +80,6 @@ public interface SchoolService {
      * @throws RuntimeException if an error occurs or the school is not found.
      */
     School findBySubscriptionKey(String subscriptionKey);
+
+    School renewSubscription(SubscriptionType subscriptionType) throws Exception;
 }

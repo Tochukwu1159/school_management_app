@@ -7,9 +7,8 @@ import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.StoreItem;
 import examination.teacherAndStudents.repository.CartRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
-import examination.teacherAndStudents.repository.StoreRepository;
+import examination.teacherAndStudents.repository.StoreItemRepository;
 import examination.teacherAndStudents.service.CartService;
-import jakarta.mail.Store;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,9 +18,9 @@ import java.util.stream.Collectors;
 public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final ProfileRepository profileRepository;
-    private final StoreRepository storeRepository;
+    private final StoreItemRepository storeRepository;
 
-    public CartServiceImpl(CartRepository cartRepository, ProfileRepository profileRepository, StoreRepository storeRepository) {
+    public CartServiceImpl(CartRepository cartRepository, ProfileRepository profileRepository, StoreItemRepository storeRepository) {
         this.cartRepository = cartRepository;
         this.profileRepository = profileRepository;
         this.storeRepository = storeRepository;
@@ -66,7 +65,7 @@ public class CartServiceImpl implements CartService {
         response.setStoreId(cart.getStoreItem().getId());
         response.setProfileId(cart.getProfile().getId());
         response.setItemName(cart.getStoreItem().getName());
-        response.setItemPhoto(cart.getStoreItem().getPhoto());
+        response.setItemPhoto(cart.getStoreItem().getPhotoUrl());
         response.setItemPrice(cart.getStoreItem().getPrice());
         response.setSize(cart.getSize());
         response.setQuantity(cart.getQuantity());

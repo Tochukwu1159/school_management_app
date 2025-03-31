@@ -9,6 +9,7 @@ import examination.teacherAndStudents.entity.Rating;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.ClassLevelRepository;
@@ -16,6 +17,10 @@ import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.ClassLevelService;
 import examination.teacherAndStudents.utils.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,30 +41,37 @@ public class ClassLevelServiceImpl implements ClassLevelService {
         this.academicSessionRepository = academicSessionRepository;
     }
 
-    public List<ClassLevel> getAllClassLevels() {
+    public Page<ClassLevel> getAllClassLevels(
+            Long classLevelId,
+            Long academicYearId,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection) {
+
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
-            return classLevelRepository.findAll();
+            // Create Pageable object
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            return classLevelRepository.findAllWithFilters(
+                    classLevelId,
+                    academicYearId,
+                    pageable);
         } catch (Exception e) {
-            throw new CustomInternalServerException("Error fetching all classes " + e);
-
+            throw new CustomInternalServerException("Error fetching class levels: " + e.getMessage());
         }
     }
-
 
     public Optional<ClassLevel> getClassLevelById(Long id) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Optional<ClassLevel> classLevelOptional = classLevelRepository.findById(id);
 
@@ -77,11 +89,8 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     public ClassLevel createClassLevel(ClassLevelRequest classLevel) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Optional<User> userDetails = userRepository.findByEmail(email);
             AcademicSession academicSession = academicSessionRepository.findById(classLevel.getAcademicSessionId())
@@ -102,12 +111,8 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     public ClassLevel updateClassLevel(Long id, ClassLevelRequest classLevelRequest) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
-
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             Optional<ClassLevel> existingClassLevel = classLevelRepository.findById(id);
 
             if (existingClassLevel.isPresent()) {
@@ -125,11 +130,8 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     public ClassLevel updateClassLevelUrl(Long id, ClassLevelRequestUrl classLevelRequest) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Optional<ClassLevel> existingClassLevel = classLevelRepository.findById(id);
 
@@ -148,11 +150,8 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     public void deleteClassLevel(Long id) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             if (classLevelRepository.existsById(id)) {
                 classLevelRepository.deleteById(id);

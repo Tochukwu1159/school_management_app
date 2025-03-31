@@ -3,6 +3,7 @@
 
 import examination.teacherAndStudents.dto.AcademicSessionRequest;
 import examination.teacherAndStudents.dto.AcademicSessionResponse;
+import examination.teacherAndStudents.dto.GraduationRequest;
 import examination.teacherAndStudents.service.AcademicSessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,17 @@ public class AcademicSessionController {
     public ResponseEntity<AcademicSessionResponse> createAcademicSession(@RequestBody AcademicSessionRequest request) {
         return new ResponseEntity<>(academicSessionService.createAcademicSession(request), HttpStatus.CREATED);
     }
+
+    @PostMapping("/graduate-students")
+    public ResponseEntity<Void> graduateStudents(
+            @RequestBody GraduationRequest request) {
+        academicSessionService.graduateStudentsForSession(
+                request.getAcademicSessionId(),
+                request.getClassBlockIds()
+        );
+        return ResponseEntity.ok().build();
+    }
+
 
     @PutMapping("/{id}")
     public ResponseEntity<AcademicSessionResponse> updateAcademicSession(@PathVariable Long id, @RequestBody AcademicSessionRequest request) {

@@ -32,8 +32,15 @@ public interface UserService {
     UserResponse generateIdCard(String uniqueRegistrationNumber);
     String updateUserStatus(Long userId, ProfileStatus newStatus, LocalDate suspensionEndDate);
 
-    Page<UserResponse> getAllStudentsFilteredAndPaginated(Long classCategoryId, Long subClassId, Long academicYearId, int page, int size,String sortBy);
-
+    Page<UserResponse> getAllStudentsFilteredAndPaginated(
+            Long classId,
+            Long subClassId,
+            Long academicYearId,
+            String uniqueRegistrationNumber,
+            String firstName,
+            int page,
+            int size,
+            String sortBy);
     Page<UserProfileResponse> getProfilesByRoleAndStatus(String role, String status, int page, int size);
 
 

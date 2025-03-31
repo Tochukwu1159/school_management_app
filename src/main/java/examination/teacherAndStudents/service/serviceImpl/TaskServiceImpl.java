@@ -6,10 +6,12 @@ import examination.teacherAndStudents.dto.TaskResponse;
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.Task;
 import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.TaskRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.TaskService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,15 +27,17 @@ public class TaskServiceImpl implements TaskService {
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
 
+    @Transactional
     @Override
     public TaskResponse saveTask(TaskRequest request) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        Optional<User> asignedBy = userRepository.findByEmail(email);
 
-        Profile assignedBy = profileRepository.findByUser(asignedBy.get())
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        Profile assignedBy = profileRepository.findByUserEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("Profile not found for user: " + email));
+
         Profile assignedTo = profileRepository.findById(request.getAssignedToId())
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new CustomNotFoundException("Profile not found for ID: " + request.getAssignedToId()));
 
         Task task = new Task();
         task.setAssignedBy(assignedBy);
@@ -46,7 +50,6 @@ public class TaskServiceImpl implements TaskService {
 
         return toResponse(task);
     }
-
     @Override
     public TaskResponse updateTask(Long id, TaskRequest request) {
         Task task = taskRepository.findById(id)

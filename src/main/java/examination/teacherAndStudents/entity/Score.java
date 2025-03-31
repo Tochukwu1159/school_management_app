@@ -1,8 +1,5 @@
 package examination.teacherAndStudents.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import examination.teacherAndStudents.entity.User;
-import examination.teacherAndStudents.utils.ScoreType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;

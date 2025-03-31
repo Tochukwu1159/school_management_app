@@ -1,6 +1,8 @@
 package examination.teacherAndStudents.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import examination.teacherAndStudents.utils.SessionPromotion;
+import examination.teacherAndStudents.utils.SessionStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -33,9 +35,17 @@ public class AcademicSession {
     @NotNull
     private LocalDate endDate;
 
+    private LocalDate resultReadyDate;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status = Status.OPEN; // Default to ACTIVE when created
+    private SessionPromotion sessionPromotion = SessionPromotion.PENDING;
+
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private
+    SessionStatus status = SessionStatus.ACTIVE; // Default to ACTIVE when created
 
 
     @JsonBackReference
@@ -43,11 +53,6 @@ public class AcademicSession {
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
 
-    // Enum for session status
-    public enum Status {
-        OPEN,
-        CLOSED
-    }
 
     // Method to validate and update status
     @PrePersist
@@ -55,16 +60,19 @@ public class AcademicSession {
         if (startDate.isAfter(endDate)) {
             throw new IllegalArgumentException("Start date must be before end date");
         }
-        if (this.status == null) {
-            this.status = Status.OPEN;
-        }
-        updateStatus();
-    }
 
-    @PostLoad
-    public void updateStatus() {
-        if (endDate.isBefore(LocalDate.now())) {
-            this.status = Status.CLOSED;
+        // Default to OPEN if not set
+        if (this.status == null) {
+            this.status = SessionStatus.OPEN;
         }
+
+        // Automatically set to CLOSED if end date passed
+        if (endDate.isBefore(LocalDate.now())) {
+            this.status =
+                    SessionStatus.CLOSED;
+        }
+
+        // Additional business logic as needed
+
     }
 }

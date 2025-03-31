@@ -40,6 +40,10 @@ public class LessonNote{
     private String diagram;
 
     @ManyToOne
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
+    @ManyToOne
     @JoinColumn(name = "term_id", nullable = false)
     private StudentTerm studentTerm;
 

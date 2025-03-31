@@ -5,6 +5,7 @@ import examination.teacherAndStudents.dto.ClassLevelRequestUrl;
 import examination.teacherAndStudents.entity.ClassLevel;
 import examination.teacherAndStudents.service.serviceImpl.ClassLevelServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,8 +25,22 @@ public class ClassLevelController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ClassLevel>> getAllClassLevels() {
-        List<ClassLevel> classLevels = classLevelService.getAllClassLevels();
+    public ResponseEntity<Page<ClassLevel>> getAllClassLevels(
+            @RequestParam(required = false) Long classLevelId,
+            @RequestParam(required = false) Long academicYearId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        Page<ClassLevel> classLevels = classLevelService.getAllClassLevels(
+                classLevelId,
+                academicYearId,
+                page,
+                size,
+                sortBy,
+                sortDirection);
+
         return new ResponseEntity<>(classLevels, HttpStatus.OK);
     }
 

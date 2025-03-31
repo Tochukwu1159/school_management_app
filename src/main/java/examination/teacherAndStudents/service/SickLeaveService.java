@@ -10,8 +10,9 @@ import java.util.List;
 public interface SickLeaveService {
     String applyForSickLeave(SickLeaveRequest sickLeaveRequest);
     List<Leave> getPendingSickLeaves();
-    String approveOrRejectSickLeaveRequest(Long sickLeaveId, SickLeaveRequestDto updatedSickLeave);
+    String processSickLeaveRequest(Long sickLeaveId, SickLeaveRequestDto updatedSickLeave);
     String cancelSickLeave(SickLeaveCancelRequest sickLeaveCancelRequest);
-    List<Leave> getAllSickLeave();
+    List<Leave> getAllSickLeaves();
+    public Leave getSickLeaveById(Long sickLeaveId);
 
 }

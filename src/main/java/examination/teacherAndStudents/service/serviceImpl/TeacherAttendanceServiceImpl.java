@@ -2,7 +2,6 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.ProfileData;
-import examination.teacherAndStudents.dto.SubjectScheduleTeacherUpdateDto;
 import examination.teacherAndStudents.dto.TeacherAttendanceRequest;
 import examination.teacherAndStudents.dto.TeacherAttendanceResponse;
 import examination.teacherAndStudents.entity.*;
@@ -11,8 +10,6 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.TeacherAttendanceService;
 import examination.teacherAndStudents.utils.AttendanceStatus;
 import examination.teacherAndStudents.utils.Roles;
-import examination.teacherAndStudents.utils.TeachingStatus;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -30,10 +27,7 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
 
     @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private SubjectScheduleRepository subjectScheduleRepository;
-    @Autowired
-    private TimetableRepository timetableRepository;
+
     @Autowired
     private TeacherAttendancePercentRepository teacherAttendancePercentRepository;
     @Autowired
@@ -45,202 +39,172 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
 
     @Override
     public void takeTeacherAttendance(TeacherAttendanceRequest attendanceRequest) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
-            }
-
-            User teacher = userRepository.findByIdAndRoles(attendanceRequest.getTeacherId(), Roles.TEACHER);
-
-            Optional<Profile> teacherProfile = profileRepository.findByUser(teacher);
-
-            if (teacher == null) {
-                throw new EntityNotFoundException("Teacher not found with ID: " + attendanceRequest.getTeacherId());
-            }
-            Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(attendanceRequest.getStudentTermId());
-            Optional<examination.teacherAndStudents.entity.AcademicSession> session = academicSessionRepository.findById(attendanceRequest.getSessionId());
-
-
-            if (studentTerm.isEmpty()) {
-                throw new EntityNotFoundException("StudentTerm not found with ID: " + attendanceRequest.getStudentTermId());
-            }
-
-            // Check if attendanceDate is within the startDate and endDate of StudentTerm
-            LocalDate attendanceDate = attendanceRequest.getAttendanceDate().toLocalDate();
-            LocalDate startDate = studentTerm.get().getStartDate();
-            LocalDate endDate = studentTerm.get().getEndDate();
-
-            if (attendanceDate.isBefore(startDate) || attendanceDate.isAfter(endDate)) {
-                throw new IllegalArgumentException("Attendance date " + attendanceDate + " is outside the Student term period (" + startDate + " to " + endDate + ")");
-            }
-
-
-            TeacherAttendance existingAttendance = teacherAttendanceRepository.findByTeacherAndDateAndAcademicYearAndStudentTerm(teacherProfile.get(), attendanceRequest.getAttendanceDate(),session.get(),studentTerm.get());
-
-
-            if (existingAttendance != null) {
-                // Attendance for the given date already exists, throw a custom exception
-                throw new AttendanceAlreadyTakenException("Attendance for date " + attendanceRequest.getAttendanceDate() + " already taken for student ID: " + teacher.getId());
-            } else {
-
-                TeacherAttendance attendanceRecord = new TeacherAttendance();
-                attendanceRecord.setTeacher(teacherProfile.get());
-                attendanceRecord.setStudentTerm(studentTerm.get());
-                attendanceRecord.setAcademicYear(studentTerm.get().getAcademicSession());
-                attendanceRecord.setDate(attendanceRequest.getAttendanceDate());
-                attendanceRecord.setStatus(attendanceRequest.getStatus());
-
-                teacherAttendanceRepository.save(attendanceRecord);
-            }
-
-        } catch (CustomNotFoundException e) {
-            throw new CustomNotFoundException("Error occurred " + e.getMessage());
-        } catch (EntityNotFoundException e) {
-            throw new EntityNotFoundException("Error occurred " + e.getMessage());
-        } catch (Exception e) {
-            throw new NotFoundException("An error occurred while taking teacher attendance." + e.getMessage());
+        User teacher = userRepository.findByIdAndRoles(attendanceRequest.getTeacherId(), Roles.TEACHER);
+        if (teacher == null) {
+            throw new EntityNotFoundException("Teacher not found with ID: " + attendanceRequest.getTeacherId());
         }
+
+        Profile teacherProfile = profileRepository.findByUser(teacher)
+                .orElseThrow(() -> new EntityNotFoundException("Profile not found for teacher ID: " + teacher.getId()));
+
+        examination.teacherAndStudents.entity.StudentTerm studentTerm = studentTermRepository.findById(attendanceRequest.getStudentTermId())
+                .orElseThrow(() -> new EntityNotFoundException("StudentTerm not found with ID: " + attendanceRequest.getStudentTermId()));
+
+        examination.teacherAndStudents.entity.AcademicSession session = academicSessionRepository.findById(attendanceRequest.getSessionId())
+                .orElseThrow(() -> new EntityNotFoundException("Academic session not found with ID: " + attendanceRequest.getSessionId()));
+
+        // Validate attendance date
+        LocalDate attendanceDate = attendanceRequest.getAttendanceDate().toLocalDate();
+        if (attendanceDate.isBefore(studentTerm.getStartDate()) || attendanceDate.isAfter(studentTerm.getEndDate())) {
+            throw new IllegalArgumentException("Attendance date " + attendanceDate + " is outside the Student term period ("
+                    + studentTerm.getStartDate() + " to " + studentTerm.getEndDate() + ")");
+        }
+
+        // Check if attendance already exists
+        if (teacherAttendanceRepository.existsByTeacherAndDateAndAcademicYearAndStudentTerm(
+                teacherProfile, attendanceRequest.getAttendanceDate(), session, studentTerm)) {
+            throw new AttendanceAlreadyTakenException("Attendance for date " + attendanceRequest.getAttendanceDate()
+                    + " already taken for teacher ID: " + teacher.getId());
+        }
+
+        // Save attendance
+        TeacherAttendance attendanceRecord = new TeacherAttendance();
+        attendanceRecord.setTeacher(teacherProfile);
+        attendanceRecord.setStudentTerm(studentTerm);
+        attendanceRecord.setAcademicYear(session);
+        attendanceRecord.setDate(attendanceRequest.getAttendanceDate());
+        attendanceRecord.setStatus(attendanceRequest.getStatus());
+
+        teacherAttendanceRepository.save(attendanceRecord);
     }
 
-    public TeacherAttendanceResponse calculateAttendancePercentage(Long userId, Long sessionId, Long term) {
-        try {
-            Optional<User> optionalTeacher = userRepository.findById(userId);
 
-            if (optionalTeacher.isEmpty()) {
-                throw new NotFoundException("Teacher not found");
-            }
 
-            Optional<AcademicSession> session = academicSessionRepository.findById(sessionId);
-            Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(term);
+    public TeacherAttendanceResponse calculateAttendancePercentage(Long userId, Long sessionId, Long termId) {
+        User teacher = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("Teacher not found"));
 
-            Optional<Profile> teacherProfile = profileRepository.findByUser(optionalTeacher.get());
+        AcademicSession session = academicSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Academic session not found"));
 
-            if (teacherProfile.isEmpty()) {
-                throw new NotFoundException("Teacher not found");
-            }
+        examination.teacherAndStudents.entity.StudentTerm studentTerm = studentTermRepository.findById(termId)
+                .orElseThrow(() -> new NotFoundException("Student term not found"));
 
-            // Check if the attendance percentage already exists
-            Optional<TeacherAttendancePercent> existingAttendancePercent = teacherAttendancePercentRepository.findByTeacherAndStudentTerm(teacherProfile.get(), studentTerm.get());
+        Profile teacherProfile = profileRepository.findByUser(teacher)
+                .orElseThrow(() -> new NotFoundException("Teacher profile not found"));
 
-            // Get the total number of attendance records for the teacher
-            long totalAttendanceRecords = teacherAttendanceRepository.countByTeacherIdAndStudentTerm(teacherProfile.get().getId(), studentTerm.get());
+        // Fetch all attendance records at once
+        List<TeacherAttendance> attendanceRecords = teacherAttendanceRepository
+                .findByTeacherIdAndAcademicYearAndStudentTerm(teacherProfile.getId(),session, studentTerm);
 
-            // Get the number of days the teacher attended
-            long daysAttended = teacherAttendanceRepository.countByTeacherIdAndStudentTermAndAndStatus(teacherProfile.get().getId(), studentTerm.get(), AttendanceStatus.PRESENT);
-
-            // Check if totalAttendanceRecords is zero to avoid division by zero
-            if (totalAttendanceRecords == 0) {
-                throw new CustomInternalServerException("Total attendance records are zero. Cannot calculate percentage.");
-            }
-
-            // Calculate the attendance percentage
-            double attendancePercentage = (double) daysAttended / totalAttendanceRecords * 100;
-
-            // Round the attendance percentage to the nearest whole number
-            double roundedPercentage = (double) Math.round(attendancePercentage);
-
-            // Save or update the attendance percentage in the TeacherAttendancePercent entity
-            TeacherAttendancePercent attendancePercent = existingAttendancePercent.orElse(new TeacherAttendancePercent());
-
-            attendancePercent.setTeacher(teacherProfile.get());
-            attendancePercent.setStudentTerm(studentTerm.get());
-            attendancePercent.setAttendancePercentage(roundedPercentage);
-            attendancePercent.setAcademicYear(session.get());
-
-            teacherAttendancePercentRepository.save(attendancePercent);
-            ProfileData profileData = new ProfileData(
-                    teacherProfile.get().getId(),
-                    teacherProfile.get().getUniqueRegistrationNumber(),
-                    teacherProfile.get().getPhoneNumber()
-            );
-
-            // Return TeacherAttendanceResponse with teacher profile and calculated percentage
-            return new TeacherAttendanceResponse(profileData, roundedPercentage);
-
-        } catch (CustomNotFoundException e) {
-            throw new CustomNotFoundException("An error occurred: " + e.getMessage());
-        } catch (Exception e) {
-            throw new CustomInternalServerException("An error occurred while calculating attendance percentage: " + e.getMessage());
+        if (attendanceRecords.isEmpty()) {
+            throw new CustomInternalServerException("No attendance records found. Cannot calculate percentage.");
         }
+
+        // Calculate present days
+        long daysAttended = attendanceRecords.stream()
+                .filter(a -> a.getStatus() == AttendanceStatus.PRESENT)
+                .count();
+
+        long daysAbsent = attendanceRecords.stream()
+                .filter(a -> a.getStatus() == AttendanceStatus.ABSENT)
+                .count();
+
+        long daysLate = attendanceRecords.stream()
+                .filter(a -> a.getStatus() == AttendanceStatus.LATE)
+                .count();
+
+        // Calculate percentage
+        double attendancePercentage = (int) Math.round((double) daysAttended / attendanceRecords.size() * 100);
+
+        // Save or update attendance percentage
+        TeacherAttendancePercent attendancePercent = teacherAttendancePercentRepository
+                .findByTeacherAndStudentTerm(teacherProfile, studentTerm)
+                .orElse(new TeacherAttendancePercent());
+
+        attendancePercent.setTeacher(teacherProfile);
+        attendancePercent.setStudentTerm(studentTerm);
+        attendancePercent.setDaysPresent(daysAttended);
+        attendancePercent.setDaysLate(daysLate);
+        attendancePercent.setDaysAbsent(daysAbsent);
+        attendancePercent.setAttendancePercentage(attendancePercentage);
+        attendancePercent.setAcademicYear(session);
+        teacherAttendancePercentRepository.save(attendancePercent);
+
+        ProfileData profileData = new ProfileData(
+                teacherProfile.getId(),
+                teacherProfile.getUniqueRegistrationNumber(),
+                teacherProfile.getPhoneNumber()
+        );
+
+        return new TeacherAttendanceResponse(profileData, attendancePercentage);
     }
+
 
     public List<TeacherAttendanceResponse> calculateTeacherAttendancePercentage(Long sessionId, Long termId) {
-        try {
-            Optional<AcademicSession> session = academicSessionRepository.findById(sessionId);
-            Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(termId);
+        AcademicSession session = academicSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Academic session not found"));
 
-            if (session.isEmpty()) {
-                throw new NotFoundException("Academic session not found");
-            }
+        examination.teacherAndStudents.entity.StudentTerm studentTerm = studentTermRepository.findById(termId)
+                .orElseThrow(() -> new NotFoundException("Student term not found"));
 
-            if (studentTerm.isEmpty()) {
-                throw new NotFoundException("Student term not found");
-            }
+        // Get all teachers
+        List<User> teachers = userRepository.findAllByRoles(Roles.TEACHER);
+        List<TeacherAttendanceResponse> teacherAttendanceResponses = new ArrayList<>();
 
-            // Get all teachers
-            List<User> teachers = userRepository.findAllByRoles(Roles.TEACHER);
+        for (User teacher : teachers) {
+            Profile teacherProfile = profileRepository.findById(teacher.getId())
+                    .orElseThrow(() -> new NotFoundException("Teacher profile not found for user ID: " + teacher.getId()));
 
-            List<TeacherAttendanceResponse> teacherAttendanceResponses = new ArrayList<>();
+            // Fetch all attendance records at once
+            List<TeacherAttendance> attendanceRecords = teacherAttendanceRepository
+                    .findByTeacherIdAndAcademicYearAndStudentTerm(teacherProfile.getId(), session, studentTerm);
 
-            for (User teacher : teachers) {
-                Optional<Profile> teacherProfile = profileRepository.findById(teacher.getId());
+            long totalAttendanceRecords = attendanceRecords.size();
+            long daysAttended = attendanceRecords.stream()
+                    .filter(a -> a.getStatus() == AttendanceStatus.PRESENT)
+                    .count();
+            long daysAbsent = attendanceRecords.stream()
+                    .filter(a -> a.getStatus() == AttendanceStatus.ABSENT)
+                    .count();
 
-                if (teacherProfile.isPresent()) {
-                    // Check if attendance percentage already exists for this teacher and term
-                    Optional<TeacherAttendancePercent> existingAttendancePercent = teacherAttendancePercentRepository
-                            .findByTeacherAndStudentTerm(teacherProfile.get(), studentTerm.get());
+            long daysLate = attendanceRecords.stream()
+                    .filter(a -> a.getStatus() == AttendanceStatus.LATE)
+                    .count();
 
-                    // Get the total number of attendance records for the teacher
-                    long totalAttendanceRecords = teacherAttendanceRepository
-                            .countByTeacherIdAndStudentTerm(teacherProfile.get().getId(), studentTerm.get());
+            // Calculate attendance percentage
+            double attendancePercentage = (totalAttendanceRecords == 0) ? 0
+                    : (int) Math.round((double) daysAttended / totalAttendanceRecords * 100);
 
-                    // Get the number of days the teacher attended
-                    long daysAttended = teacherAttendanceRepository
-                            .countByTeacherIdAndStudentTermAndAndStatus(teacherProfile.get().getId(), studentTerm.get(), AttendanceStatus.PRESENT);
+            // Save or update attendance percentage
+            TeacherAttendancePercent attendancePercent = teacherAttendancePercentRepository
+                    .findByTeacherAndStudentTerm(teacherProfile, studentTerm)
+                    .orElse(new TeacherAttendancePercent());
 
-                    // Check if totalAttendanceRecords is zero to avoid division by zero
-//                    if (totalAttendanceRecords == 0) {
-//                        continue; // Skip this teacher as their attendance data is not available
-//                    }
+            attendancePercent.setTeacher(teacherProfile);
+            attendancePercent.setStudentTerm(studentTerm);
+            attendancePercent.setAttendancePercentage(attendancePercentage);
+            attendancePercent.setDaysPresent(daysAttended);
+            attendancePercent.setDaysAbsent(daysAbsent);
+            attendancePercent.setDaysLate(daysLate);
+            attendancePercent.setAcademicYear(session);
+            teacherAttendancePercentRepository.save(attendancePercent);
 
-                    // Calculate the attendance percentage
-                    double attendancePercentage = (double) daysAttended / totalAttendanceRecords * 100;
+            ProfileData profileData = new ProfileData(
+                    teacherProfile.getId(),
+                    teacherProfile.getUniqueRegistrationNumber(),
+                    teacherProfile.getPhoneNumber()
+            );
 
-                    // Round the attendance percentage to the nearest whole number
-                    double roundedPercentage = Math.round(attendancePercentage);
-
-                    // Save or update the attendance percentage in the TeacherAttendancePercent entity
-                    TeacherAttendancePercent attendancePercent = existingAttendancePercent.orElse(new TeacherAttendancePercent());
-
-                    attendancePercent.setTeacher(teacherProfile.get());
-                    attendancePercent.setStudentTerm(studentTerm.get());
-                    attendancePercent.setAttendancePercentage(roundedPercentage);
-                    attendancePercent.setAcademicYear(session.get());
-
-                    teacherAttendancePercentRepository.save(attendancePercent);
-
-                    ProfileData profileData = new ProfileData(
-                            teacherProfile.get().getId(),
-                            teacherProfile.get().getUniqueRegistrationNumber(),
-                            teacherProfile.get().getPhoneNumber()
-                    );
-
-                    // Add the response to the list
-                    teacherAttendanceResponses.add(new TeacherAttendanceResponse(profileData, roundedPercentage));
-                }
-            }
-
-            // Return the list of TeacherAttendanceResponse objects
-            return teacherAttendanceResponses;
-
-        } catch (Exception e) {
-            throw new CustomInternalServerException("An error occurred while calculating teacher attendance percentage: " + e.getMessage());
+            teacherAttendanceResponses.add(new TeacherAttendanceResponse(profileData, attendancePercentage));
         }
-    }
 
+        return teacherAttendanceResponses;
+    }
 
 
     @Override
@@ -302,8 +266,6 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
         } catch (Exception e) {
             throw new CustomInternalServerException("An error occurred while fetching teacher attendance: " + e.getMessage());
         }
-
-
 
     }
 }

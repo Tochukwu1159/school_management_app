@@ -1,10 +1,7 @@
 package examination.teacherAndStudents.repository;
 
 import examination.teacherAndStudents.dto.UserProfileResponse;
-import examination.teacherAndStudents.entity.AcademicSession;
-import examination.teacherAndStudents.entity.ClassBlock;
-import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.utils.ProfileStatus;
 import examination.teacherAndStudents.utils.Roles;
 import io.lettuce.core.dynamic.annotation.Param;
@@ -20,6 +17,8 @@ import java.util.Optional;
 
 @Repository
 public interface ProfileRepository extends JpaRepository<Profile, Long> {
+
+
     Optional<Profile> findByUser(User user);
     List<Profile> findByClassBlockId(Long classId);
     Optional<Profile> findByUniqueRegistrationNumber(String uniqueRegistrationNumber);
@@ -44,7 +43,26 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
                                                           @Param("status") ProfileStatus status,
                                                           Pageable pageable);
 
-    List<Profile> findAllByClassBlockClassLevelClassNameAndProfileStatus(String className, ProfileStatus profileStatus);
+    @Query("SELECT p FROM Profile p WHERE " +
+            "(:classBlock IS NULL OR p.classBlock = :classBlock) AND " +
+            "(:classLevel IS NULL OR p.classBlock.classLevel = :classLevel) AND " +
+            "(:academicYear IS NULL OR p.classBlock.classLevel.academicYear = :academicYear) AND " +
+            "(:uniqueRegistrationNumber IS NULL OR p.uniqueRegistrationNumber LIKE %:uniqueRegistrationNumber%) AND " +
+            "(:firstName IS NULL OR p.user.firstName LIKE %:firstName%)")
+    Page<Profile> findAllWithFilters(
+            @Param("classBlock") ClassBlock classBlock,
+            @Param("classLevel") ClassLevel classLevel,
+            @Param("academicYear") AcademicSession academicYear,
+            @Param("uniqueRegistrationNumber") String uniqueRegistrationNumber,
+            @Param("firstName") String firstName,
+            Pageable pageable);
 
     List<Profile> findByUserIdIn(List<Long> teacherIds);
+
+    Optional<Profile> findByUserEmail(String email);
+
+    List<Profile> findByClassBlockAndClassBlock_ClassLevel_AcademicYear(ClassBlock classBlock, AcademicSession academicYear);
+
+
+    List<Profile> findByClassBlockIdInAndClassBlockClassLevelAcademicYearAndClassBlockClassLevelSchoolAndProfileStatus(List<Long> classBlockIds, AcademicSession session, School school, ProfileStatus profileStatus);
 }

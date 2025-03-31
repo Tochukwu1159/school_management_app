@@ -4,9 +4,9 @@ import examination.teacherAndStudents.dto.ScoreRequest;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.EntityNotFoundException;
-import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.*;
+import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.ResultService;
 import examination.teacherAndStudents.service.ScoreService;
 import examination.teacherAndStudents.utils.Roles;
@@ -22,7 +22,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,14 +34,10 @@ public class ScoreServiceImpl implements ScoreService {
 
     @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private SubjectRepository subjectRepository;
 
     @Autowired
     @Lazy
     private ResultService resultService;
-    @Autowired
-    private ClassLevelRepository classLevelRepository;
     @Autowired
     private ClassBlockRepository classBlockRepository;
     @Autowired
@@ -114,8 +110,8 @@ public class ScoreServiceImpl implements ScoreService {
 
         public void addScore(ScoreRequest scoreRequest) {
         User student = userRepository.findByIdAndRoles(scoreRequest.getStudentId(), Roles.STUDENT);
-        if(student == null){
-            throw new NotFoundException("Student not found or the id is not a student");
+        if (student == null) {
+            throw new EntityNotFoundException("Student not found");
         }
 
         Profile studentProfile = profileRepository.findByUser(student)
@@ -196,8 +192,6 @@ public class ScoreServiceImpl implements ScoreService {
 
 
     public List<Score> getScoresByStudent(Long studentId) {
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new CustomInternalServerException("Student not found"));
         Profile profile = profileRepository.findById(studentId)
                 .orElseThrow(() -> new CustomInternalServerException("Student profile not found"));
 

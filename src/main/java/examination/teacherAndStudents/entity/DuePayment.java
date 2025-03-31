@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -44,6 +45,11 @@ public class DuePayment {
     @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
+
+
+    @ManyToOne
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
 
     @PrePersist
     protected void onCreate() {

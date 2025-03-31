@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +16,7 @@ import java.util.Map;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "store")
+@Table(name = "store_item")
 @Entity
 @Builder
 public class StoreItem {
@@ -24,15 +25,16 @@ public class StoreItem {
     private Long id;
     private String name;
     private String description;
-    private String photo;
+    private String photoUrl;
 
     @ElementCollection
     @CollectionTable(name = "store_sizes", joinColumns = @JoinColumn(name = "store_id"))
     @MapKeyColumn(name = "size")
     @Column(name = "quantity")
-    private Map<Integer, Integer> sizes = new HashMap<>();
+    private Map<String, Integer> sizes = new HashMap<>();
 
-    private Double price;
+    private
+    BigDecimal price;
 
     @ManyToOne
     @JoinColumn(name = "school_id")
@@ -45,6 +47,21 @@ public class StoreItem {
     @UpdateTimestamp
     @Column(name = "updated_date")
     private LocalDateTime updatedDate;
+
+    @ManyToOne
+    @JoinColumn(name = "store_id")
+    private Store store;
+
+    public void updateDetails(String name, String description,
+                              String photoUrl, Map<String, Integer> sizes,
+                              BigDecimal price) {
+        this.name = name;
+        this.description = description;
+        this.photoUrl = photoUrl;
+        this.sizes = new HashMap<>(sizes);  // Defensive copy
+        this.price = price;
+    }
+
 
     // Getters and Setters
 }

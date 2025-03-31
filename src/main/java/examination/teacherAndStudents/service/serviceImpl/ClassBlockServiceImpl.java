@@ -6,6 +6,7 @@ import examination.teacherAndStudents.entity.ClassBlock;
 import examination.teacherAndStudents.entity.ClassLevel;
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.EntityAlreadyExistException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.ClassBlockRepository;
 import examination.teacherAndStudents.repository.ClassLevelRepository;
@@ -32,6 +33,8 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             // Fetch the class level by ID
             ClassLevel classLevel = classLevelRepository.findById(request.getClassLevelId())
                     .orElseThrow(() -> new ResourceNotFoundException("Class Level not found with ID: " + request.getClassLevelId()));
+
+
 
             // Build the ClassBlock entity
             ClassBlock classBlock = ClassBlock.builder()
@@ -74,10 +77,16 @@ public class ClassBlockServiceImpl implements ClassBlockService {
     }
 
 
-    public List<ClassBlockResponse> getAllClassBlocks() {
+    public List<ClassBlockResponse> getAllClassBlocks(
+            Long classId,
+            Long subClassId,
+            Long academicYearId) {
         try {
-            // Fetch all class blocks from the repository
-            List<ClassBlock> classBlocks = classBlockRepository.findAll();
+            // Fetch filtered class blocks from the repository
+            List<ClassBlock> classBlocks = classBlockRepository.findAllWithFilters(
+                    classId,
+                    subClassId,
+                    academicYearId);
 
             // Map each class block to its response DTO
             return classBlocks.stream()

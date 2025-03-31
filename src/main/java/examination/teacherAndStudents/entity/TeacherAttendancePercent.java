@@ -23,6 +23,12 @@ import lombok.NoArgsConstructor;
         @Max(value = 100, message = "Attendance percentage must be at most 100")
         private Double attendancePercentage;
 
+        private long daysPresent;
+
+        private long daysAbsent;
+
+        private long daysLate;
+
         @ManyToOne
         @JoinColumn(name = "teacher_id", nullable = false)
         private Profile teacher;

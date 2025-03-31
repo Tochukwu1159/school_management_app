@@ -1,10 +1,13 @@
 package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.TimetableType;
+import examination.teacherAndStudents.utils.TransacStatus;
 import examination.teacherAndStudents.utils.TransactionType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.transaction.TransactionStatus;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -24,11 +27,17 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     private TransactionType transactionType;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private TransacStatus status;
+
     @Column(length = 500)
     private String description;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
+
+    private String paymentReference;
 
     @CreationTimestamp
     @Column(name = "createdAt", nullable = false, updatable = false)

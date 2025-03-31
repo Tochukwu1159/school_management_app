@@ -1,6 +1,7 @@
 package examination.teacherAndStudents.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import examination.teacherAndStudents.utils.TermStatus;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
@@ -32,6 +33,8 @@ public class StudentTerm {
     private LocalDate startDate;
     private LocalDate endDate;
 
+    private LocalDate resultReadyDate;
+
     @ManyToOne
     @JoinColumn(name = "academic_session_id", nullable = false)
     private AcademicSession academicSession;
@@ -43,5 +46,10 @@ public class StudentTerm {
     @UpdateTimestamp
     @Column(name = "updated_date")
     private LocalDateTime updatedDate;
+
+    @Column(name = "status")
+    @Enumerated(EnumType.STRING)
+    private TermStatus termStatus = TermStatus.PENDING;
+
 
 }

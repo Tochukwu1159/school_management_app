@@ -70,11 +70,11 @@ public class EntityFetcher {
     }
 
 public User fetchLoggedInAdmin(String email) {
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+            Optional<User> admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
     if (admin == null) {
         throw new AuthenticationFailedException("Please login as an Admin");
     }
-    return admin;
+    return admin.get();
 }
 
     public String fetchLoggedInUser(){
@@ -224,19 +224,6 @@ public Timetable fetchTimetable(Long timetableId) {
 public List<Result> FetchResults(ClassBlock classBlock, AcademicSession academicSession, StudentTerm studentTerm) {
         return resultRepository.findAllByClassBlockAndAcademicYearAndStudentTerm(
                 classBlock, academicSession, studentTerm);
-}
-
-public User fetchAdminUser(String email) {
-        return userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-}
-public StaffLevel fetchStaffLevel(Long levelId) {
-    return staffLevelRepository.findById(levelId)
-            .orElseThrow(() -> new CustomNotFoundException("Staff Level not found"));
-}
-
-public StaffAttendance fetchStaffAttendance(User staff) {
-        return staffAttendanceRepository.findFirstByStaffOrderByCheckInTimeDesc(staff)
-                .orElseThrow(() -> new RuntimeException("Staff has not checked in."));
 }
 
 }

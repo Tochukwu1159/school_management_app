@@ -8,4 +8,7 @@ public class BlogRequest {
     private String title;
     @Column(columnDefinition = "TEXT")
     private String content;
+
+    private String imageUrl;
+
 }

@@ -4,7 +4,11 @@ import examination.teacherAndStudents.entity.AcademicSession;
 import examination.teacherAndStudents.entity.ClassBlock;
 import examination.teacherAndStudents.entity.ClassSubject;
 import examination.teacherAndStudents.entity.Subject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -15,4 +19,17 @@ public interface ClassSubjectRepository extends JpaRepository<ClassSubject, Long
     boolean existsBySubjectAndClassBlockAndAcademicYear(Subject subject, ClassBlock classBlock, AcademicSession academicSession);
 
     Optional<ClassSubject> findByIdAndClassBlock(Long id, ClassBlock studentClass);
+
+    @Query("SELECT cs FROM ClassSubject cs WHERE " +
+            "(:academicYearId IS NULL OR cs.academicYear.id = :academicYearId) AND " +
+            "(:subjectId IS NULL OR cs.subject.id = :subjectId) AND " +
+            "(:classSubjectId IS NULL OR cs.id = :classSubjectId) AND " +
+            "(:subjectName IS NULL OR LOWER(cs.subject.name) LIKE LOWER(CONCAT('%', :subjectName, '%')))")
+    Page<ClassSubject> findAllWithFilters(
+            @Param("academicYearId") Long academicYearId,
+            @Param("subjectId") Long subjectId,
+            @Param("classSubjectId") Long classSubjectId,
+            @Param("subjectName") String subjectName,
+            Pageable pageable);
+
 }

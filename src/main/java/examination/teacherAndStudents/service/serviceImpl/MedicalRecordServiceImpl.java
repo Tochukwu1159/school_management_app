@@ -15,6 +15,10 @@ import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.MedicalRecordService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -85,16 +89,32 @@ public class MedicalRecordServiceImpl implements MedicalRecordService {
         }
     }
 
-    public List<MedicationDto> getAllMedicalRecordsByStudent(Long studentId) {
+    public Page<MedicationDto> getAllMedicalRecords(
+            Long patientId,
+            Long attendantId,
+            Long id,
+            LocalDateTime createdAt,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection) {
+
         try {
-            Optional<User> student = userRepository.findById(studentId);
+            // Create Pageable object
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+            Pageable pageable = PageRequest.of(page, size, sort);
 
-            Profile profile = profileRepository.findByUser(student.get())
-                    .orElseThrow(() -> new CustomNotFoundException("Attendant profile not found"));
+            // Fetch filtered medical records
+            Page<MedicalRecord> recordsPage = medicalRecordRepository.findAllWithFilters(
+                    patientId,
+                    attendantId,
+                    id,
+                    createdAt,
+                    pageable);
 
-            List<MedicalRecord> medicationDtoList = medicalRecordRepository.findAllByPatient(profile);
+            // Map to DTO
+            return recordsPage.map(record -> modelMapper.map(record, MedicationDto.class));
 
-            return medicationDtoList.stream().map((element) -> modelMapper.map(element, MedicationDto.class)).collect(Collectors.toList());
         } catch (Exception e) {
             throw new CustomInternalServerException("Error retrieving medical records: " + e.getMessage());
         }

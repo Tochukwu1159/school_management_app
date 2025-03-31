@@ -26,6 +26,8 @@ public class StoreItemAllocation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long storeId;
+
     @ManyToMany(cascade = CascadeType.PERSIST)
     @JoinTable(
             name = "store_item_allocation_storeItem",

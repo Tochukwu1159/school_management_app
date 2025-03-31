@@ -11,6 +11,7 @@ import java.util.Map;
 
 @Data
 public class SchoolRequest {
+    private String schoolColour;
     private String schoolName;
     private String schoolAddress;
     private String schoolLogoUrl; // URL for the school's logo

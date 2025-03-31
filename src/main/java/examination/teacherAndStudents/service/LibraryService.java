@@ -1,10 +1,12 @@
 package examination.teacherAndStudents.service;
 
 import examination.teacherAndStudents.dto.BookRequest;
+import examination.teacherAndStudents.dto.BookResponse;
 import examination.teacherAndStudents.entity.Book;
 import examination.teacherAndStudents.entity.BookBorrowing;
 import org.springframework.data.domain.Page;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface LibraryService {
@@ -15,9 +17,17 @@ public interface LibraryService {
 
     void deleteBook(Long bookId);
 
-    Page<Book> getAllBooks(int pageNo, int pageSize, String sortBy);
+    Page<BookResponse> getAllBooks(
+            Long id,
+            String title,
+            String author,
+            LocalDateTime createdAt,
+            int pageNo,
+            int pageSize,
+            String sortBy,
+            String sortDirection);
 
-    BookBorrowing borrowBook(Long memberId, Long bookId);
+    BookBorrowing borrowBook(Long memberId, Long bookId,LocalDateTime dueDate);
 
 
 

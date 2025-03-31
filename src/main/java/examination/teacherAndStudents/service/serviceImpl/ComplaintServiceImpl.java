@@ -73,10 +73,8 @@ public class ComplaintServiceImpl implements ComplaintService {
 
             // Check if the authenticated user is an admin
             String adminEmail = SecurityConfig.getAuthenticatedUserEmail();
-            User adminUser = userRepository.findByEmailAndRoles(adminEmail, Roles.ADMIN);
-            if (adminUser == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User adminUser = userRepository.findByEmailAndRoles(adminEmail, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             Optional<Profile> userProfile = profileRepository.findByUser(adminUser);
             // Set the reply text and update the submitted time
             feedback.setReplyText(replyComplaintDto.getReplyText());

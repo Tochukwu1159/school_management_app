@@ -11,10 +11,7 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.UserService;
 import examination.teacherAndStudents.templateService.IdCardService;
-import examination.teacherAndStudents.utils.AccountUtils;
-import examination.teacherAndStudents.utils.MaritalStatus;
-import examination.teacherAndStudents.utils.ProfileStatus;
-import examination.teacherAndStudents.utils.Roles;
+import examination.teacherAndStudents.utils.*;
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -50,7 +47,6 @@ import java.util.regex.Pattern;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final EmailService emailService;
-    private final  HttpServletRequest httpServletRequest;
     private final JwtUtil jwtUtil;
     private final  Cloudinary cloudinary;
     private final PasswordEncoder passwordEncoder;
@@ -64,28 +60,25 @@ public class UserServiceImpl implements UserService {
     private final WalletRepository walletRepository;
     private final ProfileRepository profileRepository;
     private final ModelMapper modelMapper;
-    private final AcademicSessionRepository academicSessionRepository;
 
     private final IdCardService idCardService;
 
-    private  final  AccountUtils accountUtils;
+    private  final PasswordGenerator passwordGenerator;
     private final SubjectRepository subjectRepository;
     private final SchoolRepository schoolRepository;
     private final StaffLevelRepository staffLevelRepository;
+    private final AcademicSessionRepository academicSessionRepository;
+
 
     @Override
     @Transactional
     public UserResponse createStudent(UserRequestDto userRequest) throws MessagingException {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        if (admin == null) {
-            throw new AuthenticationFailedException("Please login as an Admin");
-        }
 
-        Optional<User> userDetails = userRepository.findByEmail(email);
-
-        School school = userDetails.get().getSchool();
+        School school = admin.getSchool();
 
         validateUserRequest(userRequest);
 
@@ -99,6 +92,8 @@ public class UserServiceImpl implements UserService {
 //        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
 //        // Get the secure URL of the uploaded image from Cloudinary
 //        String imageUrl = (String) uploadResult.get("secure_url");
+        String generatedPassword = passwordGenerator.generateRandomPassword();
+        String encodedPassword = passwordEncoder.encode(generatedPassword);
 
         User newUser = User.builder()
                 .firstName(userRequest.getFirstName())
@@ -107,9 +102,10 @@ public class UserServiceImpl implements UserService {
                 .school(school)
                 .email(userRequest.getEmail())
                 .roles(Roles.STUDENT)
+                .profileStatus(ProfileStatus.ACTIVE)
                 .isVerified(true)
-                .school(userDetails.get().getSchool())
-                .password(passwordEncoder.encode(userRequest.getPassword()))
+                .school(admin.getSchool())
+                .password(encodedPassword)
                 .roles(Roles.STUDENT)
 //                .profilePicture(imageUrl)
                 .build();
@@ -150,7 +146,7 @@ public class UserServiceImpl implements UserService {
         //create wallet
         createWallet(saveUserProfile);
 
-        sendRegistrationEmail(userRequest, savedUser);
+        sendRegistrationEmail(generatedPassword, savedUser, userProfile.getUniqueRegistrationNumber());
 
         AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
 
@@ -160,18 +156,19 @@ public class UserServiceImpl implements UserService {
 
 
 
-    private Map<String, Object> createModelWithData(UserRequestDto user) {
-        Map<String, Object> model = new HashMap<>();
-
-        // Add data to the model
-        model.put("name", user.getFirstName() + " " + user.getLastName());
-        model.put("email", user.getEmail());
-        model.put("password", user.getPassword());
-
-        // You can add more data as needed for your email template
-
-        return model;
-    }
+//    private Map<String, Object> createModelWithData(UserRequestDto user) {
+//        Map<String, Object> model = new HashMap<>();
+//
+//        // Add data to the model
+//        model.put("name", user.getFirstName() + " " + user.getLastName());
+//        model.put("email", user.getEmail());
+//        model.put("username", user.getRegistrationNumber());
+//        model.put("password", user.getPassword());
+//
+//        // You can add more data as needed for your email template
+//
+//        return model;
+//    }
 
 
     @Override
@@ -184,13 +181,17 @@ public class UserServiceImpl implements UserService {
 //        // Get the secure URL of the uploaded image from Cloudinary
 //        String imageUrl = (String) uploadResult.get("secure_url");
 
+        String generatedPassword = passwordGenerator.generateRandomPassword();
+
+        String encodedPassword = passwordEncoder.encode(generatedPassword);
 
         User newUser = User.builder()
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
                 .middleName(userRequest.getMiddleName())
                 .email(userRequest.getEmail())
-                .password(passwordEncoder.encode(userRequest.getPassword()))
+                .profileStatus(ProfileStatus.ACTIVE)
+                .password(encodedPassword)
                 .isVerified(true)
                 .roles(Roles.ADMIN)
                 .build();
@@ -237,11 +238,8 @@ public class UserServiceImpl implements UserService {
     public UserResponse createStaff(UserRequestDto userRequest) throws MessagingException {
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-
-        if (admin == null) {
-            throw new AuthenticationFailedException("Please login as an Admin");
-        }
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         StaffLevel staffLevel = staffLevelRepository.findById(userRequest.getStaffLevelId())
                 .orElseThrow(() -> new CustomNotFoundException("Staff level not found"));
 
@@ -250,6 +248,8 @@ public class UserServiceImpl implements UserService {
 
         validateUserRequest(userRequest);
 
+        String generatedPassword = passwordGenerator.generateRandomPassword();
+        String encodedPassword = passwordEncoder.encode(generatedPassword);
 
         // Create new user
         User newUser = User.builder()
@@ -258,7 +258,8 @@ public class UserServiceImpl implements UserService {
                 .middleName(userRequest.getMiddleName())
                 .email(userRequest.getEmail())
                 .school(school)
-                .password(passwordEncoder.encode(userRequest.getPassword()))
+                .profileStatus(ProfileStatus.ACTIVE)
+                .password(encodedPassword)
                 .isVerified(true)
                 .roles(userRequest.getRole())
                 .build();
@@ -268,7 +269,7 @@ public class UserServiceImpl implements UserService {
         Profile userProfile = buildStaffProfile(userRequest, savedUser, staffLevel);
         Profile savedProfile = profileRepository.save(userProfile);
         createWallet(savedProfile);
-        sendStaffCreationEmail(savedUser);
+        sendStaffCreationEmail(savedUser, generatedPassword, userProfile.getUniqueRegistrationNumber());
 
 
         //update the school population
@@ -284,16 +285,21 @@ public class UserServiceImpl implements UserService {
 
 
     public LoginResponse loginUser(LoginRequest loginRequest) {
+
         try {
+
+            Profile user = profileRepository.findByUniqueRegistrationNumber(loginRequest.getUsername())
+                    .orElseThrow(() -> new CustomNotFoundException("Username not found"));
+
             Authentication authenticate = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(user.getUser().getEmail(), loginRequest.getPassword())
             );
 
             if (!authenticate.isAuthenticated()) {
                 throw new UserPasswordMismatchException("Wrong email or password");
             }
-            Optional<User> userDetails = userRepository.findByEmail(loginRequest.getEmail());
 
+            Optional<User> userDetails = userRepository.findByEmail(user.getUser().getEmail());
             // Check if the subscription has expired
             School school = userDetails.get().getSchool();
             if (school != null && !school.isSubscriptionValid()) {
@@ -301,7 +307,7 @@ public class UserServiceImpl implements UserService {
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool());
+            String token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), userDetails.get().getSchool());
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -320,15 +326,19 @@ public class UserServiceImpl implements UserService {
 
     public LoginResponse loginTeacher(LoginRequest loginRequest) {
         try {
+
+            Profile user = profileRepository.findByUniqueRegistrationNumber(loginRequest.getUsername())
+                    .orElseThrow(() -> new CustomNotFoundException("Username not found"));
+
             Authentication authenticate = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(user.getUser().getEmail(), loginRequest.getPassword())
             );
 
             if (!authenticate.isAuthenticated()) {
                 throw new UserPasswordMismatchException("Wrong email or password");
             }
 
-            Optional<User> userDetails = userRepository.findByEmail(loginRequest.getEmail());
+            Optional<User> userDetails = userRepository.findByEmail(user.getUser().getEmail());
 
             // Check if the subscription has expired
             School school = userDetails.get().getSchool();
@@ -337,7 +347,7 @@ public class UserServiceImpl implements UserService {
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), userDetails.get().getSchool());
+            String token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), userDetails.get().getSchool());
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -355,8 +365,12 @@ public class UserServiceImpl implements UserService {
 
     public LoginResponse loginAdmin(LoginRequest loginRequest) {
         try {
+
+            Profile user = profileRepository.findByUniqueRegistrationNumber(loginRequest.getUsername())
+                    .orElseThrow(() -> new CustomNotFoundException("Username not found"));
+
             Authentication authenticate = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(user.getUser().getEmail(), loginRequest.getPassword())
             );
 
             if (!authenticate.isAuthenticated()) {
@@ -364,7 +378,7 @@ public class UserServiceImpl implements UserService {
             }
 
 
-            Optional<User> userDetails = userRepository.findByEmail(loginRequest.getEmail());
+            Optional<User> userDetails = userRepository.findByEmail(user.getUser().getEmail());
             if (userDetails.isEmpty()) {
                 throw new UsernameNotFoundException("User not found");
             }
@@ -374,10 +388,10 @@ public class UserServiceImpl implements UserService {
             String token;
             if (school == null) {
                 // Generate token with school as null
-                token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), null);
+                token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), null);
             } else {
                 // Generate token with school
-                token = "Bearer " + jwtUtil.generateToken(loginRequest.getEmail(), school);
+                token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), school);
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
@@ -636,11 +650,8 @@ public class UserServiceImpl implements UserService {
     public ResponseEntity<Void> deleteUser(Long userId) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-
-            if (!admin.getIsVerified()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             if (userRepository.existsById(userId)) {
                 userRepository.deleteById(userId);
@@ -674,31 +685,44 @@ public class UserServiceImpl implements UserService {
 
 
     public Page<UserResponse> getAllStudentsFilteredAndPaginated(
-            Long classCategoryId,
+            Long classId,
             Long subClassId,
             Long academicYearId,
+            String uniqueRegistrationNumber,
+            String firstName,
             int page,
             int size,
-            String sortBy
-    ) {
-        Optional<AcademicSession> academicYearOptional = academicSessionRepository.findById(academicYearId);
-        Optional<ClassLevel> studentClassLevelOptional = classLevelRepository.findById(classCategoryId);
-        Optional<ClassBlock> subClassOptional = classBlockRepository.findById(subClassId);
-
-
-        AcademicSession academicYear = academicYearOptional.orElseThrow(() -> new CustomNotFoundException("Academic year not found"));
-        ClassLevel studentClassLevel = studentClassLevelOptional.orElseThrow(() -> new CustomNotFoundException("Student class level not found"));
-        ClassBlock subClass = subClassOptional.orElseThrow(() -> new CustomNotFoundException("Subclass not found"));
-
+            String sortBy) {
 
         // Create Pageable object for pagination
         Pageable paging = PageRequest.of(page, size, Sort.by(sortBy).ascending());
 
-        // Fetch students based on filters
-        Page<Profile> students = profileRepository.findAllByClassBlock(
-                subClass, paging);
+        // Resolve optional filters
+        ClassBlock subClass = subClassId != null ?
+                classBlockRepository.findById(subClassId)
+                        .orElseThrow(() -> new CustomNotFoundException("Subclass not found")) :
+                null;
 
-        return students.map((element) -> modelMapper.map(element, UserResponse.class));
+        ClassLevel classLevel = classId != null ?
+                classLevelRepository.findById(classId)
+                        .orElseThrow(() -> new CustomNotFoundException("Class not found")) :
+                null;
+
+        AcademicSession academicYear = academicYearId != null ?
+                academicSessionRepository.findById(academicYearId)
+                        .orElseThrow(() -> new CustomNotFoundException("Academic year not found")) :
+                null;
+
+        // Fetch students with optional filters
+        Page<Profile> students = profileRepository.findAllWithFilters(
+                subClass,
+                classLevel,
+                academicYear,
+                uniqueRegistrationNumber,
+                firstName,
+                paging);
+
+        return students.map(element -> modelMapper.map(element, UserResponse.class));
     }
 
     private boolean isSubscriptionExpired(School school) {
@@ -765,24 +789,17 @@ public class UserServiceImpl implements UserService {
             throw new UserAlreadyExistException("Email already exists");
         }
 
-        if (!AccountUtils.validatePassword(userRequest.getPassword(), userRequest.getConfirmPassword())) {
-            throw new UserPasswordMismatchException("Passwords do not match");
-        }
-
         if (!AccountUtils.isValidEmail(userRequest.getEmail())) {
             throw new BadRequestException("Invalid email address");
         }
 
-        if (userRequest.getPassword().length() < 8) {
-            throw new BadRequestException("Password must be at least 8 characters long");
-        }
     }
 
-    private void sendRegistrationEmail(UserRequestDto userRequest, User savedUser) throws MessagingException {
+    private void sendRegistrationEmail(String generatedPassword, User savedUser, String regNo) throws MessagingException {
         Map<String, Object> model = new HashMap<>();
         model.put("name", savedUser.getFirstName() + " " + savedUser.getLastName());
-        model.put("email", savedUser.getEmail());
-        model.put("password", userRequest.getPassword());
+        model.put("username", regNo);
+        model.put("password", generatedPassword);
 
         EmailDetails emailDetails = EmailDetails.builder()
                 .recipient(savedUser.getEmail())
@@ -840,14 +857,21 @@ public class UserServiceImpl implements UserService {
         walletRepository.save(userWallet);
     }
 
-    private void sendStaffCreationEmail(User savedUser) throws MessagingException {
+    private void sendStaffCreationEmail(User savedUser, String generatedPassword, String regNo) throws MessagingException {
+
+        Map<String, Object> model = new HashMap<>();
+        model.put("name", savedUser.getFirstName() + " " + savedUser.getLastName());
+        model.put("username", regNo);
+        model.put("password", generatedPassword);
+
         EmailDetails emailDetails = EmailDetails.builder()
                 .recipient(savedUser.getEmail())
                 .subject("ACCOUNT CREATION")
                 .templateName("email-template-teachers")
-                .model(Map.of("name", savedUser.getFirstName() + " " + savedUser.getLastName()))
+                .model(model)
                 .build();
         emailService.sendHtmlEmail(emailDetails);
+
     }
 
     private AccountInfo buildAccountInfo(User savedUser, Profile userProfile) {

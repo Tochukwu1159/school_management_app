@@ -1,4 +1,4 @@
-package examination.teacherAndStudents.service.impl;
+package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.entity.ServiceOffered;
 import examination.teacherAndStudents.repository.ServiceOfferedRepository;

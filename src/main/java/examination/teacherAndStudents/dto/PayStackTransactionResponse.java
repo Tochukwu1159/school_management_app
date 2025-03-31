@@ -2,7 +2,11 @@ package examination.teacherAndStudents.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
+@Getter
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PayStackTransactionResponse {
@@ -10,14 +14,6 @@ public class PayStackTransactionResponse {
     private String message;
     private Data data;
     private int StatusCode;
-
-    public int getStatusCode() {
-        return StatusCode;
-    }
-
-    public void setStatusCode(int statusCode) {
-        StatusCode = statusCode;
-    }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -60,27 +56,4 @@ public class PayStackTransactionResponse {
         }
     }
 
-    public boolean isStatus() {
-        return status;
-    }
-
-    public void setStatus(boolean status) {
-        this.status = status;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public Data getData() {
-        return data;
-    }
-
-    public void setData(Data data) {
-        this.data = data;
-    }
 }

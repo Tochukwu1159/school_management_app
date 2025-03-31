@@ -6,6 +6,7 @@ import examination.teacherAndStudents.entity.Maintenance;
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.Transport;
 import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.MaintenanceRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
@@ -14,7 +15,13 @@ import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.MaintenanceService;
 import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -66,11 +73,57 @@ public class MaintenanceServiceImpl implements MaintenanceService {
         maintenanceRepository.deleteById(id);
     }
 
-    public List<MaintenanceResponse> getAllMaintenances() {
-        return maintenanceRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+    public Page<MaintenanceResponse> getAllMaintenances(
+            Long id,
+            Long transportId,
+            Long maintainedById,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection) {
+
+        try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            Profile user = profileRepository.findByUserEmail(email)
+                    .orElseThrow(() -> new CustomNotFoundException("User not found"));
+
+            // Create Pageable object
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            // Fetch filtered maintenance records
+            Page<Maintenance> maintenancesPage = maintenanceRepository.findAllBySchoolWithFilters(
+                    user.getUser().getSchool().getId(),
+                    id,
+                    transportId,
+                    maintainedById,
+                    startDate,
+                    endDate,
+                    pageable);
+
+            // Map to response DTO
+            return maintenancesPage.map(this::mapToMaintenanceResponse);
+        } catch (CustomNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CustomInternalServerException("Error fetching maintenance records: " + e.getMessage());
+        }
+    }
+
+    private MaintenanceResponse mapToMaintenanceResponse(Maintenance maintenance) {
+        return MaintenanceResponse.builder()
+                .id(maintenance.getId())
+                .description(maintenance.getDescription())
+                .amountSpent(maintenance.getAmountSpent())
+                .transportId(maintenance.getTransport().getId())
+                .transportVehicleNumber(maintenance.getTransport().getVehicleNumber())
+                .maintainedById(maintenance.getMaintainedBy().getId())
+                .maintainedByName(maintenance.getMaintainedBy().getUser().getFirstName() + " " + maintenance.getMaintainedBy().getUser().getLastName())
+                .maintenanceDate(maintenance.getMaintenanceDate())
+                .updatedAt(maintenance.getUpdatedAt())
+                .build();
     }
 
     public MaintenanceResponse getMaintenanceById(Long id) {

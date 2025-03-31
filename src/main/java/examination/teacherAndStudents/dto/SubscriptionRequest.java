@@ -8,5 +8,4 @@ import java.math.BigDecimal;
 @Data
 public class SubscriptionRequest {
     private SubscriptionType subscriptionType;
-    private int amount;
 }

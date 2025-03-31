@@ -1,6 +1,7 @@
 package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.BlogRequest;
+import examination.teacherAndStudents.dto.BlogResponse;
 import examination.teacherAndStudents.entity.Blog;
 import examination.teacherAndStudents.service.BlogService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +22,9 @@ public class BlogController {
     }
 
     @GetMapping("/posts")
-    public ResponseEntity<List<Blog>> getAllBlogPosts() {
+    public ResponseEntity<List<BlogResponse>> getAllBlogPosts() {
         try {
-            List<Blog> blogPosts = blogService.getAllBlogPosts();
+            List<BlogResponse> blogPosts = blogService.getAllBlogPosts();
             return ResponseEntity.ok(blogPosts);
         } catch (Exception e) {
             // Handle unexpected exceptions
@@ -32,9 +33,9 @@ public class BlogController {
     }
 
     @GetMapping("/posts/{id}")
-    public ResponseEntity<Blog> getBlogPostById(@PathVariable Long id) {
+    public ResponseEntity<BlogResponse> getBlogPostById(@PathVariable Long id) {
         try {
-            Blog blogPost = blogService.getBlogPostById(id);
+            BlogResponse blogPost = blogService.getBlogPostById(id);
             if (blogPost != null) {
                 return ResponseEntity.ok(blogPost);
             } else {
@@ -47,9 +48,9 @@ public class BlogController {
     }
 
     @PostMapping("/posts")
-    public ResponseEntity<Blog> createBlogPost(@RequestBody BlogRequest blogPost) {
+    public ResponseEntity<BlogResponse> createBlogPost(@RequestBody BlogRequest blogPost) {
         try {
-            Blog createdBlogPost = blogService.createBlogPost(blogPost);
+            BlogResponse createdBlogPost = blogService.createBlogPost(blogPost);
             return ResponseEntity.ok(createdBlogPost);
         } catch (Exception e) {
             // Handle unexpected exceptions
@@ -58,9 +59,9 @@ public class BlogController {
     }
 
     @PutMapping("/posts/{id}")
-    public ResponseEntity<Blog> updateBlogPost(@PathVariable Long id, @RequestBody BlogRequest updatedBlogPost) {
+    public ResponseEntity<BlogResponse> updateBlogPost(@PathVariable Long id, @RequestBody BlogRequest updatedBlogPost) {
         try {
-            Blog updatedPost = blogService.updateBlogPost(id, updatedBlogPost);
+            BlogResponse updatedPost = blogService.updateBlogPost(id, updatedBlogPost);
             if (updatedPost != null) {
                 return ResponseEntity.ok(updatedPost);
             } else {
@@ -73,16 +74,11 @@ public class BlogController {
     }
 
     @DeleteMapping("/posts/{id}")
-    public ResponseEntity<Void> deleteBlogPost(@PathVariable Long id) {
+    public ResponseEntity<String> deleteBlogPost(@PathVariable Long id) {
         try {
-            boolean deleted = blogService.deleteBlogPost(id);
-            if (deleted) {
-                return ResponseEntity.noContent().build();
-            } else {
-                return ResponseEntity.notFound().build();
-            }
+            String deleted = blogService.deleteBlogPost(id);
+                return ResponseEntity.ok(deleted);
         } catch (Exception e) {
-            // Handle unexpected exceptions
             return ResponseEntity.status(500).build();
         }
     }

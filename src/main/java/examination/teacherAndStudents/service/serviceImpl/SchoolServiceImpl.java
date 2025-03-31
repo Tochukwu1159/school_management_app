@@ -1,7 +1,5 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import examination.teacherAndStudents.Security.JwtUtil;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
@@ -10,25 +8,19 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.PayStackPaymentService;
 import examination.teacherAndStudents.service.SchoolService;
 import examination.teacherAndStudents.utils.Roles;
-import examination.teacherAndStudents.utils.ServiceType;
+import examination.teacherAndStudents.utils.SubscriptionType;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.service.spi.ServiceException;
 import org.modelmapper.ModelMapper;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,15 +28,16 @@ import java.util.stream.Collectors;
 public class SchoolServiceImpl implements SchoolService {
 
     private final SchoolRepository schoolRepository;
-    private final PayStackPaymentService paymentService;
     private final ModelMapper modelMapper;
     private final SubscriptionHistoryRepository subscriptionHistoryRepository;
     private final ServiceOfferedRepository serviceOfferedRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
+    private final PayStackPaymentService paymentService;
+    private final EmailTemplateService emailTemplateService;
+
+    @Value("${amount_charged_per_student}")
+    private String amountChargedPerStudent;
 
     private static ProfileData apply(Profile profile) {
         ProfileData profileData = new ProfileData();
@@ -54,67 +47,79 @@ public class SchoolServiceImpl implements SchoolService {
         return profileData;
     }
 
+    @Transactional
     public SchoolResponse onboardSchool(SchoolRequest schoolRequest) {
-        try {
-            String generatedSubscriptionKey = UUID.randomUUID().toString();
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+        // Validate input
+        Objects.requireNonNull(schoolRequest, "School request cannot be null");
 
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+        // Get authenticated admin with proper authorization check
+        User admin = getAuthenticatedAdmin();
 
-            if (schoolRepository.existsByEmail(schoolRequest.getEmail())) {
+        // Validate school uniqueness
+        validateSchoolUniqueness(schoolRequest);
 
-                throw new UserAlreadyExistException("Email already exist");
+        // Create and save school
+        School newSchool = createSchoolEntity(schoolRequest);
+        School savedSchool = schoolRepository.save(newSchool);
 
-            }
+        // Associate admin with school
+        associateAdminWithSchool(admin, savedSchool);
 
-            if (schoolRepository.existsByPhoneNumber(schoolRequest.getPhoneNumber())) {
+        // Send notifications
+        emailTemplateService.sendOnboardingNotifications(savedSchool, admin);
 
-                throw new UserAlreadyExistException("Phone Number already exist");
+        return convertToResponse(savedSchool);
+    }
 
-            }
-            if (schoolRepository.existsBySchoolName(schoolRequest.getSchoolName())) {
+    private User getAuthenticatedAdmin() {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+     Optional<User> optionalUser =   userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+        return  optionalUser.get();
+    }
 
-                throw new UserAlreadyExistException("School Name already exist");
-
-            }
-
-            if (schoolRepository.existsBySchoolIdentificationNumber(schoolRequest.getSchoolIdentificationNumber())) {
-                throw new UserAlreadyExistException("School Identification Number already exists");
-            }
-
-            // Map SchoolRequest to School
-            School newSchool = modelMapper.map(schoolRequest, School.class);
-            newSchool.setIsActive(false);
-            newSchool.setNumberOfStudents(schoolRequest.getNumberOfStudents());
-            newSchool.setSubscriptionKey(generatedSubscriptionKey);
-
-
-            // Set social media links if provided
-            if (schoolRequest.getSocialMediaLinks() != null) {
-                newSchool.setSocialMediaLinks(schoolRequest.getSocialMediaLinks());
-            }
-
-            // Fetch and associate selected services
-            List<ServiceOffered> services = serviceOfferedRepository.findAllById(schoolRequest.getSelectedServices());
-            newSchool.setSelectedServices(services);
-
-            // Save the school entity
-            School savedSchool = schoolRepository.save(newSchool);
-
-            //update the admin
-            admin.setSchool(savedSchool);
-            userRepository.save(admin);
-
-
-            return modelMapper.map(savedSchool, SchoolResponse.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Error onboarding school: " + e.getMessage(), e);
+    private void validateSchoolUniqueness(SchoolRequest request) {
+        if (schoolRepository.existsByEmail(request.getEmail())) {
+            throw new UserAlreadyExistException("Email already exists");
+        }
+        if (schoolRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new UserAlreadyExistException("Phone number already exists");
+        }
+        if (schoolRepository.existsBySchoolName(request.getSchoolName())) {
+            throw new UserAlreadyExistException("School name already exists");
+        }
+        if (schoolRepository.existsBySchoolIdentificationNumber(request.getSchoolIdentificationNumber())) {
+            throw new UserAlreadyExistException("School identification number already exists");
         }
     }
 
+    private School createSchoolEntity(SchoolRequest request) {
+        School school = modelMapper.map(request, School.class);
+
+        // Set default values
+        school.setIsActive(false);
+
+        // Set social media links if provided
+        Optional.ofNullable(request.getSocialMediaLinks())
+                .ifPresent(school::setSocialMediaLinks);
+
+        // Fetch and associate services
+        List<ServiceOffered> services = serviceOfferedRepository.findAllById(
+                Optional.ofNullable(request.getSelectedServices())
+                        .orElse(Collections.emptyList())
+        );
+        school.setSelectedServices(services);
+
+        return school;
+    }
+
+    private void associateAdminWithSchool(User admin, School school) {
+        admin.setSchool(school);
+        userRepository.save(admin);
+    }
+
+    private SchoolResponse convertToResponse(School school) {
+        return modelMapper.map(school, SchoolResponse.class);
+    }
 
     public void accessibleService(Long schoolId, String serviceName) {
         try {
@@ -139,78 +144,242 @@ public class SchoolServiceImpl implements SchoolService {
         }
     }
 
-    public School subscribeSchool(Long schoolId, SubscriptionRequest subscriptionRequest) {
+    public School subscribeSchool(SubscriptionRequest subscriptionRequest) {
         try {
-            // Find the school by ID
-            School school = schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+            String email = SecurityConfig.getAuthenticatedUserEmail();
 
-            int amountInKobo;
-            try {
-                amountInKobo = subscriptionRequest.getAmount() * 100;
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid amount format", e);
+            // Validate user existence
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new NotFoundException("User not found with email: " + email));
+            Objects.requireNonNull(subscriptionRequest, "Subscription request cannot be null");
+
+            // Find the school by ID
+            School school = schoolRepository.findById(user.getSchool().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + user.getSchool().getId()));
+
+            if (school.getActualNumberOfStudents() == null || school.getActualNumberOfStudents() <= 0) {
+                throw new IllegalStateException("School has no students registered");
             }
 
-            String email = school.getEmail();
+            int amountInKobo;
+            long totalAmount;
+            try {
+                 totalAmount = Math.multiplyExact(
+                        school.getActualNumberOfStudents(),
+                        Integer.parseInt(amountChargedPerStudent)
+                );
 
+                if (totalAmount <= 0) {
+                    throw new IllegalStateException("Calculated amount must be greater than zero");
+                }
+                amountInKobo = Math.toIntExact(totalAmount);
+
+            } catch (ArithmeticException e) {
+                throw new IllegalArgumentException("Amount too large", e);
+            }
 
             PayStackTransactionRequest payStackTransactionRequest = PayStackTransactionRequest.builder()
-                    .email(email)
+                    .email(school.getEmail())
                     .amount(new BigDecimal(amountInKobo))
+                    .metadata(Map.of(
+                            "schoolId", user.getSchool().getId().toString(),
+                            "subscriptionType", subscriptionRequest.getSubscriptionType().name(),
+                            "purpose", "SUBSCRIPTION"
+                    ))
                     .build();
 
             // Initialize payment transaction
-//            boolean paymentSuccessful = paymentService.initTransaction(payStackTransactionRequest).isStatus();
-            boolean paymentSuccessful = true;
+            PayStackTransactionResponse paymentSuccessful = paymentService.initTransaction(payStackTransactionRequest);
+//            boolean paymentSuccessful = true;
 
-            if (paymentSuccessful) {
-                // Get the current expiry date or default to now if no active subscription
+            if (paymentSuccessful.isStatus()) {
+
                 LocalDateTime now = LocalDateTime.now();
-                LocalDateTime currentExpiryDate = school.getSubscriptionExpiryDate() != null && school.getSubscriptionExpiryDate().isAfter(now)
-                        ? school.getSubscriptionExpiryDate()
-                        : now;
+                LocalDateTime currentExpiryDate = Optional.ofNullable(school.getSubscriptionExpiryDate())
+                        .filter(date -> date.isAfter(now))
+                        .orElse(now);
 
-                // Calculate the new expiry date based on the subscription type
-                LocalDateTime newExpiryDate;
-                switch (subscriptionRequest.getSubscriptionType()) {
-                    case MONTHLY:
-                        newExpiryDate = currentExpiryDate.plusDays(30);
-                        break;
-                    case YEARLY:
-                        newExpiryDate = currentExpiryDate.plusYears(1);
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Unsupported subscription type: " + subscriptionRequest.getSubscriptionType());
-                }
+                LocalDateTime newExpiryDate = calculateNewExpiryDate(currentExpiryDate, subscriptionRequest.getSubscriptionType());
 
                 SubscriptionHistory subscriptionHistory = SubscriptionHistory.builder()
                         .school(school)
                         .subscriptionType(subscriptionRequest.getSubscriptionType())
                         .startDate(currentExpiryDate.toLocalDate())
                         .endDate(newExpiryDate.toLocalDate())
-                        .amountPaid(new BigDecimal(subscriptionRequest.getAmount()))
-//                        .paymentReference(payStackTransactionRequest.getPaymentReference()) // Assume you get this from the payment response
+                        .amountPaid(new BigDecimal(totalAmount))
+                        .paymentReference(paymentSuccessful.getData().getReference())
+                        .paymentMethod("Paystack")
+                        .transactionStatus("completed")
                         .build();
                 subscriptionHistoryRepository.save(subscriptionHistory);
 
                 // Update subscription details
                 school.setSubscriptionExpiryDate(newExpiryDate);
                 school.setIsActive(newExpiryDate.isAfter(now)); // Check if the subscription is valid
+                school.setSubscriptionKey(generateSubscriptionKey());
                 school.setSubscriptionType(subscriptionRequest.getSubscriptionType());
                 schoolRepository.save(school);
+
+                // Send confirmation email
+                emailTemplateService.sendSubscriptionConfirmationEmail(school, subscriptionRequest, newExpiryDate,  amountInKobo);
+
 
                 return school;
             } else {
                 throw new PaymentFailedException("Subscription payment failed");
             }
-        } catch (ResourceNotFoundException e) {
-            throw e; // Rethrow known exceptions to avoid wrapping them unnecessarily
-        } catch (IllegalArgumentException e) {
-            throw e; // Handle input errors directly
+        } catch (ResourceNotFoundException | IllegalArgumentException | PaymentFailedException e) {
+            throw e; // Re-throw known exceptions
         } catch (Exception e) {
-            throw new RuntimeException("Error renewing subscription: " + e.getMessage(), e);
+            throw new ServiceException("Error processing subscription: " + e.getMessage(), e);
         }
+    }
+
+
+    @Transactional
+    public School renewSubscription(SubscriptionType subscriptionType) throws Exception {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+
+        // Validate user existence
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("User not found with email: " + email));
+
+        Objects.requireNonNull(subscriptionType, "Subscription type cannot be null");
+
+        // Retrieve school with lock
+        School school = schoolRepository.findById(user.getSchool().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + user.getSchool().getId()));
+
+        // Validate school has students
+        if (school.getActualNumberOfStudents() == null || school.getActualNumberOfStudents() <= 0) {
+            throw new IllegalStateException("Cannot renew subscription - school has no students");
+        }
+
+        // Calculate amount
+        int amountInKobo = calculateSubscriptionAmount(school.getActualNumberOfStudents());
+
+        // Process payment
+        PayStackTransactionResponse paymentResponse = processPayment(school, amountInKobo, subscriptionType);
+
+        // Calculate new expiry date with remaining days
+        LocalDateTime newExpiryDate = calculateNewExpiryWithRemainingDays(school, subscriptionType);
+
+        // Save subscription history
+        createSubscriptionHistory(school, subscriptionType, amountInKobo, paymentResponse, newExpiryDate);
+
+        // Update school subscription
+        updateSchoolSubscription(school, subscriptionType, newExpiryDate);
+
+        // Send confirmation
+        emailTemplateService.sendRenewalConfirmation(school, subscriptionType, newExpiryDate, amountInKobo);
+
+        return school;
+    }
+
+    private int calculateSubscriptionAmount(int studentCount) {
+        try {
+            return Math.multiplyExact(studentCount, Integer.parseInt(amountChargedPerStudent));
+        } catch (ArithmeticException e) {
+            throw new IllegalStateException("Amount calculation overflow for " +
+                    studentCount + " students", e);
+        }
+    }
+
+    private LocalDateTime calculateNewExpiryWithRemainingDays(School school, SubscriptionType subscriptionType) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime currentExpiry = school.getSubscriptionExpiryDate();
+
+        if (currentExpiry != null && currentExpiry.isAfter(now)) {
+            // Calculate remaining days from current subscription
+            long remainingDays = ChronoUnit.DAYS.between(now, currentExpiry);
+
+            // Calculate base new expiry date from today
+            LocalDateTime baseNewExpiry = calculateBaseExpiryDate(now, subscriptionType);
+
+            // Add remaining days to the new expiry date
+            return baseNewExpiry.plusDays(remainingDays);
+        }
+
+        // If expired or no current expiry, start from now
+        return calculateBaseExpiryDate(now, subscriptionType);
+    }
+
+    private LocalDateTime calculateBaseExpiryDate(LocalDateTime startDate, SubscriptionType type) {
+        return switch (type) {
+            case MONTHLY -> startDate.plusMonths(1);
+            case QUARTERLY -> startDate.plusMonths(3);
+            case YEARLY -> startDate.plusYears(1);
+        };
+    }
+
+    private PayStackTransactionResponse processPayment(School school, int amountInKobo, SubscriptionType type) throws Exception {
+        PayStackTransactionRequest request = PayStackTransactionRequest.builder()
+                .email(school.getEmail())
+                .amount(new BigDecimal(amountInKobo))
+                .metadata(Map.of(
+                        "schoolId", school.getId().toString(),
+                        "subscriptionType", type.name(),
+                        "purpose", "SUBSCRIPTION_RENEWAL"
+                ))
+                .build();
+
+        PayStackTransactionResponse response = paymentService.initTransaction(request);
+        if (!response.isStatus()) {
+            throw new PaymentFailedException("Payment failed: " + response.getMessage());
+        }
+        return response;
+    }
+
+    private void createSubscriptionHistory(School school, SubscriptionType type,
+                                           int amountInKobo, PayStackTransactionResponse paymentResponse,
+                                           LocalDateTime newExpiryDate) {
+        SubscriptionHistory history = SubscriptionHistory.builder()
+                .school(school)
+                .subscriptionType(type)
+                .startDate(LocalDate.now())
+                .endDate(newExpiryDate.toLocalDate())
+                .amountPaid(new BigDecimal(amountInKobo / 100.0))
+                .paymentReference(paymentResponse.getData().getReference())
+                .paymentMethod("Paystack")
+                .transactionStatus("completed")
+                .studentCount(school.getActualNumberOfStudents())
+                .previousExpiryDate(school.getSubscriptionExpiryDate())
+                .daysCarriedOver(calculateCarriedOverDays(school))
+                .build();
+
+        subscriptionHistoryRepository.save(history);
+    }
+
+    private long calculateCarriedOverDays(School school) {
+        if (school.getSubscriptionExpiryDate() == null) {
+            return 0;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        return school.getSubscriptionExpiryDate().isAfter(now)
+                ? ChronoUnit.DAYS.between(now, school.getSubscriptionExpiryDate())
+                : 0;
+    }
+
+    private void updateSchoolSubscription(School school, SubscriptionType type, LocalDateTime newExpiryDate) {
+        school.setSubscriptionExpiryDate(newExpiryDate);
+        school.setIsActive(true);
+        school.setSubscriptionType(type);
+        school.setLastRenewalDate(LocalDateTime.now());
+        schoolRepository.save(school);
+    }
+
+    private LocalDateTime calculateNewExpiryDate(LocalDateTime currentDate, SubscriptionType subscriptionType) {
+        return switch (subscriptionType) {
+            case MONTHLY -> currentDate.plusMonths(1);
+            case QUARTERLY -> currentDate.plusMonths(3);
+            case YEARLY -> currentDate.plusYears(1);
+            default -> throw new IllegalArgumentException("Unsupported subscription type: " + subscriptionType);
+        };
+    }
+
+    private String generateSubscriptionKey() {
+        return UUID.randomUUID().toString();
     }
 
 

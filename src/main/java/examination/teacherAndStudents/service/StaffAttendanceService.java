@@ -9,8 +9,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface StaffAttendanceService {
-    public void checkIn(String location);
-    public void checkOut(String location);
+    void checkIn(byte[] thumbprintData, String deviceId);
+    void checkOut(byte[] thumbprintData, String deviceId);
     Page<StaffAttendance> getAllStaffAttendance(int pageNo, int pageSize, String sortBy);
 //    double calculateAttendancePercentage(Long userId, StudentTerm term);
     Page<StaffAttendance> getStaffAttendanceByDateRange(LocalDate startDate, LocalDate endDate, int pageNo, int pageSize, String sortBy);

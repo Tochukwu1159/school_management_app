@@ -2,130 +2,90 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.BlogRequest;
+import examination.teacherAndStudents.dto.BlogResponse;
 import examination.teacherAndStudents.entity.Blog;
-import examination.teacherAndStudents.entity.Notification;
-import examination.teacherAndStudents.entity.Transaction;
+import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.User;
-import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
-import examination.teacherAndStudents.error_handler.CustomInternalServerException;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.BlogRepository;
-import examination.teacherAndStudents.repository.NotificationRepository;
-import examination.teacherAndStudents.repository.TransactionRepository;
+import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.BlogService;
-import examination.teacherAndStudents.utils.NotificationType;
 import examination.teacherAndStudents.utils.Roles;
-import examination.teacherAndStudents.utils.TransactionType;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Date;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
+@Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class BlogServiceImpl implements BlogService {
-
     private final BlogRepository blogRepository;
     private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
 
-    public BlogServiceImpl(BlogRepository blogRepository, UserRepository userRepository) {
-        this.blogRepository = blogRepository;
-        this.userRepository = userRepository;
+    @Override
+    public List<BlogResponse> getAllBlogPosts() {
+        return blogRepository.findAll().stream()
+                .map(BlogResponse::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    public List<Blog> getAllBlogPosts() {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
-            return blogRepository.findAll();
-        } catch (Exception e) {
-            throw new CustomInternalServerException("An error occurred while fetching blog posts " + e.getMessage());
-        }
+    @Override
+    public BlogResponse getBlogPostById(Long id) {
+        return blogRepository.findById(id)
+                .map(BlogResponse::fromEntity)
+                .orElseThrow(() -> new NotFoundException("Blog not found "));
     }
 
-    public Blog getBlogPostById(Long id) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
-
-            return blogRepository.findById(id)
-                    .orElseThrow(() -> new CustomNotFoundException("Blog post not found with id: " + id));
-        } catch (Exception e) {
-            throw new CustomInternalServerException("An error occurred while fetching the blog post " + e.getMessage());
-        }
+    @Override
+    @Transactional
+    public BlogResponse createBlogPost(BlogRequest blogRequest) {
+        Profile admin = getAuthenticatedAdmin();
+        Blog newBlog = Blog.builder()
+                .title(blogRequest.getTitle())
+                .content(blogRequest.getContent())
+                .imageUrl(blogRequest.getImageUrl())
+                .school(admin.getUser().getSchool())
+                .author(admin)
+                .build();
+        return BlogResponse.fromEntity(blogRepository.save(newBlog));
     }
 
-    public Blog createBlogPost(BlogRequest blogPost) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
-            Optional<User> userDetails = userRepository.findByEmail(email);
-            Blog newBlog = new Blog();
-            newBlog.setContent(blogPost.getContent());
-            newBlog.setSchool(userDetails.get().getSchool());
-            newBlog.setTitle(blogPost.getTitle());
-            return blogRepository.save(newBlog);
-        } catch (Exception e) {
-            throw new CustomInternalServerException("An error occurred while creating the blog post " +e.getMessage());
-        }
+    @Override
+    @Transactional
+    public BlogResponse updateBlogPost(Long id, BlogRequest blogRequest) {
+        Profile admin = getAuthenticatedAdmin();
+        Blog existingBlog = blogRepository.findByIdAndSchool(id, admin.getUser().getSchool())
+                .orElseThrow(() -> new NotFoundException("Blog not found "));
+
+        existingBlog.updateDetails(
+                blogRequest.getTitle(),
+                blogRequest.getContent(),
+                blogRequest.getImageUrl()
+        );
+
+        return BlogResponse.fromEntity(blogRepository.save(existingBlog));
     }
 
-    public Blog updateBlogPost(Long id, BlogRequest updatedBlogPost) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
-
-            Blog existingBlogPost = blogRepository.findById(id)
-                    .orElseThrow(() -> new CustomNotFoundException("Blog post not found with id: " + id));
-
-            Date date = new Date();
-            LocalDateTime localDateTime = date.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDateTime();
-
-            existingBlogPost.setTitle(updatedBlogPost.getTitle());
-            existingBlogPost.setContent(updatedBlogPost.getContent());
-            existingBlogPost.setCreatedAt(localDateTime);
-            // You can update other fields as needed
-
-            return blogRepository.save(existingBlogPost);
-        } catch (Exception e) {
-            throw new CustomInternalServerException("An error occurred while updating the blog post" + e.getMessage());
-        }
+    @Override
+    @Transactional
+    public String deleteBlogPost(Long id) {
+        Profile admin = getAuthenticatedAdmin();
+        Blog blog = blogRepository.findByIdAndSchool(id, admin.getUser().getSchool())
+                .orElseThrow(() -> new NotFoundException("Blog not found "));
+        blogRepository.delete(blog);
+        return "Blog deleted successfully";
     }
 
-
-    public boolean deleteBlogPost(Long id) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
-
-            Blog existingBlogPost = blogRepository.findById(id)
-                    .orElseThrow(() -> new CustomNotFoundException("Blog post not found with id: " + id));
-
-            blogRepository.delete(existingBlogPost);
-        } catch (Exception e) {
-            throw new CustomInternalServerException("An error occurred while deleting the blog post " +  e.getMessage());
-        }
-        return false;
+    private Profile getAuthenticatedAdmin() {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User user = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new NotFoundException("User not found "));
+        return profileRepository.findByUser(user)
+                .orElseThrow(() -> new NotFoundException("profile not found "));
     }
 }

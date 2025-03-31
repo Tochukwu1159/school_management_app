@@ -4,6 +4,7 @@ import examination.teacherAndStudents.dto.ClassSubjectRequest;
 import examination.teacherAndStudents.dto.ClassSubjectResponse;
 import examination.teacherAndStudents.service.serviceImpl.ClassSubjectServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -44,8 +45,26 @@ public class ClassSubjectController {
 
     // Get all ClassSubjects
     @GetMapping
-    public ResponseEntity<List<ClassSubjectResponse>> getAllClassSubjects() {
-        List<ClassSubjectResponse> classSubjects = classSubjectService.getAllClassSubjects();
-        return new ResponseEntity<>(classSubjects, HttpStatus.OK);
+    public ResponseEntity<Page<ClassSubjectResponse>> getAllClassSubjects(
+            @RequestParam(required = false) Long academicYearId,
+            @RequestParam(required = false) Long subjectId,
+            @RequestParam(required = false) Long classSubjectId,
+            @RequestParam(required = false) String subjectName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        Page<ClassSubjectResponse> responses = classSubjectService.getAllClassSubjects(
+                academicYearId,
+                subjectId,
+                classSubjectId,
+                subjectName,
+                page,
+                size,
+                sortBy,
+                sortDirection);
+
+        return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 }

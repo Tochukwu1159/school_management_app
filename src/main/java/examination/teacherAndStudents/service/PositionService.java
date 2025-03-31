@@ -5,10 +5,15 @@ import examination.teacherAndStudents.utils.StudentTerm;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.LocalDate;
 
 public interface PositionService {
 //    void generateAndSaveRanks();
     void updatePositionsForClass(Long classBlockId, Long sessionId, Long termId);
 
     void generateResultSummaryPdf(Long studentId, Long classLevelId, Long sessionId,Long term) throws IOException, DocumentException;
+
+    void updatePositionsForSessionForJob(Long sessionId, Long termId);
+
+    void generateReportCardSummaryJob(Long sessionId);
 }

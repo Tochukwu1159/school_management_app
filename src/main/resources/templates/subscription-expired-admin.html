@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        :root {
+            --primary: #e63946;
+            --primary-dark: #c1121f;
+            --secondary: #457b9d;
+            --light: #f1faee;
+            --dark: #1d3557;
+            --alert: #ffd166;
+        }
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            color: #212529;
+        }
+        .container {
+            background-color: #ffffff;
+            max-width: 600px;
+            margin: 20px auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: var(--primary);
+            padding: 25px;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+        .header:after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg"><path fill="%23ffffff" d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25"/><path fill="%23ffffff" d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" opacity=".5"/><path fill="%23ffffff" d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z"/></svg>');
+            background-size: cover;
+        }
+        .content {
+            padding: 30px;
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        h2 {
+            color: var(--dark);
+            font-size: 20px;
+            margin-top: 25px;
+        }
+        .alert-banner {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid var(--alert);
+            margin: 25px 0;
+            font-weight: 600;
+            color: #856404;
+            border-radius: 4px;
+        }
+        .critical-banner {
+            background-color: #f8d7da;
+            padding: 15px;
+            border-left: 4px solid var(--primary);
+            margin: 25px 0;
+            font-weight: 600;
+            color: #721c24;
+            border-radius: 4px;
+        }
+        .action-btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: 600;
+            margin: 20px 0;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .action-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+            background-color: #f8f9fa;
+        }
+        .details-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 25px 0;
+            border: 1px solid #dee2e6;
+        }
+        .detail-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        .detail-label {
+            font-weight: 600;
+            width: 150px;
+            color: var(--dark);
+        }
+        .detail-value {
+            flex: 1;
+        }
+        .features-list {
+            margin: 15px 0 0 0;
+            padding-left: 20px;
+        }
+        .features-list li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 25px;
+        }
+        .features-list li:before {
+            content: "✖";
+            color: var(--primary);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+        .restricted-features {
+            margin-top: 30px;
+        }
+        .contact-methods {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .contact-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 12px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .contact-badge:hover {
+            background-color: #dee2e6;
+        }
+        .text-center {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>URGENT: Subscription Expired</h1>
+        <p>Immediate Action Required</p>
+    </div>
+    <div class="content">
+        <p>Dear <strong th:text="${adminName}"></strong>,</p>
+
+        <div class="critical-banner">
+            ⚠️ <strong>CRITICAL:</strong> <span th:text="${schoolName}"></span>'s subscription expired on
+            <span th:text="${#temporals.format(expiryDate, 'MMMM dd, yyyy')}"></span>.
+            Platform access is now restricted.
+        </div>
+
+        <div class="details-card">
+            <div class="detail-row">
+                <div class="detail-label">School:</div>
+                <div class="detail-value" th:text="${schoolName}"></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Expiration Date:</div>
+                <div class="detail-value" th:text="${#temporals.format(expiryDate, 'MMMM dd, yyyy')}"></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Days Since Expiration:</div>
+                <div class="detail-value" th:text="${daysSinceExpiration}"></div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Account Status:</div>
+                <div class="detail-value"><strong style="color: var(--primary);">SUSPENDED</strong></div>
+            </div>
+        </div>
+
+        <h2>Current Restrictions</h2>
+        <p>Your school is currently experiencing these limitations:</p>
+
+        <ul class="features-list">
+            <li>All administrative functions are disabled</li>
+            <li>No new student or staff registrations</li>
+            <li>Attendance tracking and gradebook locked</li>
+            <li>Reports and analytics unavailable</li>
+            <li>Parent and student portals offline</li>
+            <li>API access terminated</li>
+        </ul>
+
+        <div class="alert-banner">
+            ℹ️ <strong>Note:</strong> All existing data remains safe and will be fully accessible after renewal.
+        </div>
+
+        <div class="text-center">
+            <a th:href="${renewalLink}" class="action-btn">RENEW SUBSCRIPTION NOW</a>
+            <p>Renewal takes less than 2 minutes</p>
+        </div>
+
+        <h2>Need Immediate Help?</h2>
+        <p>Our support team is standing by to assist you:</p>
+
+        <div class="contact-methods">
+            <a href="mailto:support@edumanager.com" class="contact-badge">
+                ✉️ Email Support
+            </a>
+            <a href="tel:+15551234567" class="contact-badge">
+                📞 Call Now
+            </a>
+            <a href="https://edumanager.com/live-chat" class="contact-badge">
+                💬 Live Chat
+            </a>
+        </div>
+    </div>
+    <div class="footer">
+        <p>© 2023 EduManager Platform. All rights reserved.</p>
+        <p>This is an automated message. Replies to this email are not monitored.</p>
+        <p><small>ID: <span th:text="${subscriptionId}"></span></small></p>
+    </div>
+</div>
+</body>
+</html>

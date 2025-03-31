@@ -9,12 +9,15 @@ import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.VisitorsRepository;
 import examination.teacherAndStudents.service.VisitorsService;
+import examination.teacherAndStudents.utils.VisitorStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 import static examination.teacherAndStudents.utils.VisitorStatus.CHECKED_IN;
 
@@ -30,37 +33,40 @@ public class VisitorsServiceImpl implements VisitorsService {
     public VisitorsResponse addVisitor(VisitorsRequest request) {
         Profile profile = profileRepository.findById(request.getProfileId())
                 .orElseThrow(() -> new NotFoundException("Visitor not found"));
-        try {
-            Visitors visitor = new Visitors();
-            visitor.setName(request.getName());
-            visitor.setPurpose(request.getPurpose());
-            visitor.setPhoneNumber(request.getPhoneNumber());
-            visitor.setEmail(request.getEmail());
-            visitor.setStatus(CHECKED_IN);
-            visitor.setHost(profile);
-            visitor.setVisitorType(request.getVisitorType());
-            Visitors savedVisitor = visitorsRepository.save(visitor);
-            return mapToResponse(savedVisitor);
-        } catch (Exception e) {
-            throw new CustomInternalServerException("Error occurred while adding visitor "+ e);
-        }
+
+        Visitors visitor = Visitors.builder()
+                .name(request.getName())
+                .numOfPeople(request.getNumberOfPeople())
+                .purpose(request.getPurpose())
+                .phoneNumber(request.getPhoneNumber())
+                .email(request.getEmail())
+                .status(CHECKED_IN)
+                .host(profile)
+                .visitorType(request.getVisitorType())
+                .build();
+
+        return mapToResponse(visitorsRepository.save(visitor));
     }
+
 
     @Override
     public VisitorsResponse editVisitor(Long id, VisitorsRequest request) {
         try {
-            Profile profile = profileRepository.findById(request.getProfileId())
-                    .orElseThrow(() -> new NotFoundException("Visitor not found"));
             Visitors visitor = visitorsRepository.findById(id)
                     .orElseThrow(() -> new NotFoundException("Visitor not found"));
-            visitor.setName(request.getName());
-            visitor.setPhoneNumber(request.getPhoneNumber());
-           visitor.setEmail(request.getEmail());
-           visitor.setVisitorType(request.getVisitorType());
+
+            Profile profile = profileRepository.findById(request.getProfileId())
+                    .orElseThrow(() -> new NotFoundException("Profile not found"));
+
             visitor.setHost(profile);
-            visitor.setPurpose(request.getPurpose());
-            Visitors updatedVisitor = visitorsRepository.save(visitor);
-            return mapToResponse(updatedVisitor);
+            Optional.ofNullable(request.getName()).ifPresent(visitor::setName);
+            Optional.ofNullable(request.getPhoneNumber()).ifPresent(visitor::setPhoneNumber);
+            Optional.ofNullable(request.getEmail()).ifPresent(visitor::setEmail);
+            Optional.ofNullable(request.getVisitorType()).ifPresent(visitor::setVisitorType);
+            Optional.ofNullable(request.getPurpose()).ifPresent(visitor::setPurpose);
+
+            return mapToResponse(visitorsRepository.save(visitor));
+
         } catch (NotFoundException e) {
             throw e; // Re-throw NotFoundException as it's a specific error
         } catch (Exception e) {
@@ -77,14 +83,30 @@ public class VisitorsServiceImpl implements VisitorsService {
         }
     }
 
-    @Override
-    public Page<VisitorsResponse> getAllVisitors(int pageNo, int pageSize, String sortBy) {
+    public Page<VisitorsResponse> getAllVisitors(
+            String name,
+            String phoneNumber,
+            String email,
+            VisitorStatus status,
+            int pageNo,
+            int pageSize,
+            String sortBy,
+            String sortDirection) {
+
         try {
-            Pageable paging = PageRequest.of(pageNo, pageSize, Sort.by(sortBy).ascending());
-            Page<Visitors> visitorsPage = visitorsRepository.findAll(paging);
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+            Pageable paging = PageRequest.of(pageNo, pageSize, sort);
+
+            Page<Visitors> visitorsPage = visitorsRepository.findAllWithFilters(
+                    name,
+                    phoneNumber,
+                    email,
+                    status,
+                    paging);
+
             return visitorsPage.map(this::mapToResponse);
         } catch (Exception e) {
-            throw new CustomInternalServerException("Error occurred while fetching all visitors " +e);
+            throw new CustomInternalServerException("Error occurred while fetching visitors: " + e.getMessage());
         }
     }
 

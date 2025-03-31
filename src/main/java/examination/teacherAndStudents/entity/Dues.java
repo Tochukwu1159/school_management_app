@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -37,6 +38,9 @@ public class Dues {
     @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

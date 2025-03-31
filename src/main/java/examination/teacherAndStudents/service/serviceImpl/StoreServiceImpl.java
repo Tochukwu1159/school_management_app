@@ -3,12 +3,11 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.StoreRequest;
 import examination.teacherAndStudents.dto.StoreResponse;
-import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.School;
-import examination.teacherAndStudents.entity.StoreItem;
+import examination.teacherAndStudents.entity.Store;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.repository.ProfileRepository;
+import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.SchoolRepository;
 import examination.teacherAndStudents.repository.StoreRepository;
 import examination.teacherAndStudents.repository.UserRepository;
@@ -17,9 +16,9 @@ import examination.teacherAndStudents.utils.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-
 import java.util.List;
 import java.util.stream.Collectors;
+
 @Service
 public class StoreServiceImpl implements StoreService {
 
@@ -30,82 +29,75 @@ public class StoreServiceImpl implements StoreService {
     private SchoolRepository schoolRepository;
     @Autowired
     private UserRepository userRepository;
-    @Autowired
-    private ProfileRepository profileRepository;
 
-    // Create a store
+    @Override
     public StoreResponse createStore(StoreRequest request) {
+
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-        if (admin == null) {
-            throw new CustomNotFoundException("Please login as an Admin");
-        };
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new NotFoundException("Please login as an Admin"));;
 
-        Profile profile = profileRepository.findByUser(admin)
-                .orElseThrow(() -> new CustomNotFoundException("Staff not found"));
+        School school = schoolRepository.findById(admin.getSchool().getId())
+                .orElseThrow(() -> new CustomNotFoundException("School not found"));
 
-        StoreItem storeItem = new StoreItem();
-        storeItem.setName(request.getName());
-        storeItem.setDescription(request.getDescription());
-        storeItem.setPhoto(request.getPhoto());
-        storeItem.setSizes(request.getSizes());
-        storeItem.setPrice(request.getPrice());
-        storeItem.setSchool(profile.getUser().getSchool());
+        Store store = Store.builder()
+                .name(request.getName())
+                .school(school)
+                .build();
 
-        storeItem = storeRepository.save(storeItem);
-
-        return mapToResponse(storeItem);
+        store = storeRepository.save(store);
+        return mapToResponse(store);
     }
 
-    // Edit a store
+    @Override
     public StoreResponse editStore(Long storeId, StoreRequest request) {
-        StoreItem storeItem = storeRepository.findById(storeId)
-                .orElseThrow(() -> new RuntimeException("Store not found"));
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new NotFoundException("Please login as an Admin"));
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new CustomNotFoundException("Store not found"));
 
-        storeItem.setName(request.getName());
-        storeItem.setDescription(request.getDescription());
-        storeItem.setPhoto(request.getPhoto());
-        storeItem.setSizes(request.getSizes());
-        storeItem.setPrice(request.getPrice());
+        store.setName(request.getName());
+        store = storeRepository.save(store);
 
-        storeItem = storeRepository.save(storeItem);
-
-        return mapToResponse(storeItem);
+        return mapToResponse(store);
     }
 
-    // Delete a store
+    @Override
     public void deleteStore(Long storeId) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new NotFoundException("Please login as an Admin"));
         if (!storeRepository.existsById(storeId)) {
-            throw new RuntimeException("Store not found");
+            throw new CustomNotFoundException("Store not found");
         }
         storeRepository.deleteById(storeId);
     }
 
-    // Get a store by ID
+    @Override
     public StoreResponse getStoreById(Long storeId) {
-        StoreItem storeItem = storeRepository.findById(storeId)
-                .orElseThrow(() -> new RuntimeException("Store not found"));
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new CustomNotFoundException("Store not found"));
 
-        return mapToResponse(storeItem);
+        return mapToResponse(store);
     }
 
-    // Get all stores for a school
+    @Override
     public List<StoreResponse> getAllStoresForSchool(Long schoolId) {
-        List<StoreItem> storeItems = storeRepository.findBySchoolId(schoolId);
-        return storeItems.stream()
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new NotFoundException("Please login as an Admin"));
+        List<Store> stores = storeRepository.findBySchoolId(schoolId);
+        return stores.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
-    // Helper method to map Store to StoreResponse
-    private StoreResponse mapToResponse(StoreItem storeItem) {
+    private StoreResponse mapToResponse(Store store) {
         StoreResponse response = new StoreResponse();
-        response.setId(storeItem.getId());
-        response.setName(storeItem.getName());
-        response.setDescription(storeItem.getDescription());
-        response.setPhoto(storeItem.getPhoto());
-        response.setSizes(storeItem.getSizes());
-        response.setPrice(storeItem.getPrice());
+        response.setId(store.getId());
+        response.setName(store.getName());
+        response.setSchoolId(store.getSchool().getId());
         return response;
     }
 }

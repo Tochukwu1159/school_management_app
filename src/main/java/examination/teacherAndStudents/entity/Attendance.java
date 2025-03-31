@@ -55,7 +55,6 @@ public class Attendance {
 
     @ManyToOne
     @JoinColumn(name = "term_id", nullable = false)
-    private StudentTerm studentTerm
-            ;
+    private StudentTerm studentTerm;
 
 }

@@ -1,9 +1,8 @@
 package examination.teacherAndStudents.controller;
 
-import examination.teacherAndStudents.entity.AcademicSession;
-import examination.teacherAndStudents.entity.ClassBlock;
-import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.Result;
+import examination.teacherAndStudents.dto.SessionAverageResponse;
+import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.EntityNotFoundException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
@@ -18,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/results")
@@ -96,6 +97,47 @@ public class ResultController {
 
             return ResponseEntity.ok("Session averages updated successfully");
         }
+
+    @GetMapping("/top5/{classBlockId}/{academicSessionId}")
+    public ResponseEntity<List<SessionAverageResponse>> getTop5StudentsPerClass(
+            @PathVariable Long classBlockId, @PathVariable Long academicSessionId) {
+
+        ClassBlock classBlock = classBlockRepository.findById(classBlockId)
+                .orElseThrow(() -> new CustomNotFoundException("Class block not found"));
+
+        AcademicSession academicSession = academicSessionRepository.findById(academicSessionId)
+                .orElseThrow(() -> new CustomNotFoundException("Academic session not found"));
+
+        List<SessionAverage> top5Students = resultService.getTop5StudentsPerClass(classBlock, academicSession);
+
+        List<SessionAverageResponse> response = top5Students.stream()
+                .map(SessionAverageResponse::fromEntity)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    @GetMapping("/top5/{academicSessionId}")
+    public ResponseEntity<Map<String, List<SessionAverageResponse>>> getTop5StudentsForAllClasses(
+            @PathVariable Long academicSessionId) {
+
+        AcademicSession academicSession = academicSessionRepository.findById(academicSessionId)
+                .orElseThrow(() -> new CustomNotFoundException("Academic session not found"));
+
+        Map<ClassBlock, List<SessionAverage>> top5Students =
+                resultService.getTop5StudentsForAllClasses(academicSession);
+
+        Map<String, List<SessionAverageResponse>> response = top5Students.entrySet().stream()
+                .collect(Collectors.toMap(
+                        entry -> entry.getKey().getCurrentStudentClassName(),
+                        entry -> entry.getValue().stream()
+                                .map(SessionAverageResponse::fromEntity)
+                                .collect(Collectors.toList())
+                ));
+
+        return ResponseEntity.ok(response);
+    }
 
 
 

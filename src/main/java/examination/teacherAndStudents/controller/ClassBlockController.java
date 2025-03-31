@@ -22,8 +22,14 @@ public class ClassBlockController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ClassBlockResponse>> getAllClassBlocks() {
-        List<ClassBlockResponse> responses = classBlockService.getAllClassBlocks();
+    public ResponseEntity<List<ClassBlockResponse>> getAllClassBlocks(
+            @RequestParam(required = false) Long classId,
+            @RequestParam(required = false) Long subClassId,
+            @RequestParam(required = false) Long academicYearId) {
+        List<ClassBlockResponse> responses = classBlockService.getAllClassBlocks(
+                classId,
+                subClassId,
+                academicYearId);
         return ResponseEntity.ok(responses);
     }
 

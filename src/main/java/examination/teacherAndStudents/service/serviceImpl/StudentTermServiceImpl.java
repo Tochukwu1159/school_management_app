@@ -26,7 +26,6 @@ public class StudentTermServiceImpl implements StudentTermService {
 
     private final StudentTermRepository studentTermRepository;
     private final AcademicSessionRepository academicSessionRepository;
-    private final UserRepository userRepository;
 
 
     public StudentTermResponse createStudentTerm(StudentTermRequest request) {

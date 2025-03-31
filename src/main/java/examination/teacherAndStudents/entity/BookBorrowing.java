@@ -37,6 +37,10 @@ public class BookBorrowing {
     @NotNull
     private LocalDateTime borrowDate;  // Date and time when the book was borrowed
 
+    private LocalDateTime dueDate;
+
+    private boolean late;
+
     private LocalDateTime supposedReturnedDate;  // Date and time when the book is expected/was returned
 
     private LocalDateTime actualReturnDate;

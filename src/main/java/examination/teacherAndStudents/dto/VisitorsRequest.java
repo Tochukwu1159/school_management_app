@@ -22,6 +22,8 @@ public class VisitorsRequest {
     @Size(max = 100, message = "Name must not exceed 100 characters")
     private String name;
 
+     private String numberOfPeople;
+
     @NotBlank(message = "profile id is required")
     private Long profileId;
 

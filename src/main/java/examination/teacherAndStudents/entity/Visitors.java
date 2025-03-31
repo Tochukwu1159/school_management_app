@@ -42,6 +42,9 @@ public class Visitors {
     @Column(name = "status")
     private VisitorStatus status;
 
+    @Column(name = "number_of_persons")
+    private String numOfPeople;
+
     @NotBlank(message = "Purpose is required")
     @Size(max = 255, message = "Purpose must be less than 255 characters")
     @Column(name = "purpose")

@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 public class BookSaleRequest {
     private String title;
     private String author;
+    private String edition;
     private String idNo;
     private double price;
     private Long classId;

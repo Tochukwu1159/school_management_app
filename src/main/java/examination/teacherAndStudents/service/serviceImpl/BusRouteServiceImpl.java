@@ -6,6 +6,7 @@ import examination.teacherAndStudents.dto.RouteResponse;
 import examination.teacherAndStudents.entity.BusRoute;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.BusRouteRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.BusRouteService;
@@ -52,10 +53,8 @@ public class BusRouteServiceImpl implements BusRouteService {
     public RouteResponse createRoute(RouteRequest routeRequest) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Optional<User> userDetails = userRepository.findByEmail(email);
             BusRoute newRoute = new BusRoute();

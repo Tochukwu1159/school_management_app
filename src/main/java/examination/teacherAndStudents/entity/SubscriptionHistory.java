@@ -36,6 +36,17 @@ public class SubscriptionHistory {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    private String paymentMethod;
+
+    private String transactionStatus;
+
+    private
+    LocalDateTime previousExpiryDate;
+
+    private long daysCarriedOver;
+
+    private int studentCount;
+
     @Column(name = "amount_paid", nullable = false, precision = 10, scale = 2)
     private BigDecimal amountPaid;
 

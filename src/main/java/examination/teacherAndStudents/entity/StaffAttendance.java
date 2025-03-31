@@ -2,10 +2,9 @@ package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.AttendanceStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -20,37 +19,57 @@ public class StaffAttendance {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "staff_unique_reg_number", nullable = false)
     private String staffUniqueRegNumber;
 
-    @Column(nullable = false)
+    @Column(name = "check_in_time", nullable = false)
     private LocalDateTime checkInTime;
 
+    @Column(name = "check_out_time")
     private LocalDateTime checkOutTime;
 
-    private String checkInLocation;
+    @Column(name = "check_in_thumbprint_hash")
+    private String checkInThumbprintHash;
 
-    private String checkOutLocation;
+    @Column(name = "check_out_thumbprint_hash")
+    private String checkOutThumbprintHash;
+
+    @Column(name = "biometric_device_id")
+    private String biometricDeviceId;
+    @Column(name = "checkOut_biometric_deviceId")
+    private String checkOutBiometricDeviceId;
+
+    @Column(name = "check_out_verification_score")
+    private double checkOutVerificationScore;
+
+    @Column(name = "verification_score")
+    private Double verificationScore;
+
+    private String thumbprintHash;
 
     @Enumerated(EnumType.STRING)
-    private AttendanceStatus status; // Enum for present or absent
+    private AttendanceStatus status;
 
     @ManyToOne
-    @JoinColumn(name = "term_id", nullable = false)
+    @JoinColumn(name = "term_id")
     private StudentTerm studentTerm;
 
     @ManyToOne
     @JoinColumn(name = "profile_id")
     private Profile staff;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    // Additional biometric metadata
+    @Column(name = "biometric_match_algorithm")
+    private String biometricMatchAlgorithm;
 
-    // Constructors, getters, and setters
-
+    @Column(name = "biometric_sdk_version")
+    private String biometricSdkVersion;
 }
-

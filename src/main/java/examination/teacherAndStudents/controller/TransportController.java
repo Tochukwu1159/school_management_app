@@ -2,10 +2,12 @@ package examination.teacherAndStudents.controller;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.StudentTransportAllocation;
 import examination.teacherAndStudents.entity.Transport;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.service.TransactionService;
 import examination.teacherAndStudents.service.TransportService;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -85,10 +87,32 @@ public class TransportController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<List<TransportResponse>> getAllTransports() {
+    public ResponseEntity<Page<TransportResponse>> getAllTransports(
+            @RequestParam(required = false) Long id,
+            @RequestParam(required = false) String vehicleNumber,
+            @RequestParam(required = false) String licenceNumber,
+            @RequestParam(required = false) Long driverId,
+            @RequestParam(required = false) Boolean available,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+
         try {
-            List<TransportResponse> allTransports = transportService.getAllTransports();
-            return new ResponseEntity<>(allTransports, HttpStatus.OK);
+            Page<TransportResponse> transportsPage = transportService.getAllTransports(
+                    id,
+                    vehicleNumber,
+                    licenceNumber,
+                    driverId,
+                    available,
+                    page,
+                    size,
+                    sortBy,
+                    sortDirection);
+
+            return new ResponseEntity<>(transportsPage, HttpStatus.OK);
+        } catch (CustomNotFoundException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }

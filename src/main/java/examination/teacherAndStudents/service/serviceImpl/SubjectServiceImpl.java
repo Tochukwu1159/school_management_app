@@ -37,16 +37,12 @@ public class SubjectServiceImpl implements SubjectService {
     public SubjectResponse createSubject(SubjectRequest subjectRequest) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
-            }
-
-            Optional<User> userDetails = userRepository.findByEmail(email);
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Subject subject = subjectMapper.mapToSubject(subjectRequest);
             subject.setName(subjectRequest.getName());
-            subject.setSchool(userDetails.get().getSchool());
+            subject.setSchool(admin.getSchool());
             subjectRepository.save(subject);
             return subjectMapper.mapToSubjectResponse(subject);
 
@@ -57,24 +53,23 @@ public class SubjectServiceImpl implements SubjectService {
 
     public SubjectResponse updateSubject(Long subjectId, SubjectRequest updatedSubjectRequest) {
         try {
-            // Check if the subject exists
-            Subject existingSubject = subjectRepository.findById(subjectId).orElse(null);
-            if (existingSubject == null) {
-                throw new CustomNotFoundException("Subject not found");
-            }
-
             // Check if the authenticated user is an admin
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
+
+            // Check if the subject exists
+            Subject existingSubject = subjectRepository.findById(subjectId)
+                    .orElseThrow(() -> new CustomNotFoundException("Subject not found"));
+
 
             // Update the subject details
             existingSubject.setName(updatedSubjectRequest.getName());
 
+            subjectRepository.save(existingSubject);
+
             // Save the updated subject
-            return modelMapper.map(subjectRepository.save(existingSubject), SubjectResponse.class);
+            return modelMapper.map(existingSubject, SubjectResponse.class);
         } catch (Exception e) {
             throw new CustomInternalServerException("An error occurred while updating the subject " + e.getMessage());
         }
@@ -83,10 +78,8 @@ public class SubjectServiceImpl implements SubjectService {
     public SubjectResponse findSubjectById(Long subjectId) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             return modelMapper.map(subjectRepository.findById(subjectId).orElse(null), SubjectResponse.class);
         } catch (Exception e) {
@@ -97,11 +90,8 @@ public class SubjectServiceImpl implements SubjectService {
     public List<SubjectResponse> findAllSubjects() {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new CustomNotFoundException("Please login as an Admin"); // Return unauthorized response for non-admin users
-            }
-
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             return subjectRepository.findAll()
                     .stream().map((element) -> modelMapper.map(element, SubjectResponse.class))
                     .collect(Collectors.toList());

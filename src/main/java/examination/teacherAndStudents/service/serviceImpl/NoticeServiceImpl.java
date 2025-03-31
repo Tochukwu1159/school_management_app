@@ -42,10 +42,8 @@ public class NoticeServiceImpl implements NoticeService {
     public List<NoticeResponse> getAllNoticePosts() {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             return noticeRepository.findAll().stream().map((element) -> modelMapper.map(element, NoticeResponse.class)).collect(Collectors.toList());
         } catch (Exception e) {
             throw new CustomInternalServerException("An error occurred while fetching blog posts " + e.getMessage());
@@ -55,10 +53,8 @@ public class NoticeServiceImpl implements NoticeService {
     public NoticeResponse getNoticePostById(Long id) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Notice notice = noticeRepository.findById(id)
                     .orElseThrow(() -> new CustomNotFoundException("Notice post not found with id: " + id));
@@ -77,11 +73,8 @@ public class NoticeServiceImpl implements NoticeService {
     public NoticeResponse createNoticePost(NoticeRequest noticeRequest) {
         try {
                 String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
-
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             Optional<User> userDetails = userRepository.findByEmail(email);
             Notice newNotice = new Notice();
             newNotice.setTitle(noticeRequest.getTitle());
@@ -97,10 +90,8 @@ public class NoticeServiceImpl implements NoticeService {
     public NoticeResponse updateNoticePost(Long id, UpdateNoticeRequest updatedNoticePost) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Notice existingNoticePost = noticeRepository.findById(id)
                     .orElseThrow(() -> new CustomNotFoundException("Notice post not found with id: " + id));
@@ -120,10 +111,8 @@ public class NoticeServiceImpl implements NoticeService {
     public boolean deleteNoticePost(Long id) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-            if (admin == null) {
-                throw new AuthenticationFailedException("Please login as an Admin");
-            }
+            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Notice existingNoticePost = noticeRepository.findById(id)
                     .orElseThrow(() -> new CustomNotFoundException("Notice post not found with id: " + id));

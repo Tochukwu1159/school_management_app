@@ -18,15 +18,13 @@ public class StoreController {
     private StoreService storeService;
 
     @PostMapping("/create")
-    public ResponseEntity<StoreResponse> createStore(
-                                                     @RequestBody StoreRequest request) {
+    public ResponseEntity<StoreResponse> createStore(@RequestBody StoreRequest request) {
         StoreResponse response = storeService.createStore(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{storeId}")
-    public ResponseEntity<StoreResponse> editStore(@PathVariable Long storeId,
-                                                   @RequestBody StoreRequest request) {
+    public ResponseEntity<StoreResponse> editStore(@PathVariable Long storeId, @RequestBody StoreRequest request) {
         StoreResponse response = storeService.editStore(storeId, request);
         return ResponseEntity.ok(response);
     }
@@ -49,4 +47,3 @@ public class StoreController {
         return ResponseEntity.ok(responses);
     }
 }
-

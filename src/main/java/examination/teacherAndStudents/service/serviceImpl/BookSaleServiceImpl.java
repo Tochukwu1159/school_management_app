@@ -7,6 +7,7 @@ import examination.teacherAndStudents.dto.BookSaleRequest;
 import examination.teacherAndStudents.dto.BookSaleResponse;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.BookSaleService;
@@ -47,10 +48,8 @@ public class BookSaleServiceImpl implements BookSaleService {
     @Override
     public BookSaleResponse createBookSale(BookSaleRequest request) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-        if (admin == null) {
-            throw new AuthenticationFailedException("Please login as an Admin");
-        }
+        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
         Optional<User> userDetails = userRepository.findByEmail(email);
         ClassLevel classLevel = classLevelRepository.findById(request.getClassId())
@@ -62,6 +61,7 @@ public class BookSaleServiceImpl implements BookSaleService {
         BookSale bookSale = BookSale.builder()
                 .title(request.getTitle())
                 .author(request.getAuthor())
+                .edition(request.getEdition())
                 .idNo(request.getIdNo())
                 .inStock(true)
                 .numberOfCopies(request.getNumberOfCopies())

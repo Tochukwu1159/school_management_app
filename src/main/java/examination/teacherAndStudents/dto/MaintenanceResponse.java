@@ -17,7 +17,10 @@ public class MaintenanceResponse {
     private String description;
     private Double amountSpent;
     private Long transportId;
+    private String transportVehicleNumber;
     private String transportBusNumber;
+    private String maintainedByName;
+    private Long maintainedById;
     private LocalDateTime maintenanceDate;
     private LocalDateTime updatedAt;
 }
