@@ -20,6 +20,7 @@ public class Grade {
     private Long id;
 
     @ManyToOne
+    @JoinColumn(name = "school_id", nullable = false)
     private School school; // Reference to the school
 
     private int minMarks;

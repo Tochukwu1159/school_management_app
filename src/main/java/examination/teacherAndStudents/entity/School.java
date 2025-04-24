@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -48,7 +48,9 @@ public class School {
     private String city;
 
     @Column(nullable = false)
-    private String schoolMotto;
+    private String
+
+            schoolMotto;
 
     @Column(nullable = false)
     private Integer establishedYear;
@@ -71,16 +73,29 @@ public class School {
 
     private String schoolPrimaryColour;
 
-    private String schoolSecondaryColour;
+    @Column(name = "is_application_fee", nullable = false, columnDefinition = "boolean default false")
+    private Boolean isApplicationFee = false;
+
+
+    @Column(name = "supports_entry_exam", columnDefinition = "boolean default false")
+    private Boolean supportsEntryExam = false; // New field for entry exam support
+
+    private BigDecimal applicationFeeAmount;
+
+    private BigDecimal libraryBookLateReturnFee;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime subscriptionExpiryDate;
 
-
-
     @Column(nullable = false)
-    private Boolean isActive;
+    private Boolean isActive = false;
 
+    private BigDecimal amountPerPoint;
+
+    @Column(columnDefinition = "int default 5")
+    private Integer scratchCardMaxUsageCount = 5; // New field for max usage count
+
+    private BigDecimal scratchCardPrice; // New field for scratch card price
 
     @ManyToMany
     @JoinTable(
@@ -96,11 +111,9 @@ public class School {
     @Column(name = "url")
     private Map<String, String> socialMediaLinks = new HashMap<>();
 
-
     @JsonManagedReference
     @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<User> users;
-
 
     @Column(nullable = false)
     private Integer numberOfStudents = 0;
@@ -120,7 +133,6 @@ public class School {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
-
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -133,7 +145,8 @@ public class School {
     }
 
     public boolean isSubscriptionValid() {
-        return subscriptionExpiryDate.isAfter(LocalDateTime.now());
+        return subscriptionExpiryDate != null &&
+                subscriptionExpiryDate.isAfter(LocalDateTime.now());
     }
 
     public void incrementActualNumberOfStudents() {
@@ -143,7 +156,6 @@ public class School {
     public void incrementActualNumberOfStaff() {
         this.actualNumberOfStaff++;
     }
-
 
     public void decrementActualNumberOfStudents() {
         if (this.actualNumberOfStudents > 0) {

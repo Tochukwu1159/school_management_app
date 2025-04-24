@@ -5,6 +5,7 @@ import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.LibraryMemberRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.UserRepository;
+import examination.teacherAndStudents.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Contract;
@@ -20,6 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 @Component
@@ -29,9 +31,12 @@ public class AccountUtils {
 
     public static final String PAYSTACK_TRANSACTION_INITIALIZER ="https://api.paystack.co/transaction/initialize";
     public static final String PAYSTACK_BULK_TRANSFER_URL = "https://api.paystack.co/transfer/bulk";
-    public static final String ACCOUNT_UPDATE_SUCCESS = "019";
-    public static final String ACCOUNT_NOT_FOUND = "020" ;
-    public static final String ACCOUNT_UPDATE_FAILED = "021";
+    private static WalletRepository walletRepository;
+
+    // Inject repository via constructor
+    public AccountUtils(WalletRepository repository) {
+        walletRepository = repository;
+    }
 
     @Contract(value = "_, null -> false", pure = true)
     public static boolean validatePassword(String password, String cpassword) {
@@ -45,10 +50,11 @@ public class AccountUtils {
 
     // Constructor-based injection
     @Autowired
-    public AccountUtils(UserRepository userRepository, ProfileRepository profileRepository, LibraryMemberRepository libraryMemberRepository) {
+    public AccountUtils(UserRepository userRepository, ProfileRepository profileRepository, LibraryMemberRepository libraryMemberRepository, WalletRepository walletRepository) {
         AccountUtils.userRepository = userRepository;
         AccountUtils.profileRepository = profileRepository;
         AccountUtils.libraryMemberRepository = libraryMemberRepository;
+        AccountUtils.walletRepository = walletRepository;
     }
 
 
@@ -211,5 +217,8 @@ public class AccountUtils {
     public static String generateSubscriptionKey() {
         return RandomStringUtils.randomAlphanumeric(16);
     }
+
+
+
 
 }

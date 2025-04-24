@@ -9,6 +9,7 @@ import examination.teacherAndStudents.utils.SubscriptionType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface SchoolService {
@@ -27,6 +28,8 @@ public interface SchoolService {
     List<ProfileData> gateManProfilesForSchool(Long schoolId);
 
     BigDecimal getAmountToSubscribe(Long schoolId);
+    void deleteSchool(Long schoolId);
+    List<School> getAllSchools();
 
     boolean canAccessService(Long schoolId, Long serviceId);
 
@@ -82,4 +85,6 @@ public interface SchoolService {
     School findBySubscriptionKey(String subscriptionKey);
 
     School renewSubscription(SubscriptionType subscriptionType) throws Exception;
+
+    School getSchoolById(Long schoolId);
 }

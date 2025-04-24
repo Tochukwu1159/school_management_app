@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -8,16 +9,27 @@ import java.util.Map;
 
 @Data
 @AllArgsConstructor
-public class
-StoreItemRequest {
-    private Long storeId;
+public class StoreItemRequest {
+    @NotNull
     private String name;
+    @NotNull
+    private Long storeId;
+    @NotNull
+    private Long categoryId;
+    @NotNull
+    private BigDecimal price;
     private String description;
     private String photo;
-    private Double size;
-    private Map<String, Integer> sizes;;
-    private BigDecimal price;
+    private Map<String, Integer> sizes;
+    private Integer quantity;
 
-    // Getters and Setters
+    // Custom validation to ensure at least one of sizes or quantity is provided
+    public void validate() {
+        if ((sizes == null || sizes.isEmpty()) && quantity == null) {
+            throw new IllegalArgumentException("Either sizes or quantity must be provided");
+        }
+        if (sizes != null && !sizes.isEmpty() && quantity != null) {
+            throw new IllegalArgumentException("Cannot provide both sizes and quantity");
+        }
+    }
 }
-

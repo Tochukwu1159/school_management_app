@@ -2,31 +2,26 @@ package examination.teacherAndStudents.objectMapper;
 
 import examination.teacherAndStudents.dto.TransportRequest;
 import examination.teacherAndStudents.dto.TransportResponse;
-import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.Transport;
-import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.entity.Bus;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.Set;
 
 @Component
     @RequiredArgsConstructor
     public class TransportMapper {
         private final ModelMapper modelMapper;
 
-        public Transport mapToTransport(TransportRequest transportRequest) {
-            return modelMapper.map(transportRequest, Transport.class);
+        public Bus mapToTransport(TransportRequest transportRequest) {
+            return modelMapper.map(transportRequest, Bus.class);
         }
 
-        public TransportResponse mapToTransportResponse(Transport transport) {
+        public TransportResponse mapToTransportResponse(Bus transport) {
             return modelMapper.map(transport, TransportResponse.class);
         }
 
 
-        public void updateTransportFromRequest(Transport transport, TransportRequest transportRequest) {
+        public void updateTransportFromRequest(Bus transport, TransportRequest transportRequest) {
 
             if (transportRequest.getVehicleNumber() != null) {
                 transport.setVehicleNumber(transportRequest.getVehicleNumber());

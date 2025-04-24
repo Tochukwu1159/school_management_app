@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -26,7 +25,7 @@ public class Maintenance {
 
     @OneToOne
     @JoinColumn(name = "transport_id", nullable = false)
-    private Transport transport;
+    private Bus transport;
 
     @ManyToOne
     @JoinColumn(name = "profile_id", nullable = false)

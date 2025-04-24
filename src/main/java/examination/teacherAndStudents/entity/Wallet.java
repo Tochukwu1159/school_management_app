@@ -1,9 +1,11 @@
 package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.error_handler.InsufficientBalanceException;
+import examination.teacherAndStudents.utils.WalletStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -33,16 +35,22 @@ public class Wallet {
     @Digits(integer = 9, fraction = 2, message = "Invalid money sent format.")
     private BigDecimal totalMoneySent;
 
+    @Enumerated(EnumType.STRING)
+    private WalletStatus walletStatus;
+
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal totalMoneyReceived = BigDecimal.ZERO;
 
     private LocalDateTime lastTransactionTime;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id", unique = true, nullable = false)
-    private Profile userProfile;
-//    @JoinColumn(name = "user_id", referencedColumnName = "id", unique = true, nullable = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
 
+
+    @OneToOne
+    @JoinColumn(name = "profile_id")
+    private Profile userProfile;
 
     /**
      * Credits amount to the wallet with validation and audit trail
@@ -94,8 +102,38 @@ public class Wallet {
     }
 
     // Additional business methods
-    public synchronized void transferTo(Wallet recipient, BigDecimal amount) {
-        this.debit(amount); // Will throw if insufficient funds
-        recipient.credit(amount);
+    /**
+     * Transfers money to another wallet within the same school
+     * @param recipientWallet The wallet to receive the funds
+     * @param amount The amount to transfer
+     * @throws IllegalArgumentException if wallets are not in the same school or invalid amount
+     * @throws InsufficientBalanceException if sender has insufficient funds
+     */
+    public synchronized void transferTo(Wallet recipientWallet, BigDecimal amount) {
+        // Basic validations
+        if (recipientWallet == null) {
+            throw new IllegalArgumentException("Recipient wallet cannot be null");
+        }
+        if (amount == null) {
+            throw new IllegalArgumentException("Transfer amount cannot be null");
+        }
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Transfer amount must be positive");
+        }
+
+        // Check if wallets belong to the same school
+        if (!this.userProfile.getUser().getSchool().getId()
+                .equals(recipientWallet.getUserProfile().getUser().getSchool().getId())) {
+            throw new IllegalArgumentException("Can only transfer to wallets within the same school");
+        }
+
+        // Check if trying to transfer to self
+        if (this.id.equals(recipientWallet.getId())) {
+            throw new IllegalArgumentException("Cannot transfer to your own wallet");
+        }
+
+        // Perform the transfer
+        this.debit(amount);
+        recipientWallet.credit(amount);
     }
 }

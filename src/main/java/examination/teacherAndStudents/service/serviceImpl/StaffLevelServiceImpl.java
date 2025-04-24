@@ -91,7 +91,7 @@ public class StaffLevelServiceImpl implements StaffLevelService {
     // Helper methods
     private User getAuthenticatedAdmin() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        return userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+        return userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException(ADMIN_NOT_FOUND));
     }
 

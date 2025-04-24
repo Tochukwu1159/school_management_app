@@ -11,6 +11,10 @@ import java.util.List;
 @Data
 public class BulkAttendanceRequest {
 
+    private Long sessionId;
+
+    private Long classLevelId;
+
     @NotNull(message = "Date cannot be null")
     @FutureOrPresent(message = "Date cannot be in the past")
     private LocalDateTime date;

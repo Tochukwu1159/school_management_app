@@ -55,5 +55,9 @@ public class Transaction {
     @JoinColumn(name = "term_id")
     private StudentTerm studentTerm;
 
+    @ManyToOne
+    @JoinColumn(name = "class_id")
+    private ClassBlock classBlock;
+
 
 }

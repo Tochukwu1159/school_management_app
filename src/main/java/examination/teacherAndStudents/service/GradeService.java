@@ -14,5 +14,5 @@ public interface GradeService {
     GradeResponse getGradeById(Long gradeId);
     List<GradeResponse> findAllGradesBySchool(Long schoolId);
 
-    Grade calculateGrade(School school, double totalMarks);
+//    Grade calculateGrade(School school, double totalMarks);
 }

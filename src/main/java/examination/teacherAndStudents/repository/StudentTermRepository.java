@@ -5,19 +5,35 @@ import examination.teacherAndStudents.entity.StaffPayroll;
 import examination.teacherAndStudents.entity.StudentTerm;
 import examination.teacherAndStudents.utils.TermStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 
 @Repository
 public interface StudentTermRepository extends JpaRepository<StudentTerm, Long> {
     StudentTerm findByNameAndAcademicSession(String name, AcademicSession academicSession);
 
-    List<StudentTerm> findByResultReadyDate(LocalDate now);
 
     List<StudentTerm> findByAcademicSession(AcademicSession academicSession);
 
     List<StudentTerm> findByResultReadyDateAndTermStatus(LocalDate now, TermStatus termStatus);
+
+    List<StudentTerm> findByAcademicSessionOrderByStartDateAsc(AcademicSession academicSession);
+
+    boolean existsByNameAndAcademicSession(String name, AcademicSession session);
+
+    boolean existsByNameAndAcademicSessionAndIdNot(String name, AcademicSession session, Long id);
+
+    @Query("SELECT t FROM StudentTerm t " +
+            "WHERE t.academicSession.status = 'ACTIVE' " +
+            "AND t.startDate <= :currentDate " +
+            "AND t.endDate >= :currentDate " +
+            "AND t.termStatus = 'ACTIVE' " +
+            "ORDER BY t.startDate ASC")
+    Optional<StudentTerm> findCurrentTerm(@Param("currentDate") LocalDate currentDate);
 }

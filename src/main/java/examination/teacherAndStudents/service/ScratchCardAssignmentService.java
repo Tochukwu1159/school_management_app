@@ -1,9 +1,9 @@
 package examination.teacherAndStudents.service;
 
 import examination.teacherAndStudents.dto.ScratchCardDTO;
+import examination.teacherAndStudents.dto.ScratchCardPurchaseRequest;
 
 public interface ScratchCardAssignmentService {
-
-    ScratchCardDTO buyScratch(Long sessionId, Long termId) throws Exception;
+    ScratchCardDTO buyScratch(ScratchCardPurchaseRequest request) throws Exception;
     ScratchCardDTO getStudentScratchCard(Long sessionId, Long termId);
 }

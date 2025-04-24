@@ -1,21 +1,21 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
-import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.CustomInternalServerException;
-import examination.teacherAndStudents.error_handler.NotFoundException;
+import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.SickLeaveService;
+import examination.teacherAndStudents.utils.Roles;
 import examination.teacherAndStudents.utils.SickLeaveStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -30,29 +30,21 @@ public class SickLeaveServiceImpl implements SickLeaveService {
 
     @Override
     @Transactional
-    public String applyForSickLeave(SickLeaveRequest sickLeaveRequest) {
-        try {
-            validateSickLeaveRequest(sickLeaveRequest);
+    public String applyForSickLeave(SickLeaveRequest request) {
+        validateSickLeaveRequest(request);
 
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            Profile profile = getProfileByEmail(email);
-            AcademicSession academicYear = getAcademicSession(sickLeaveRequest.getSessionId());
-            StudentTerm studentTerm = getStudentTerm(sickLeaveRequest.getTermId());
+        String email = getAuthenticatedUserEmail();
+        Profile profile = getProfileByEmail(email);
+        AcademicSession academicSession = getAcademicSession(request.getSessionId());
+        StudentTerm studentTerm = getStudentTerm(request.getTermId());
 
-            Leave leave = buildLeaveEntity(sickLeaveRequest, profile, academicYear, studentTerm);
-            sickLeaveRepository.save(leave);
+        Leave sickLeave = buildSickLeaveEntity(request, profile, academicSession, studentTerm);
+        sickLeaveRepository.save(sickLeave);
 
-            log.info("Sick leave applied successfully by {} for dates {} to {}",
-                    email, sickLeaveRequest.getStartDate(), sickLeaveRequest.getEndDate());
+        log.info("Sick leave applied successfully [leaveId={}, email={}, startDate={}, endDate={}]",
+                sickLeave.getId(), email, request.getStartDate(), request.getEndDate());
 
-            return "Leave applied successfully.";
-        } catch (IllegalArgumentException | NotFoundException e) {
-            log.error("Validation error in leave application: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error during leave application", e);
-            throw new CustomInternalServerException("Error during leave application process "+ e);
-        }
+        return "Sick leave applied successfully.";
     }
 
     @Override
@@ -64,65 +56,46 @@ public class SickLeaveServiceImpl implements SickLeaveService {
     @Override
     @Transactional
     public String processSickLeaveRequest(Long sickLeaveId, SickLeaveRequestDto requestDto) {
-        try {
-            validateProcessRequest(requestDto);
+        validateProcessRequest(requestDto);
 
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            Profile approver = getProfileByEmail(email);
-            Leave leave = getLeaveById(sickLeaveId).get();
+        String email = getAuthenticatedUserEmail();
+        Profile approver = getProfileByEmail(email);
+        Leave sickLeave = getSickLeaveById(sickLeaveId);
 
-            validateLeaveForProcessing(leave);
+        validateSickLeaveForProcessing(sickLeave);
 
-            updateLeaveStatus(leave, requestDto, approver);
-            sickLeaveRepository.save(leave);
+        updateSickLeaveStatus(sickLeave, requestDto, approver);
+        sickLeaveRepository.save(sickLeave);
 
-            log.info("Leave {} {} by {}", sickLeaveId, requestDto.getAction(), email);
+        log.info("Sick leave processed [leaveId={}, action={}, email={}]",
+                sickLeaveId, requestDto.getAction(), email);
 
-            return String.format("Sick leave %sd successfully.", requestDto.getAction().toLowerCase());
-        } catch (IllegalArgumentException | NotFoundException | IllegalStateException e) {
-            log.error("Error processing leave request: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error processing leave request", e);
-            throw new CustomInternalServerException("Error processing leave request "+ e);
-        }
+        return String.format("Sick leave %sd successfully.", requestDto.getAction().toLowerCase());
     }
 
     @Override
     @Transactional
     public String cancelSickLeave(SickLeaveCancelRequest cancelRequest) {
-        try {
-            validateCancelRequest(cancelRequest);
+        validateCancelRequest(cancelRequest);
 
-            Leave leave = getLeaveById(cancelRequest.getSickLeaveId()).get();
-            validateLeaveForCancellation(leave);
+        Leave sickLeave = getSickLeaveById(cancelRequest.getSickLeaveId());
+        validateSickLeaveForCancellation(sickLeave);
 
-            leave.setCancelled(true);
-            leave.setCancelReason(cancelRequest.getCancelReason());
-            sickLeaveRepository.save(leave);
+        sickLeave.setCancelled(true);
+        sickLeave.setCancelReason(cancelRequest.getCancelReason());
+        sickLeaveRepository.save(sickLeave);
 
-            log.info("Leave {} cancelled by {}", cancelRequest.getSickLeaveId(),
-                    SecurityConfig.getAuthenticatedUserEmail());
+        log.info("Sick leave cancelled [leaveId={}, email={}]",
+                cancelRequest.getSickLeaveId(), getAuthenticatedUserEmail());
 
-            return "Leave cancelled successfully.";
-        } catch (IllegalArgumentException | NotFoundException | IllegalStateException e) {
-            log.error("Error cancelling leave: {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            log.error("Unexpected error cancelling leave", e);
-            throw new CustomInternalServerException("Error cancelling leave "+ e);
-        }
-    }
-
-    private Optional<Leave> getLeaveById(Long sickLeaveId) {
-        return sickLeaveRepository.findById(sickLeaveId);
+        return "Sick leave cancelled successfully.";
     }
 
     @Override
     @Transactional(readOnly = true)
     public Leave getSickLeaveById(Long sickLeaveId) {
         return sickLeaveRepository.findById(sickLeaveId)
-                .orElseThrow(() -> new NotFoundException("Leave not found with ID: " + sickLeaveId));
+                .orElseThrow(() -> new NotFoundException("Sick leave not found with ID: " + sickLeaveId));
     }
 
     @Override
@@ -134,13 +107,22 @@ public class SickLeaveServiceImpl implements SickLeaveService {
     // Helper Methods
     private void validateSickLeaveRequest(SickLeaveRequest request) {
         if (request.getStartDate().isAfter(request.getEndDate())) {
-            throw new IllegalArgumentException("Start date cannot be after end date");
+            throw new BadRequestException("Start date cannot be after end date");
         }
         if (request.getReason() == null || request.getReason().isBlank()) {
-            throw new IllegalArgumentException("Leave reason is required");
+            throw new BadRequestException("Leave reason is required");
         }
         if (request.getStartDate().isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("Start date cannot be in the past");
+            throw new BadRequestException("Start date cannot be in the past");
+        }
+    }
+
+    private String getAuthenticatedUserEmail() {
+        try {
+            return SecurityContextHolder.getContext().getAuthentication().getName();
+        } catch (Exception e) {
+            log.error("Failed to retrieve authenticated user email", e);
+            throw new CustomInternalServerException("Unable to authenticate user");
         }
     }
 
@@ -153,69 +135,89 @@ public class SickLeaveServiceImpl implements SickLeaveService {
 
     private AcademicSession getAcademicSession(Long sessionId) {
         return academicSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Academic year not found with ID: " + sessionId));
+                .orElseThrow(() -> new NotFoundException("Academic session not found with ID: " + sessionId));
     }
 
     private StudentTerm getStudentTerm(Long termId) {
         return studentTermRepository.findById(termId)
-                .orElseThrow(() -> new NotFoundException("Term not found with ID: " + termId));
+                .orElseThrow(() -> new NotFoundException("Student term not found with ID: " + termId));
     }
 
-    private Leave buildLeaveEntity(SickLeaveRequest request, Profile profile,
-                                   AcademicSession academicYear, StudentTerm studentTerm) {
+    private Leave buildSickLeaveEntity(SickLeaveRequest request, Profile profile,
+                                           AcademicSession academicSession, StudentTerm studentTerm) {
+        int days = (int) ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
+        if (days <= 0) {
+            throw new BadRequestException("End date must be after start date");
+        }
+
+        // Skip leave balance check for students
+        if (!profile.getUser().getRoles().contains(Roles.STUDENT)) {
+            if (profile.getRemainingLeaveDays() < days) {
+                throw new InsufficientBalanceException("Insufficient leave days remaining");
+            }
+        }
+
         return Leave.builder()
                 .appliedBy(profile)
-                .academicYear(academicYear)
+                .academicYear(academicSession)
                 .studentTerm(studentTerm)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
+                .days(days)
                 .reason(request.getReason())
                 .status(SickLeaveStatus.PENDING)
                 .build();
     }
 
     private void validateProcessRequest(SickLeaveRequestDto requestDto) {
-        if (!"approve".equalsIgnoreCase(requestDto.getAction()) &&
-                !"reject".equalsIgnoreCase(requestDto.getAction())) {
-            throw new IllegalArgumentException("Invalid action. Must be 'approve' or 'reject'");
+        if (!"APPROVE".equalsIgnoreCase(requestDto.getAction()) &&
+                !"REJECT".equalsIgnoreCase(requestDto.getAction())) {
+            throw new BadRequestException("Invalid action. Must be 'APPROVE' or 'REJECT'");
         }
-        if ("reject".equalsIgnoreCase(requestDto.getAction()) &&
+        if ("REJECT".equalsIgnoreCase(requestDto.getAction()) &&
                 (requestDto.getReason() == null || requestDto.getReason().isBlank())) {
-            throw new IllegalArgumentException("Rejection reason is required");
+            throw new BadRequestException("Rejection reason is required");
         }
     }
 
-    private void validateLeaveForProcessing(Leave leave) {
-        if (leave.getCancelled() != null && leave.getCancelled()) {
-            throw new IllegalStateException("Cannot process a cancelled leave request");
+    private void validateSickLeaveForProcessing(Leave sickLeave) {
+        if (sickLeave.isCancelled()) {
+            throw new IllegalStateException("Cannot process a cancelled sick leave request");
         }
-        if (leave.getStatus() != SickLeaveStatus.PENDING) {
-            throw new IllegalStateException("Leave is not in pending status");
+        if (sickLeave.getStatus() != SickLeaveStatus.PENDING) {
+            throw new IllegalStateException("Sick leave is not in pending status");
         }
     }
 
-    private void updateLeaveStatus(Leave leave, SickLeaveRequestDto requestDto, Profile approver) {
-        if ("approve".equalsIgnoreCase(requestDto.getAction())) {
-            leave.setStatus(SickLeaveStatus.APPROVED);
+    private void updateSickLeaveStatus(Leave sickLeave, SickLeaveRequestDto requestDto, Profile approver) {
+        if ("APPROVE".equalsIgnoreCase(requestDto.getAction())) {
+            if (!sickLeave.getAppliedBy().getUser().getRoles().contains(Roles.STUDENT)) {
+                int remainingDays = sickLeave.getAppliedBy().getRemainingLeaveDays();
+                if (remainingDays < sickLeave.getDays()) {
+                    throw new InsufficientBalanceException("Insufficient leave days remaining");
+                }
+                sickLeave.getAppliedBy().setRemainingLeaveDays(remainingDays - sickLeave.getDays());
+            }
+            sickLeave.setStatus(SickLeaveStatus.APPROVED);
         } else {
-            leave.setStatus(SickLeaveStatus.REJECTED);
-            leave.setRejectionReason(requestDto.getReason());
+            sickLeave.setStatus(SickLeaveStatus.REJECTED);
+            sickLeave.setRejectionReason(requestDto.getReason());
         }
-        leave.setRejectedBy(approver);
+        sickLeave.setRejectedBy(approver);
     }
 
     private void validateCancelRequest(SickLeaveCancelRequest request) {
         if (request.getCancelReason() == null || request.getCancelReason().isBlank()) {
-            throw new IllegalArgumentException("Cancel reason must be provided");
+            throw new BadRequestException("Cancel reason is required");
         }
     }
 
-    private void validateLeaveForCancellation(Leave leave) {
-        if (leave.getCancelled() != null && leave.getCancelled()) {
-            throw new IllegalStateException("Leave is already cancelled");
+    private void validateSickLeaveForCancellation(Leave sickLeave) {
+        if (sickLeave.isCancelled()) {
+            throw new IllegalStateException("Sick leave is already cancelled");
         }
-        if (leave.getStatus() != SickLeaveStatus.PENDING) {
-            throw new IllegalStateException("Only pending leaves can be cancelled");
+        if (sickLeave.getStatus() != SickLeaveStatus.PENDING) {
+            throw new IllegalStateException("Only pending sick leaves can be cancelled");
         }
     }
 }

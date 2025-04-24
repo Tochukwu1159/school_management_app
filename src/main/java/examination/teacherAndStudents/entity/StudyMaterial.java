@@ -1,38 +1,60 @@
 package examination.teacherAndStudents.entity;
 
-import com.fasterxml.jackson.databind.annotation.EnumNaming;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDateTime;
+
+@Entity
+@Table(
+        name = "study_material")
 @Getter
 @Setter
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
-@Entity
+@AllArgsConstructor
+@Builder
+@ToString(exclude = {"subject", "teacher", "academicYear", "classBlock", "studentTerm"})
 public class StudyMaterial {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
+    @Column(nullable = false)
     private String title;
 
-    private String filePath; // Path to the stored PDF file
-    @ManyToOne
+    @NotBlank
+    @Column(nullable = false)
+    private String filePath;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
-    private Subject subject; // Link to the associated Course entity
-    @ManyToOne
+    private Subject subject;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id", nullable = false)
-    private User teacher; // Link to the teacher (assumed to be a User entity)
-    @ManyToOne
+    private Profile teacher;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_id", nullable = false)
+    private ClassBlock classBlock;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "term_id", nullable = false)
     private StudentTerm studentTerm;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    private LocalDateTime updatedAt;
 }

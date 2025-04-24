@@ -1,25 +1,37 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
+import examination.teacherAndStudents.dto.HomeworkRequest;
 import examination.teacherAndStudents.dto.HomeworkResponse;
+import examination.teacherAndStudents.dto.HomeworkSubmissionRequest;
 import examination.teacherAndStudents.dto.HomeworkSubmissionResponse;
 import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.*;
+import examination.teacherAndStudents.utils.Roles;
 import examination.teacherAndStudents.utils.SubmissionStatus;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Validated
 public class HomeworkService {
+
+    private static final Logger logger = LoggerFactory.getLogger(HomeworkService.class);
 
     private final HomeworkRepository homeworkRepository;
     private final HomeworkSubmissionRepository submissionRepository;
@@ -28,131 +40,140 @@ public class HomeworkService {
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final ClassBlockRepository classBlockRepository;
+    private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
 
-    // Teacher uploads a homework assignment
-    public Homework createHomework(Long teacherId, Long subjectId, Long sessionId,Long classId, Long termId, String title, String description, String fileUrl, LocalDateTime submissionDate) {
-        Profile teacher = profileRepository.findById(teacherId)
-                .orElseThrow(() -> new CustomNotFoundException("Teacher not found"));
+    @Transactional
+    public HomeworkResponse createHomework(@Valid HomeworkRequest request) {
+        User teacher = verifyTeacherAccess();
+        logger.info("Teacher {} creating homework for subject ID: {}", teacher.getEmail(), request.subjectId());
 
-        Subject subject = subjectRepository.findById(subjectId)
-                .orElseThrow(() -> new CustomNotFoundException("Subject not found"));
-
-        AcademicSession session = academicSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomNotFoundException("Academic session not found"));
-        ClassBlock classBlock = classBlockRepository.findById(classId)
-                .orElseThrow(() -> new CustomNotFoundException("Class  not found"));
-
-
-        StudentTerm studentTerm = studentTermRepository.findById(termId)
-                .orElseThrow(() -> new CustomNotFoundException("Student term not found"));
+        Profile teacherProfile = profileRepository.findByUserId(teacher.getId())
+                .orElseThrow(() -> new CustomNotFoundException("Teacher profile not found for ID: " + teacher.getId()));
+        Subject subject = subjectRepository.findById(request.subjectId())
+                .orElseThrow(() -> new CustomNotFoundException("Subject not found with ID: " + request.subjectId()));
+        AcademicSession session = academicSessionRepository.findById(request.sessionId())
+                .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + request.sessionId()));
+        ClassBlock classBlock = classBlockRepository.findById(request.classId())
+                .orElseThrow(() -> new CustomNotFoundException("Class block not found with ID: " + request.classId()));
+        StudentTerm term = studentTermRepository.findById(request.termId())
+                .orElseThrow(() -> new CustomNotFoundException("Student term not found with ID: " + request.termId()));
 
         Homework homework = Homework.builder()
                 .subject(subject)
                 .academicSession(session)
-                .term(studentTerm)
+                .term(term)
                 .classBlock(classBlock)
-                .teacher(teacher)
-                .title(title)
-                .school(teacher.getUser().getSchool())
-                .description(description)
-                .fileUrl(fileUrl)
-                .submissionDate(submissionDate)
+                .teacher(teacherProfile)
+                .title(request.title())
+                .mark(request.mark())
+                .school(teacher.getSchool())
+                .description(request.description())
+                .fileUrl(request.fileUrl())
+                .submissionDate(request.submissionDate())
                 .createdAt(LocalDateTime.now())
                 .build();
-        return homeworkRepository.save(homework);
+
+        Homework savedHomework = homeworkRepository.save(homework);
+        return modelMapper.map(savedHomework, HomeworkResponse.class);
     }
 
-    // Student submits homework
-    public HomeworkSubmission submitHomework(Long homeworkId, String fileUrl) {
-        String email = SecurityConfig.getAuthenticatedUserEmail();
-        Profile student = profileRepository.findByUserEmail(email)
-                .orElseThrow(() -> new CustomNotFoundException("Student not found"));
+    @Transactional
+    public HomeworkSubmissionResponse submitHomework(@Valid HomeworkSubmissionRequest request) {
+        User student = verifyStudentAccess();
+        logger.info("Student {} submitting homework for ID: {}", student.getEmail(), request.homeworkId());
 
-        Homework homework = homeworkRepository.findById(homeworkId)
-                .orElseThrow(() -> new CustomNotFoundException("Homework not found"));
+        Profile studentProfile = profileRepository.findByUserId(student.getId())
+                .orElseThrow(() -> new CustomNotFoundException("Student profile not found for ID: " + student.getId()));
+        Homework homework = homeworkRepository.findById(request.homeworkId())
+                .orElseThrow(() -> new CustomNotFoundException("Homework not found with ID: " + request.homeworkId()));
 
-        if(!student.getClassBlock().getId().equals(homework.getClassBlock().getId())) {
-            throw new CustomNotFoundException("Student cannot access an assignment from another Class block");
+        if (!studentProfile.getClassBlock().getId().equals(homework.getClassBlock().getId())) {
+            logger.warn("Student {} attempted to submit homework for another class block", student.getEmail());
+            throw new AuthenticationFailedException("Student cannot submit homework for another class block");
         }
 
-        SubmissionStatus status = LocalDateTime.now().isAfter(homework.getSubmissionDate())
+        SubmissionStatus status = request.submittedAt().isAfter(homework.getSubmissionDate())
                 ? SubmissionStatus.LATE
                 : SubmissionStatus.SUBMITTED;
 
         HomeworkSubmission submission = HomeworkSubmission.builder()
-
                 .homework(homework)
-                .student(student)
-                .fileUrl(fileUrl)
-                .submittedAt(LocalDateTime.now())
+                .student(studentProfile)
+                .fileUrl(request.fileUrl())
+                .submittedAt(request.submittedAt())
                 .status(status)
                 .build();
 
-        return submissionRepository.save(submission);
+        HomeworkSubmission savedSubmission = submissionRepository.save(submission);
+        return modelMapper.map(savedSubmission, HomeworkSubmissionResponse.class);
     }
 
+    @Transactional
+    public HomeworkSubmissionResponse gradeSubmission(Long submissionId, Double obtainedMark) {
+        User teacher = verifyTeacherAccess();
+        logger.info("Teacher {} grading submission ID: {}", teacher.getEmail(), submissionId);
 
-    // Teacher evaluates a submission
-    public HomeworkSubmission gradeSubmission(Long submissionId, Double obtainedMark) {
         HomeworkSubmission submission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new CustomNotFoundException("Submission not found"));
+                .orElseThrow(() -> new CustomNotFoundException("Submission not found with ID: " + submissionId));
+
+        if (!submission.getHomework().getTeacher().getUser().getId().equals(teacher.getId())) {
+            logger.warn("Teacher {} attempted to grade submission not assigned to them", teacher.getEmail());
+            throw new AuthenticationFailedException("Teacher can only grade their own homework submissions");
+        }
 
         submission.setObtainedMark(obtainedMark);
         submission.setStatus(SubmissionStatus.GRADED);
-        return submissionRepository.save(submission);
+        HomeworkSubmission updatedSubmission = submissionRepository.save(submission);
+        return modelMapper.map(updatedSubmission, HomeworkSubmissionResponse.class);
     }
 
-    // Get all homework by subject
+    @Transactional(readOnly = true)
     public Page<HomeworkResponse> getHomeworkBySubject(
             Long subjectId,
             Long classBlockId,
             Long termId,
             LocalDateTime submissionDate,
+            String title,
             int page,
             int size,
             String sortBy,
-            String sortDirection) {
-
-        String email = SecurityConfig.getAuthenticatedUserEmail();
-        Profile profile = profileRepository.findByUserEmail(email)
-                .orElseThrow(() -> new CustomNotFoundException("User profile not found"));
+            String sortDirection
+    ) {
+        User user = verifyUserAccess();
+        logger.info("User {} fetching homework for subject ID: {}", user.getEmail(), subjectId);
 
         Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<Homework> homeworkPage = homeworkRepository.findBySubjectIdAndFilters(
-                subjectId,
-                classBlockId,
-                termId,
-                submissionDate,
-                profile.getUser().getId(),
-                pageable);
+        Page<Homework> homeworkPage;
+        if (user.getRoles().contains(Roles.STUDENT)) {
+            Profile studentProfile = profileRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new CustomNotFoundException("Student profile not found for ID: " + user.getId()));
+            homeworkPage = homeworkRepository.findBySubjectIdAndFiltersForStudent(
+                    subjectId,
+                    classBlockId != null ? classBlockId : studentProfile.getClassBlock().getId(),
+                    termId,
+                    submissionDate,
+                    title,
+                    user.getSchool().getId(),
+                    pageable
+            );
+        } else {
+            homeworkPage = homeworkRepository.findBySubjectIdAndFilters(
+                    subjectId,
+                    classBlockId,
+                    termId,
+                    submissionDate,
+                    title,
+                    user.getSchool().getId(),
+                    pageable
+            );
+        }
 
-        return homeworkPage.map(this::mapToHomeworkResponse);
+        return homeworkPage.map(homework -> modelMapper.map(homework, HomeworkResponse.class));
     }
-
-    private HomeworkResponse mapToHomeworkResponse(Homework homework) {
-        return HomeworkResponse.builder()
-                .id(homework.getId())
-                .subjectId(homework.getSubject().getId())
-                .subjectName(homework.getSubject().getName())
-                .academicSessionId(homework.getAcademicSession().getId())
-                .academicSessionName(homework.getAcademicSession().getName())
-                .classBlockId(homework.getClassBlock().getId())
-                .classBlockName(homework.getClassBlock().getCurrentStudentClassName())
-                .termId(homework.getTerm().getId())
-                .termName(homework.getTerm().getName())
-                .teacherId(homework.getTeacher().getId())
-                .teacherName(homework.getTeacher().getUser().getFirstName() + " " + homework.getTeacher().getUser().getLastName())
-                .title(homework.getTitle())
-                .description(homework.getDescription())
-                .fileUrl(homework.getFileUrl())
-                .createdAt(homework.getCreatedAt())
-                .submissionDate(homework.getSubmissionDate())
-                .build();
-    }
-
-    // Get all submissions for a homework
+   @Transactional(readOnly = true)
     public Page<HomeworkSubmissionResponse> getSubmissionsByHomework(
             Long homeworkId,
             Long studentId,
@@ -161,11 +182,10 @@ public class HomeworkService {
             int page,
             int size,
             String sortBy,
-            String sortDirection) {
-
-        String email = SecurityConfig.getAuthenticatedUserEmail();
-        Profile profile = profileRepository.findByUserEmail(email)
-                .orElseThrow(() -> new CustomNotFoundException("User profile not found"));
+            String sortDirection
+    ) {
+        User user = verifyTeacherOrAdminAccess();
+        logger.info("User {} fetching submissions for homework ID: {}", user.getEmail(), homeworkId);
 
         Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
@@ -175,23 +195,43 @@ public class HomeworkService {
                 studentId,
                 submittedAt,
                 status,
-                profile.getUser().getId(),
-                pageable);
+                user.getSchool().getId(),
+                pageable
+        );
 
-        return submissions.map(this::mapToSubmissionResponse);
+        return submissions.map(submission -> modelMapper.map(submission, HomeworkSubmissionResponse.class));
     }
 
-    private HomeworkSubmissionResponse mapToSubmissionResponse(HomeworkSubmission submission) {
-        return HomeworkSubmissionResponse.builder()
-                .id(submission.getId())
-                .homeworkId(submission.getHomework().getId())
-                .homeworkTitle(submission.getHomework().getTitle())
-                .studentId(submission.getStudent().getId())
-                .studentName(submission.getStudent().getUser().getFirstName() + " " + submission.getStudent().getUser().getLastName())
-                .fileUrl(submission.getFileUrl())
-                .submittedAt(submission.getSubmittedAt())
-                .obtainedMark(submission.getObtainedMark())
-                .status(submission.getStatus())
-                .build();
+    private User verifyUserAccess() {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("User not found with email: " + email));
+    }
+
+    private User verifyTeacherAccess() {
+        User user = verifyUserAccess();
+        if (!user.getRoles().contains(Roles.TEACHER)) {
+            logger.warn("Unauthorized access attempt by user: {}", user.getEmail());
+            throw new AuthenticationFailedException("Access restricted to TEACHER role");
+        }
+        return user;
+    }
+
+    private User verifyStudentAccess() {
+        User user = verifyUserAccess();
+        if (!user.getRoles().contains(Roles.STUDENT)) {
+            logger.warn("Unauthorized access attempt by user: {}", user.getEmail());
+            throw new AuthenticationFailedException("Access restricted to STUDENT role");
+        }
+        return user;
+    }
+
+    private User verifyTeacherOrAdminAccess() {
+        User user = verifyUserAccess();
+        if (!user.getRoles().contains(Roles.TEACHER) && !user.getRoles().contains(Roles.ADMIN)) {
+            logger.warn("Unauthorized access attempt by user: {}", user.getEmail());
+            throw new AuthenticationFailedException("Access restricted to TEACHER or ADMIN roles");
+        }
+        return user;
     }
 }

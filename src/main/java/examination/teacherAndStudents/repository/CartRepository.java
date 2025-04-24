@@ -11,4 +11,6 @@ import java.util.List;
 public interface CartRepository extends JpaRepository<Cart, Long> {
 
     List<Cart> findByProfileId(Long profileId);
+
+    List<Cart> findByProfileIdAndCheckedOutFalse(Long profileId);
 }

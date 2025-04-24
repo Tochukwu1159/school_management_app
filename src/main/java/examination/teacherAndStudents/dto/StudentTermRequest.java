@@ -11,5 +11,6 @@ public class StudentTermRequest {
     private String name;
     private LocalDate startDate;
     private LocalDate endDate;
+    private LocalDate resultReadyDate;
     private Long academicSessionId;
 }

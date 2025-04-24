@@ -14,7 +14,7 @@ public interface RatingService {
     RatingResponse getRatingById(Long ratingId);
     List<RatingResponse> findAllRatingsBySchool(Long schoolId);
 
-    Rating calculateRating(School school, double totalMarks);
+//    Rating calculateRating(School school, double totalMarks);
 }
 
 

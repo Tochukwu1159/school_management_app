@@ -1,19 +1,15 @@
 package examination.teacherAndStudents.jobs;
 
-import examination.teacherAndStudents.entity.AcademicSession;
 import examination.teacherAndStudents.entity.School;
-import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.SchoolRepository;
-import examination.teacherAndStudents.service.AcademicSessionService;
-import examination.teacherAndStudents.service.SchoolService;
+
 import examination.teacherAndStudents.service.serviceImpl.EmailTemplateService;
-import examination.teacherAndStudents.utils.SessionPromotion;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -22,16 +18,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ScheduleJobs {
 
-    private final SchoolService schoolService;
     private final SchoolRepository schoolRepository;
-    private final AcademicSessionRepository academicSessionRepository;
-    private final AcademicSessionService academicSessionService;
     private final EmailTemplateService emailTemplateService;
 
-    @Scheduled(cron = "0 0 0 * * ?") // Every day at midnight
+    @Scheduled(cron = "0 0 0 * * ?")
+    @Transactional
     public void deactivateExpiredSubscriptions() {
-        schoolService.deactivateExpiredSubscriptions();
+        schoolRepository.findBySubscriptionExpiryDateBefore(LocalDateTime.now())
+                .forEach(school -> {
+                    school.setIsActive(false);
+//                    log.info("Deactivated expired subscription for school: {}", school.getId());
+//                    notificationService.sendSubscriptionExpiredNotification(school);
+                    schoolRepository.save(school);
+                });
     }
+
 
 
 

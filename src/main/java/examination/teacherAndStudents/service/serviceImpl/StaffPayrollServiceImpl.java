@@ -45,7 +45,7 @@ public class StaffPayrollServiceImpl implements StaffPayrollService {
         log.info("Creating/updating payroll for staff ID: {}", payrollRequest.getStaffId());
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException(ADMIN_NOT_AUTHORIZED));
 
         Profile userProfile = getStaffProfile(payrollRequest.getStaffId());
@@ -87,7 +87,7 @@ public class StaffPayrollServiceImpl implements StaffPayrollService {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         log.info("Fetching payroll for school of admin: {}", email);
 
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException(ADMIN_NOT_AUTHORIZED));
 
         return staffPayrollRepository.findBySchoolId(admin.getSchool().getId()).stream()
@@ -103,7 +103,7 @@ public class StaffPayrollServiceImpl implements StaffPayrollService {
         validateMonth(month);
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException(ADMIN_NOT_AUTHORIZED));
 
         return staffPayrollRepository.findBySchoolIdAndYearAndMonth(admin.getSchool().getId(), month, year).stream()

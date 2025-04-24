@@ -6,7 +6,6 @@ import examination.teacherAndStudents.error_handler.CustomInternalServerExceptio
 import examination.teacherAndStudents.error_handler.EntityNotFoundException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.*;
-import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.ResultService;
 import examination.teacherAndStudents.service.ScoreService;
 import examination.teacherAndStudents.utils.Roles;
@@ -22,7 +21,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -109,12 +108,12 @@ public class ScoreServiceImpl implements ScoreService {
     }
 
         public void addScore(ScoreRequest scoreRequest) {
-        User student = userRepository.findByIdAndRoles(scoreRequest.getStudentId(), Roles.STUDENT);
+        Optional<User> student = userRepository.findByIdAndRole(scoreRequest.getStudentId(), Roles.STUDENT);
         if (student == null) {
             throw new EntityNotFoundException("Student not found");
         }
 
-        Profile studentProfile = profileRepository.findByUser(student)
+        Profile studentProfile = profileRepository.findByUser(student.get())
                 .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
 
         ClassBlock studentClass = classBlockRepository.findById(scoreRequest.getClassLevelId())
@@ -182,13 +181,8 @@ public class ScoreServiceImpl implements ScoreService {
         }
 
         // After saving the score, calculate the result using a separate service method
-        resultService.calculateResult(scoreRequest.getClassLevelId(), student.getId(), subject.getName(),scoreRequest.getSessionId(), studentTerm.getId());
+        resultService.calculateResult(scoreRequest.getClassLevelId(), student.get().getId(), subject.getName(),scoreRequest.getSessionId(), studentTerm.getId());
     }
-
-
-
-
-
 
 
     public List<Score> getScoresByStudent(Long studentId) {

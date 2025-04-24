@@ -110,7 +110,7 @@ public class LessonPlannerServiceImpl implements LessonPlannerService {
         response.setUpdatedTimeAfterTeaching(lessonPlan.getUpdatedTimeAfterTeaching());
         response.setSchoolName(lessonPlan.getSchool().getSchoolName());
         response.setTermName(lessonPlan.getTerm().getName());
-        response.setClassBlockName(lessonPlan.getClassBlock().getCurrentStudentClassName());
+        response.setClassBlockName(lessonPlan.getClassBlock().getName());
         return response;
     }
 }

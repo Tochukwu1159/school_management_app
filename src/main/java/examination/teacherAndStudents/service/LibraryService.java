@@ -16,20 +16,18 @@ public interface LibraryService {
     Book editBook(Long bookId, BookRequest updatedBook);
 
     void deleteBook(Long bookId);
-
     Page<BookResponse> getAllBooks(
             Long id,
             String title,
             String author,
+            String shelfLocation,
             LocalDateTime createdAt,
             int pageNo,
             int pageSize,
             String sortBy,
             String sortDirection);
 
-    BookBorrowing borrowBook(Long memberId, Long bookId,LocalDateTime dueDate);
-
-
+    BookBorrowing borrowBook(Long memberId, Long bookId, LocalDateTime dueDate);
 
     BookBorrowing returnBook(Long borrowingId);
 }

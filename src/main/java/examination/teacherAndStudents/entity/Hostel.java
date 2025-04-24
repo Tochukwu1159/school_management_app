@@ -3,14 +3,10 @@ package examination.teacherAndStudents.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.utils.AvailabilityStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -36,6 +32,10 @@ public class Hostel {
     @Column(name = "availability_status", nullable = false)
     private AvailabilityStatus availabilityStatus;
 
+    @ManyToOne
+    @JoinColumn(name = "warden_id")
+    private Profile warden;
+
     @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)
@@ -50,6 +50,9 @@ public class Hostel {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        if (this.availabilityStatus == null) {
+            this.availabilityStatus = AvailabilityStatus.AVAILABLE;
+        }
     }
 
     @PreUpdate

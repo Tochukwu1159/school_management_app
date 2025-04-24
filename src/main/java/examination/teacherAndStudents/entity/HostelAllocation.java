@@ -3,10 +3,7 @@ package examination.teacherAndStudents.entity;
 import examination.teacherAndStudents.utils.AllocationStatus;
 import examination.teacherAndStudents.utils.PaymentStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -24,13 +21,14 @@ public class HostelAllocation {
 
     @ManyToOne
     @JoinColumn(name = "hostel_id")
-    private Hostel hostel; // Reference to the Hostel entity
+    private Hostel hostel;
 
-    private int bedNumber;
+    @Column(name = "bed_number")
+    private Integer bedNumber; // Nullable until allocated
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private Profile profile; // Reference to the student or user
+    private Profile profile;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
@@ -52,13 +50,15 @@ public class HostelAllocation {
     private AcademicSession academicYear;
 
     @ManyToOne
-    @JoinColumn(name = "due_id", nullable = false)
-    private Dues dues;
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
+    @ManyToOne
+    @JoinColumn(name = "fee_id", nullable = false)
+    private Fee fee;
 
     @PrePersist
     protected void onCreate() {
         this.datestamp = LocalDateTime.now();
     }
-
-
 }

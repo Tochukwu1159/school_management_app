@@ -3,6 +3,7 @@ package examination.teacherAndStudents.dto;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class AssignmentRequest {
@@ -13,4 +14,9 @@ public class AssignmentRequest {
     private String attachment;  // Assignment attachment
     private LocalDateTime dateIssued; // Date the assignment is issued
     private LocalDateTime dateDue;    // Date the assignment is due
+    private int totalMark;
+    private List<Long> classIds;
+    private String instructions;
+    private String title;
+
 }

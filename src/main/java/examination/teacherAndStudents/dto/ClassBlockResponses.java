@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ClassBlockResponses {
     private Long id;
-    private String currentStudentClassName;
+    private String name;
     private ClassLevelResponse classLevel;
 }

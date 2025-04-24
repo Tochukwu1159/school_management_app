@@ -6,6 +6,7 @@ import examination.teacherAndStudents.dto.BlogResponse;
 import examination.teacherAndStudents.entity.Blog;
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.BlogRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
@@ -13,9 +14,14 @@ import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.BlogService;
 import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,10 +34,36 @@ public class BlogServiceImpl implements BlogService {
     private final ProfileRepository profileRepository;
 
     @Override
-    public List<BlogResponse> getAllBlogPosts() {
-        return blogRepository.findAll().stream()
-                .map(BlogResponse::fromEntity)
-                .collect(Collectors.toList());
+    public Page<BlogResponse> getAllBlogPosts(
+            String title,
+            Long schoolId,
+            Long authorId,
+            LocalDateTime createdAtStart,
+            LocalDateTime createdAtEnd,
+            Long id,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection) {
+
+        try {
+            // Create Pageable object
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            Page<Blog> blogsPage = blogRepository.findAllWithFilters(
+                    title,
+                    schoolId,
+                    authorId,
+                    createdAtStart,
+                    createdAtEnd,
+                    id,
+                    pageable);
+
+            return blogsPage.map(BlogResponse::fromEntity);
+        } catch (Exception e) {
+            throw new CustomInternalServerException("An error occurred while fetching blog posts: " + e.getMessage());
+        }
     }
 
     @Override
@@ -83,7 +115,7 @@ public class BlogServiceImpl implements BlogService {
 
     private Profile getAuthenticatedAdmin() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User user = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+        User user = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new NotFoundException("User not found "));
         return profileRepository.findByUser(user)
                 .orElseThrow(() -> new NotFoundException("profile not found "));

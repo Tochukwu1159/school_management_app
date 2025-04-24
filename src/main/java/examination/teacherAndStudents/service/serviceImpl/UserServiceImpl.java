@@ -6,14 +6,17 @@ import examination.teacherAndStudents.Security.JwtUtil;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.entity.EmergencyContact;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
+import examination.teacherAndStudents.service.FeeService;
 import examination.teacherAndStudents.service.UserService;
+import examination.teacherAndStudents.service.funding.PaymentProvider;
+import examination.teacherAndStudents.service.funding.PaymentProviderFactory;
 import examination.teacherAndStudents.templateService.IdCardService;
 import examination.teacherAndStudents.utils.*;
 import jakarta.mail.MessagingException;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -33,13 +36,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -68,13 +72,17 @@ public class UserServiceImpl implements UserService {
     private final SchoolRepository schoolRepository;
     private final StaffLevelRepository staffLevelRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final FeeService feeStructureService;
+    private final AdmissionApplicationRepository admissionApplicationRepository;
+    private final DocumentRepository documentRepository;
+    private final ReferralRepository referralRepository;
 
 
     @Override
     @Transactional
     public UserResponse createStudent(UserRequestDto userRequest) throws MessagingException {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
 
@@ -85,15 +93,18 @@ public class UserServiceImpl implements UserService {
         ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
                 .orElseThrow(() -> new BadRequestException("Error: Class block not found"));
 
-        ClassLevel classLevel = classLevelRepository.findByClassName(classBlock.getClassLevel().getClassName());
-        if (classLevel == null) {
-            throw new BadRequestException("Error: Class level not found");
-        }
+        ClassLevel classLevel = classLevelRepository.findById(classBlock.getClassLevel().getId()).orElseThrow(() -> new CustomNotFoundException("Class Level not found."));
 //        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
 //        // Get the secure URL of the uploaded image from Cloudinary
 //        String imageUrl = (String) uploadResult.get("secure_url");
         String generatedPassword = passwordGenerator.generateRandomPassword();
         String encodedPassword = passwordEncoder.encode(generatedPassword);
+
+        String referralCode = generateReferralCode(
+                userRequest.getFirstName(),
+                userRequest.getLastName()
+        );
+        String referralLink = generateReferralLink(referralCode);
 
         User newUser = User.builder()
                 .firstName(userRequest.getFirstName())
@@ -101,28 +112,30 @@ public class UserServiceImpl implements UserService {
                 .middleName(userRequest.getMiddleName())
                 .school(school)
                 .email(userRequest.getEmail())
-                .roles(Roles.STUDENT)
+                .roles(Collections.singleton(Roles.STUDENT))
                 .profileStatus(ProfileStatus.ACTIVE)
                 .isVerified(true)
                 .school(admin.getSchool())
                 .password(encodedPassword)
-                .roles(Roles.STUDENT)
 //                .profilePicture(imageUrl)
                 .build();
         User savedUser = userRepository.save(newUser);
 
-        Profile userProfile =  Profile.builder()
+        Set<EmergencyContact> emergencyContact = buildEmergencyContacts(userRequest.getEmergencyContacts());
+        Set<Address> addresses = buildAddressesFromDto(userRequest.getAddresses());
+
+        Profile userProfile = Profile.builder()
                 .gender(userRequest.getGender())
                 .religion(userRequest.getReligion())
-                .city(userRequest.getCity())
-                .state(userRequest.getState())
-                .country(userRequest.getCountry())
+                .addresses(addresses)
+                .emergencyContacts(emergencyContact)
+                .referralLink(referralLink)
+                .referralCode(referralCode)
                 .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
                 .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
                 .studentGuardianName(userRequest.getStudentGuardianName())
                 .studentGuardianPhoneNumber(userRequest.getStudentGuardianPhoneNumber())
                 .uniqueRegistrationNumber(AccountUtils.generateStudentId())
-                .address(userRequest.getAddress())
                 .user(savedUser)
                 .isVerified(true)
                 .profileStatus(ProfileStatus.ACTIVE)
@@ -139,10 +152,16 @@ public class UserServiceImpl implements UserService {
         classBlock.setNumberOfStudents(classBlock.getNumberOfStudents() + 1);
         classBlockRepository.save(classBlock);
 
-      //update the school population
+        //update the school population
         school.incrementActualNumberOfStudents();
         schoolRepository.save(school);
 
+        if (userRequest.getDocuments() != null) {
+            handleDocumentUploads(userRequest.getDocuments(), school, saveUserProfile);
+        }
+        if (userRequest.getReferralCode() != null) {
+            processReferral(userRequest.getReferralCode(), saveUserProfile);
+        }
         //create wallet
         createWallet(saveUserProfile);
 
@@ -151,7 +170,7 @@ public class UserServiceImpl implements UserService {
         AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
 
 
-        return new  UserResponse("200", "Student Successfully Created", accountInfo);
+        return new UserResponse("200", "Student Successfully Created", accountInfo);
     }
 
 
@@ -171,13 +190,124 @@ public class UserServiceImpl implements UserService {
 //    }
 
 
+    @Transactional
+    public UserResponse selfRegisterStudent(UserRequestDto userRequest) {
+        // Validate school exists
+        School school = schoolRepository.findById(userRequest.getSchoolId())
+                .orElseThrow(() -> new BadRequestException("Invalid school ID"));
+
+        // Validate class exists
+        ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
+                .orElseThrow(() -> new BadRequestException("Invalid class ID"));
+
+        // Check if email already exists
+        if (userRepository.existsByEmail(userRequest.getEmail())) {
+            throw new BadRequestException("Email already registered");
+        }
+        BigDecimal applicationFee = null;
+        boolean applicationFeeApplied = false;
+
+        if (school.getIsApplicationFee()) {
+            applicationFee = feeStructureService.getApplicationFee(
+                    school.getId(),
+                    classBlock.getClassLevel().getId(),
+                    classBlock.getId()
+            );
+            applicationFeeApplied = true;
+        }
+
+
+        String generatedPassword = passwordGenerator.generateRandomPassword();
+        String encodedPassword = passwordEncoder.encode(generatedPassword);
+
+        String referralCode = generateReferralCode(
+                userRequest.getFirstName(),
+                userRequest.getLastName()
+        );
+       String referralLink = generateReferralLink(referralCode);
+
+        // Create user with PENDING_REVIEW status
+        User newUser = User.builder()
+                .firstName(userRequest.getFirstName())
+                .lastName(userRequest.getLastName())
+                .middleName(userRequest.getMiddleName())
+                .school(school)
+                .email(userRequest.getEmail())
+                .roles(Collections.singleton(Roles.STUDENT))
+                .profileStatus(ProfileStatus.PENDING_REVIEW)
+                .isVerified(false)
+                .password(encodedPassword)
+                .build();
+        User savedUser = userRepository.save(newUser);
+
+        Set<EmergencyContact> emergencyContact = buildEmergencyContacts(userRequest.getEmergencyContacts());
+
+        Set<Address> addresses = buildAddressesFromDto(userRequest.getAddresses());
+
+        // Create profile
+        Profile userProfile = Profile.builder()
+                .user(savedUser)
+                .profileStatus(ProfileStatus.PENDING_REVIEW)
+                .gender(userRequest.getGender())
+                .religion(userRequest.getReligion())
+                .addresses(addresses)
+                .emergencyContacts(emergencyContact)
+                .referralCode(referralCode)
+                .referralLink(referralLink)
+                .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
+                .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
+                .studentGuardianName(userRequest.getStudentGuardianName())
+                .studentGuardianPhoneNumber(userRequest.getStudentGuardianPhoneNumber())
+                .uniqueRegistrationNumber(AccountUtils.generateStudentId())
+                .user(savedUser)
+                .isVerified(true)
+                .maritalStatus(userRequest.getMaritalStatus())
+                .dateOfBirth(userRequest.getDateOfBirth())
+                .admissionDate(userRequest.getAdmissionDate())
+                .classBlock(classBlock)
+//                .profilePicture(imageUrl)
+                .phoneNumber(userRequest.getPhoneNumber())
+                // ... other profile fields
+                .build();
+        Profile savedProfile = profileRepository.save(userProfile);
+
+
+        // Handle document uploads if provided
+        if (userRequest.getDocuments() != null) {
+            handleDocumentUploads(userRequest.getDocuments(), school, savedProfile);
+        }
+         if(userRequest.getReferralCode() != null) {
+          processReferral(userRequest.getReferralCode(), savedProfile);
+                    }
+
+        // Create admission application
+        AdmissionApplication application = AdmissionApplication.builder()
+                .profile(savedProfile)
+                .school(school)
+                .status(ApplicationStatus.PENDING_REVIEW)
+                .session(academicSessionRepository.findCurrentSession(school.getId()).get())
+                .appliedClass(classBlock)
+                .applicationFeeApplied(applicationFeeApplied)
+                .applicationDate(LocalDateTime.now())
+                .applicationFee(applicationFee)
+                .build();
+        admissionApplicationRepository.save(application);
+
+        // Send confirmation email
+        emailService.sendApplicationConfirmation(savedUser.getEmail(), savedUser.getFirstName(),
+                application.getApplicationNumber(), school);
+
+        return UserResponse.builder().responseCode("200").responseMessage("Application submitted successfully. Awaiting review.").build();
+
+    }
+
     @Override
     @Transactional
     public UserResponse createAdmin(UserRequestDto userRequest) throws MessagingException {
 
         validateUserRequest(userRequest);
 
-        //        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
+//                Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
 //        // Get the secure URL of the uploaded image from Cloudinary
 //        String imageUrl = (String) uploadResult.get("secure_url");
 
@@ -193,9 +323,11 @@ public class UserServiceImpl implements UserService {
                 .profileStatus(ProfileStatus.ACTIVE)
                 .password(encodedPassword)
                 .isVerified(true)
-                .roles(Roles.ADMIN)
+                .roles(Collections.singleton(Roles.ADMIN))
                 .build();
         User savedUser = userRepository.save(newUser);
+
+        Set<Address> addresses = buildAddressesFromDto(userRequest.getAddresses());
 
 
         Profile userProfile =  Profile.builder()
@@ -206,16 +338,13 @@ public class UserServiceImpl implements UserService {
                 .profileStatus(ProfileStatus.ACTIVE)
                 .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
                 .phoneNumber(userRequest.getPhoneNumber())
-                .city(userRequest.getCity())
-                .state(userRequest.getState())
-                .country(userRequest.getCountry())
+                .addresses(addresses)
                 .maritalStatus(userRequest.getMaritalStatus())
                 .courseOfStudy(userRequest.getCourseOfStudy())
                 .contractType(userRequest.getContractType())
                 .academicQualification(userRequest.getAcademicQualification())
                 .admissionDate(userRequest.getAdmissionDate())
                 .uniqueRegistrationNumber(AccountUtils.generateStaffId())
-                .address(userRequest.getAddress())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .user(savedUser)
                 //                .profilePicture(imageUrl)
@@ -225,7 +354,8 @@ public class UserServiceImpl implements UserService {
 
 
         //create wallet
-        createWallet(saveUserProfile);
+//        createWallet(saveUserProfile);
+        sendAdminCreationEmail(savedUser, generatedPassword, userProfile.getUniqueRegistrationNumber());
 
         AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
 
@@ -238,7 +368,7 @@ public class UserServiceImpl implements UserService {
     public UserResponse createStaff(UserRequestDto userRequest) throws MessagingException {
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         StaffLevel staffLevel = staffLevelRepository.findById(userRequest.getStaffLevelId())
                 .orElseThrow(() -> new CustomNotFoundException("Staff level not found"));
@@ -251,6 +381,12 @@ public class UserServiceImpl implements UserService {
         String generatedPassword = passwordGenerator.generateRandomPassword();
         String encodedPassword = passwordEncoder.encode(generatedPassword);
 
+        String referralCode = generateReferralCode(
+                userRequest.getFirstName(),
+                userRequest.getLastName()
+        );
+        String referralLink = generateReferralLink(referralCode);
+
         // Create new user
         User newUser = User.builder()
                 .firstName(userRequest.getFirstName())
@@ -261,12 +397,13 @@ public class UserServiceImpl implements UserService {
                 .profileStatus(ProfileStatus.ACTIVE)
                 .password(encodedPassword)
                 .isVerified(true)
-                .roles(userRequest.getRole())
+                .roles(Collections.singleton(userRequest.getRole()))
                 .build();
 
         User savedUser = userRepository.save(newUser);
-
-        Profile userProfile = buildStaffProfile(userRequest, savedUser, staffLevel);
+        Set<EmergencyContact> emergencyContact = buildEmergencyContacts(userRequest.getEmergencyContacts());
+        Set<Address> addresses = buildAddressesFromDto(userRequest.getAddresses());
+        Profile userProfile = buildStaffProfile(userRequest, savedUser, staffLevel, referralCode, referralLink, addresses, emergencyContact);
         Profile savedProfile = profileRepository.save(userProfile);
         createWallet(savedProfile);
         sendStaffCreationEmail(savedUser, generatedPassword, userProfile.getUniqueRegistrationNumber());
@@ -275,6 +412,14 @@ public class UserServiceImpl implements UserService {
         //update the school population
         school.incrementActualNumberOfStaff();
         schoolRepository.save(school);
+
+        // Handle document uploads if provided
+        if (userRequest.getDocuments() != null) {
+            handleDocumentUploads(userRequest.getDocuments(), school, savedProfile);
+        }
+        if (userRequest.getReferralCode() != null) {
+            processReferral(userRequest.getReferralCode(), savedProfile);
+        }
 
         // Return the response
         AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
@@ -307,7 +452,22 @@ public class UserServiceImpl implements UserService {
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), userDetails.get().getSchool());
+
+            SchoolAuthDto schoolAuthDto = SchoolAuthDto.builder()
+                    .id(school.getId())
+                    .schoolName(school.getSchoolName())
+                    .schoolAddress(school.getSchoolAddress())
+                    .subscriptionType(school.getSubscriptionType() != null ? school.getSubscriptionType().toString() : null)
+                    .phoneNumber(school.getPhoneNumber())
+                    .subscriptionKey(school.getSubscriptionKey())
+                    .subscriptionExpiryDate(school.getSubscriptionExpiryDate() != null ?
+                            school.getSubscriptionExpiryDate().toLocalDate() : null)
+                    .selectedServices(school.getSelectedServices() != null ?
+                            school.getSelectedServices().stream()
+                                    .map(ServiceOffered::getName)
+                                    .collect(Collectors.toList()) : null)
+                    .build();
+          String  token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), schoolAuthDto);
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -347,7 +507,23 @@ public class UserServiceImpl implements UserService {
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
-            String token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), userDetails.get().getSchool());
+
+            assert school != null;
+            SchoolAuthDto schoolAuthDto = SchoolAuthDto.builder()
+                    .id(school.getId())
+                    .schoolName(school.getSchoolName())
+                    .schoolAddress(school.getSchoolAddress())
+                    .subscriptionType(school.getSubscriptionType() != null ? school.getSubscriptionType().toString() : null)
+                    .phoneNumber(school.getPhoneNumber())
+                    .subscriptionKey(school.getSubscriptionKey())
+                    .subscriptionExpiryDate(school.getSubscriptionExpiryDate() != null ?
+                            school.getSubscriptionExpiryDate().toLocalDate() : null)
+                    .selectedServices(school.getSelectedServices() != null ?
+                            school.getSelectedServices().stream()
+                                    .map(ServiceOffered::getName)
+                                    .collect(Collectors.toList()) : null)
+                    .build();
+        String    token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), schoolAuthDto);
 
             // Create a UserDto object containing user details
             UserDto userDto = new UserDto();
@@ -363,9 +539,9 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+
     public LoginResponse loginAdmin(LoginRequest loginRequest) {
         try {
-
             Profile user = profileRepository.findByUniqueRegistrationNumber(loginRequest.getUsername())
                     .orElseThrow(() -> new CustomNotFoundException("Username not found"));
 
@@ -376,7 +552,6 @@ public class UserServiceImpl implements UserService {
             if (!authenticate.isAuthenticated()) {
                 throw new UserPasswordMismatchException("Wrong email or password");
             }
-
 
             Optional<User> userDetails = userRepository.findByEmail(user.getUser().getEmail());
             if (userDetails.isEmpty()) {
@@ -390,8 +565,22 @@ public class UserServiceImpl implements UserService {
                 // Generate token with school as null
                 token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), null);
             } else {
-                // Generate token with school
-                token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), school);
+                // Generate token with SchoolAuthDto
+                SchoolAuthDto schoolAuthDto = SchoolAuthDto.builder()
+                        .id(school.getId())
+                        .schoolName(school.getSchoolName())
+                        .schoolAddress(school.getSchoolAddress())
+                        .subscriptionType(school.getSubscriptionType() != null ? school.getSubscriptionType().toString() : null)
+                        .phoneNumber(school.getPhoneNumber())
+                        .subscriptionKey(school.getSubscriptionKey())
+                        .subscriptionExpiryDate(school.getSubscriptionExpiryDate() != null ?
+                                school.getSubscriptionExpiryDate().toLocalDate() : null)
+                        .selectedServices(school.getSelectedServices() != null ?
+                                school.getSelectedServices().stream()
+                                        .map(ServiceOffered::getName)
+                                        .collect(Collectors.toList()) : null)
+                        .build();
+                token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), schoolAuthDto);
             }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
@@ -402,10 +591,9 @@ public class UserServiceImpl implements UserService {
             userDto.setEmail(userDetails.get().getEmail());
             return new LoginResponse(token, userDto);
         } catch (BadCredentialsException e) {
-            // Handle the "Bad credentials" error here
             throw new AuthenticationFailedException("Wrong email or password");
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error processing JWT token", e);
         }
     }
 
@@ -420,7 +608,7 @@ public class UserServiceImpl implements UserService {
 
         ClassLevel classLevel = classLevelRepository.findByClassName(newClassBlock.getClassLevel().getClassName());
         if (classLevel == null) {
-            throw new BadRequestException("Error: Class level not found for class " + newClassBlock.getCurrentStudentClassName());
+            throw new BadRequestException("Error: Class level not found for class " + newClassBlock.getName());
         }
 
         newClassBlock.setNumberOfStudents(newClassBlock.getNumberOfStudents() + 1);
@@ -446,7 +634,7 @@ public class UserServiceImpl implements UserService {
         // Ensure that the class level is valid for the new class block
         ClassLevel classLevel = classLevelRepository.findByClassName(newClassBlock.getClassLevel().getClassName());
         if (classLevel == null) {
-            throw new BadRequestException("Error: Class level not found for class " + newClassBlock.getCurrentStudentClassName());
+            throw new BadRequestException("Error: Class level not found for class " + newClassBlock.getName());
         }
 
         // Decrement the number of students in the current class block of the user
@@ -474,9 +662,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse editUserDetails(EditUserRequest editUserDto) {
         String email = SecurityConfig.getAuthenticatedUserEmail();   //why using this method and not autowired
-        System.out.println(email+ "email");
-        Object loggedInUsername1 = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        System.out.println(loggedInUsername1 + "loggedInUsername1");
+
 
         User user = userRepository.findByEmail(email).orElseThrow(()-> new UsernameNotFoundException("User not found"));
 
@@ -486,6 +672,12 @@ public class UserServiceImpl implements UserService {
         user.setFirstName(editUserDto.getFirstName());
         user.setLastName(editUserDto.getLastName());
         User updatedUser = userRepository.save(user);
+
+        Set<Address> addresses = new HashSet<>();
+        if(editUserDto.getAddresses() != null){
+            addresses = buildAddressesFromDto(editUserDto.getAddresses());
+
+        }
 
         Profile userProfile =  Profile.builder()
                 .gender(editUserDto.getGender())
@@ -497,7 +689,7 @@ public class UserServiceImpl implements UserService {
                 .studentGuardianName(editUserDto.getStudentGuardianName())
                 .studentGuardianPhoneNumber(editUserDto.getStudentGuardianPhoneNumber())
                 .uniqueRegistrationNumber(AccountUtils.generateStudentId())
-                .address(editUserDto.getAddress())
+                .addresses(addresses)
                 .dateOfBirth(editUserDto.getDateOfBirth())
                 .admissionDate(editUserDto.getAdmissionDate())
 //                .profilePicture(imageUrl)
@@ -650,7 +842,7 @@ public class UserServiceImpl implements UserService {
     public ResponseEntity<Void> deleteUser(Long userId) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+            User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                     .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             if (userRepository.existsById(userId)) {
@@ -690,6 +882,7 @@ public class UserServiceImpl implements UserService {
             Long academicYearId,
             String uniqueRegistrationNumber,
             String firstName,
+            String lastName,
             int page,
             int size,
             String sortBy) {
@@ -720,6 +913,7 @@ public class UserServiceImpl implements UserService {
                 academicYear,
                 uniqueRegistrationNumber,
                 firstName,
+                lastName,
                 paging);
 
         return students.map(element -> modelMapper.map(element, UserResponse.class));
@@ -732,22 +926,6 @@ public class UserServiceImpl implements UserService {
 
 
 
-    private boolean isValidEmail(String email) {
-        String regex = "^[\\w!#$%&'*+/=?`{|}~^-]+(?:\\.[\\w!#$%&'*+/=?`{|}~^-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,6}$";
-
-        // Compile the ReGex
-        Pattern p = Pattern.compile(regex);
-        if (email == null) {
-            throw new BadRequestException("Error: Email cannot be null");
-        }
-        Matcher m = p.matcher(email);
-        return m.matches();
-    }
-    private boolean existsByMail(String email) {
-        return userRepository.existsByEmail(email);
-
-
-    }
     public String updateUserStatus(Long userId, ProfileStatus newStatus, LocalDate suspensionEndDate) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found for user ID: " + userId));
@@ -770,6 +948,8 @@ public class UserServiceImpl implements UserService {
 
         return "User status updated successfully.";
     }
+
+    @Override
 
     public Page<UserProfileResponse> getProfilesByRoleAndStatus(String role, String status, int page, int size) {
         // Convert role and status strings to enum
@@ -795,42 +975,105 @@ public class UserServiceImpl implements UserService {
 
     }
 
-    private void sendRegistrationEmail(String generatedPassword, User savedUser, String regNo) throws MessagingException {
-        Map<String, Object> model = new HashMap<>();
-        model.put("name", savedUser.getFirstName() + " " + savedUser.getLastName());
-        model.put("username", regNo);
-        model.put("password", generatedPassword);
 
-        EmailDetails emailDetails = EmailDetails.builder()
-                .recipient(savedUser.getEmail())
-                .subject("Successful Registration")
-                .templateName("email-template") // Thymeleaf template name
-                .model(model)
+    @Transactional(readOnly = true)
+    public SchoolActiveUsersResponse getActiveUsersStatistics() {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+
+
+        User loggedUser = userRepository.findByEmail(email).orElseThrow(()-> new UsernameNotFoundException("User not found"));
+        // Get all active users in the school
+        List<User> activeUsers = userRepository.findBySchoolIdAndProfileStatus(loggedUser.getSchool().getId(), ProfileStatus.ACTIVE);
+
+        if (activeUsers.isEmpty()) {
+            return SchoolActiveUsersResponse.builder()
+                    .numOfStudents(0)
+                    .numOfStaff(0)
+                    .percentOfBoys(BigDecimal.ZERO)
+                    .percentOfGirls(BigDecimal.ZERO)
+                    .percentOfMaleStaff(BigDecimal.ZERO)
+                    .percentOfFemaleStaff(BigDecimal.ZERO)
+                    .build();
+        }
+
+        // Count students and staff
+        long numStudents = activeUsers.stream()
+                .filter(user -> user.hasRole(Roles.STUDENT))
+                .count();
+
+        long numStaff = activeUsers.size() - numStudents;
+
+        // Get profiles for gender statistics
+        List<Profile> profiles = profileRepository.findByUserIn(activeUsers);
+
+        // Calculate student gender percentages
+        long maleStudents = profiles.stream()
+                .filter(profile -> profile.getUser().hasRole(Roles.STUDENT))
+                .filter(profile -> "male".equalsIgnoreCase(profile.getGender()))
+                .count();
+
+        long femaleStudents = numStudents - maleStudents;
+
+        BigDecimal percentBoys = numStudents > 0 ?
+                BigDecimal.valueOf(maleStudents * 100.0 / numStudents)
+                        .setScale(2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+
+        BigDecimal percentGirls = numStudents > 0 ?
+                BigDecimal.valueOf(femaleStudents * 100.0 / numStudents)
+                        .setScale(2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+
+        // Calculate staff gender percentages
+        long maleStaff = profiles.stream()
+                .filter(profile -> profile.getUser().hasRole(Roles.STUDENT))
+                .filter(profile -> "male".equalsIgnoreCase(profile.getGender()))
+                .count();
+
+        long femaleStaff = numStaff - maleStaff;
+
+        BigDecimal percentMaleStaff = numStaff > 0 ?
+                BigDecimal.valueOf(maleStaff * 100.0 / numStaff)
+                        .setScale(2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+
+        BigDecimal percentFemaleStaff = numStaff > 0 ?
+                BigDecimal.valueOf(femaleStaff * 100.0 / numStaff)
+                        .setScale(2, RoundingMode.HALF_UP) :
+                BigDecimal.ZERO;
+
+        return SchoolActiveUsersResponse.builder()
+                .numOfStudents((int) numStudents)
+                .numOfStaff((int) numStaff)
+                .percentOfBoys(percentBoys)
+                .percentOfGirls(percentGirls)
+                .percentOfMaleStaff(percentMaleStaff)
+                .percentOfFemaleStaff(percentFemaleStaff)
                 .build();
-        emailService.sendHtmlEmail(emailDetails);
     }
 
 
-    private Profile buildStaffProfile(UserRequestDto userRequest, User savedUser, StaffLevel staffLevel) {
+    private Profile buildStaffProfile(UserRequestDto userRequest, User savedUser, StaffLevel staffLevel, String referralCode, String referralLink,Set<Address> addresses, Set<EmergencyContact> emergencyContact
+    ) {
         Profile.ProfileBuilder profileBuilder = Profile.builder()
                 .gender(userRequest.getGender())
                 .isVerified(true)
                 .staffLevel(staffLevel)
+                .referralCode(referralCode)
+                .referralLink(referralLink)
                 .profileStatus(ProfileStatus.ACTIVE)
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .courseOfStudy(userRequest.getCourseOfStudy())
                 .classOfDegree(userRequest.getClassOfDegree())
                 .admissionDate(userRequest.getAdmissionDate())
-                .city(userRequest.getCity())
-                .state(userRequest.getState())
-                .country(userRequest.getCountry())
+                .addresses(addresses)
                 .contractType(userRequest.getContractType())
                 .maritalStatus(userRequest.getMaritalStatus())
                 .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
                 .academicQualification(userRequest.getAcademicQualification())
                 .religion(userRequest.getReligion())
                 .uniqueRegistrationNumber(AccountUtils.generateStaffId())
-                .address(userRequest.getAddress())
+                .emergencyContacts(emergencyContact)
                 .phoneNumber(userRequest.getPhoneNumber())
                 .user(savedUser);
 
@@ -854,8 +1097,27 @@ public class UserServiceImpl implements UserService {
         userWallet.setBalance(BigDecimal.ZERO);
         userWallet.setTotalMoneySent(BigDecimal.ZERO);
         userWallet.setUserProfile(userProfile);
+        userWallet.setWalletStatus(WalletStatus.ACTIVE);
+        userWallet.setSchool(userProfile.getUser().getSchool());
         walletRepository.save(userWallet);
     }
+
+
+    private void sendRegistrationEmail(String generatedPassword, User savedUser, String regNo) throws MessagingException {
+        Map<String, Object> model = new HashMap<>();
+        model.put("name", savedUser.getFirstName() + " " + savedUser.getLastName());
+        model.put("username", regNo);
+        model.put("password", generatedPassword);
+
+        EmailDetails emailDetails = EmailDetails.builder()
+                .recipient(savedUser.getEmail())
+                .subject("Successful Registration")
+                .templateName("email-template") // Thymeleaf template name
+                .model(model)
+                .build();
+        emailService.sendHtmlEmail(emailDetails);
+    }
+
 
     private void sendStaffCreationEmail(User savedUser, String generatedPassword, String regNo) throws MessagingException {
 
@@ -874,6 +1136,23 @@ public class UserServiceImpl implements UserService {
 
     }
 
+    private void sendAdminCreationEmail(User savedUser, String generatedPassword, String regNo) throws MessagingException {
+
+        Map<String, Object> model = new HashMap<>();
+        model.put("name", savedUser.getFirstName() + " " + savedUser.getLastName());
+        model.put("username", regNo);
+        model.put("password", generatedPassword);
+
+        EmailDetails emailDetails = EmailDetails.builder()
+                .recipient(savedUser.getEmail())
+                .subject("ACCOUNT CREATION")
+                .templateName("email-template-admin")
+                .model(model)
+                .build();
+        emailService.sendHtmlEmail(emailDetails);
+
+    }
+
     private AccountInfo buildAccountInfo(User savedUser, Profile userProfile) {
         return AccountInfo.builder()
                 .firstName(savedUser.getFirstName())
@@ -884,7 +1163,157 @@ public class UserServiceImpl implements UserService {
     }
 
 
+    private String generateReferralCode(String firstName, String lastName) {
+        String base = (firstName.charAt(0) + lastName.substring(0, 1)).toUpperCase();
+        String randomDigits = String.format("%04d", new Random().nextInt(10000));
 
+        String code = base + randomDigits;
+
+        // Ensure uniqueness
+        while (profileRepository.existsByReferralCode(code)) {
+            randomDigits = String.format("%04d", new Random().nextInt(10000));
+            code = base + randomDigits;
+        }
+
+        return code;
+    }
+
+    private String generateReferralLink(String referralCode) {
+        String baseUrl = "https://yourapp.com/signup?ref="; // Replace with your actual domain
+        return baseUrl + referralCode;
+    }
+
+
+    private List<Document> handleDocumentUploads(
+            List<UserRequestDto.DocumentDto> documentDtos,
+            School school,
+            Profile profile) {
+
+        if (documentDtos == null || documentDtos.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Document> documents = new ArrayList<>();
+
+        for (UserRequestDto.DocumentDto docRequest : documentDtos) {
+            try {
+                Document document = processSingleDocument(docRequest, school, profile);
+                documents.add(document);
+            } catch (Exception e) {
+                throw new BadRequestException("Failed to upload document: " + docRequest.getDocumentType());
+            }
+        }
+
+        return documentRepository.saveAll(documents);
+    }
+
+    private Document processSingleDocument(
+            UserRequestDto.DocumentDto docRequest,
+            School school,
+            Profile profile) throws Exception {
+
+        // Upload file to Cloudinary and get URL
+        // Map<?, ?> uploadResult = cloudinaryService.uploadFile(docRequest.getFile());
+        // String documentUrl = (String) uploadResult.get("secure_url");
+        String documentUrl = "documentUrl"; // Replace with actual upload logic
+
+        return Document.builder()
+                .title(docRequest.getDocumentType() + " for " + profile.getUser().getFirstName() +
+                        " " + profile.getUser().getLastName())
+                .school(school)
+                .profile(profile)
+                .documentType(docRequest.getDocumentType())
+                .documentImageUrl(documentUrl)
+                .build();
+    }
+
+
+    private void processReferral(String referralCode, Profile referredProfile) {
+        if (!StringUtils.hasText(referralCode)) {
+            return;
+        }
+
+        Profile referringUser = profileRepository.findByReferralCode(referralCode)
+                .orElseThrow(() -> new BadRequestException("Invalid referral code"));
+
+        Referral referral = Referral.builder()
+                .referringUser(referringUser)
+                .referredUser(referredProfile)
+                .status(ReferralStatus.PENDING)
+                .referralDate(LocalDateTime.now())
+                .build();
+
+        referralRepository.save(referral);
+    }
+
+
+    private Set<Address> buildAddressesFromDto(Set<UserRequestDto.AddressDto> addressDtos) {
+        Set<Address> addresses = new HashSet<>();
+        for (UserRequestDto.AddressDto addressDto : addressDtos) {
+            Address address = Address.builder()
+                    .street(addressDto.getStreet())
+                    .city(addressDto.getCity())
+                    .state(addressDto.getState())
+                    .country(addressDto.getCountry())
+                    .postalCode(addressDto.getPostalCode())
+                    .isPrimary(addressDto.isPrimary())
+                    .build();
+            addresses.add(address);
+        }
+        return addresses;
+    }
+
+    private Set<EmergencyContact> buildEmergencyContacts(List<UserRequestDto.EmergencyContactDto> contactDtos) {
+        if (contactDtos == null || contactDtos.isEmpty()) {
+            return new HashSet<>(); // Return empty set if no contacts provided
+        }
+
+        Set<EmergencyContact> emergencyContacts = new HashSet<>();
+        Set<String> phoneNumbers = new HashSet<>(); // Track phones to prevent duplicates
+
+        for (UserRequestDto.EmergencyContactDto dto : contactDtos) {
+            EmergencyContact contact = buildEmergencyContact(dto);
+            if (contact != null) {
+                // Check for duplicate phone numbers
+                if (!phoneNumbers.add(contact.getPhone())) {
+                    throw new BadRequestException("Duplicate emergency contact phone number: " + contact.getPhone());
+                }
+                emergencyContacts.add(contact);
+            }
+        }
+
+        return emergencyContacts;
+    }
+
+
+    private EmergencyContact buildEmergencyContact(UserRequestDto.EmergencyContactDto emergencyContactDto) {
+        if (emergencyContactDto == null) {
+            return null; // Skip null DTOs, handled by caller
+        }
+
+        // Validate required fields
+        if (emergencyContactDto.getName() == null || emergencyContactDto.getName().trim().isEmpty()) {
+            throw new BadRequestException("Emergency contact name cannot be empty");
+        }
+        if (emergencyContactDto.getPhone() == null || emergencyContactDto.getPhone().trim().isEmpty()) {
+            throw new BadRequestException("Emergency contact phone cannot be empty");
+        }
+        if (emergencyContactDto.getRelationship() == null || emergencyContactDto.getRelationship().trim().isEmpty()) {
+            throw new BadRequestException("Emergency contact relationship cannot be empty");
+        }
+
+        // Validate phone format (optional, adjust regex as needed)
+        String phone = emergencyContactDto.getPhone().trim();
+        if (!phone.matches("^\\+?[1-9]\\d{1,14}$")) {
+            throw new BadRequestException("Invalid emergency contact phone number format: " + phone);
+        }
+
+        return EmergencyContact.builder()
+                .name(emergencyContactDto.getName().trim())
+                .phone(phone)
+                .relationship(emergencyContactDto.getRelationship().trim())
+                .build();
+    }
 
 
 }

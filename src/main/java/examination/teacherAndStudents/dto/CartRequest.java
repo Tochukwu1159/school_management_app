@@ -1,14 +1,15 @@
 package examination.teacherAndStudents.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
 @AllArgsConstructor
 public class CartRequest {
+    @NotNull
     private Long storeItemId;
-    private Integer quantity;
     private String size;
-
-    // Getters and Setters
+    @NotNull
+    private Integer quantity;
 }

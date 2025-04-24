@@ -46,6 +46,8 @@ public class Homework {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
+    private int mark;
+
     @Column(nullable = false)
     private String fileUrl; // Store file location (S3, local storage, etc.)
 

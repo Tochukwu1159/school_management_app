@@ -1,16 +1,22 @@
 package examination.teacherAndStudents.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
-@Getter
-@Setter
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class StudyMaterialResponse {
     private Long id;
     private String title;
     private String filePath;
-    private String subjectName;
-    private String teacherName;
-    private String academicYear;
-    private String term;
+    private Long subjectId;
+    private Long teacherId;
+    private Long academicYearId;
+    private Long termId;
+    private Long classId;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

@@ -8,31 +8,29 @@ import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.HostelService;
 import examination.teacherAndStudents.utils.AvailabilityStatus;
-import examination.teacherAndStudents.utils.NotificationType;
 import examination.teacherAndStudents.utils.Roles;
-import examination.teacherAndStudents.utils.TransactionType;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class HostelServiceImpl implements HostelService {
 
-    @Autowired
-    private HostelRepository hostelRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private ProfileRepository profileRepository;
+    private final HostelRepository hostelRepository;
+    private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
+    private final HostelBedTrackerRepository hostelBedTrackerRepository;
+    private final AcademicSessionRepository academicSessionRepository;
+    private final HostelAllocationRepository hostelAllocationRepository;
 
     @Override
     public Page<HostelResponse> getAllHostels(
@@ -43,143 +41,125 @@ public class HostelServiceImpl implements HostelService {
             int size,
             String sortBy,
             String sortDirection) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("User not found"));
 
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User attendant = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
-                    .orElseThrow(() -> new CustomNotFoundException("Admin not found"));
+        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
 
-            Profile attendantProfile = profileRepository.findByUser(attendant)
-                    .orElseThrow(() -> new CustomNotFoundException("Attendant profile not found"));
+        Page<Hostel> hostelsPage = hostelRepository.findAllBySchoolWithFilters(
+                user.getSchool().getId(),
+                hostelName,
+                availabilityStatus,
+                id,
+                pageable);
 
-            // Create Pageable object
-            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
-            Pageable pageable = PageRequest.of(page, size, sort);
-
-            // Fetch filtered hostels
-            Page<Hostel> hostelsPage = hostelRepository.findAllBySchoolWithFilters(
-                    attendantProfile.getUser().getSchool().getId(),
-                    hostelName,
-                    availabilityStatus,
-                    id,
-                    pageable);
-
-            // Map to response DTO
-            return hostelsPage.map(this::mapToHostelResponse);
-        } catch (CustomNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new CustomInternalServerException("Error fetching all hostels: " + e.getMessage());
-        }
+        return hostelsPage.map(this::mapToHostelResponse);
     }
-
 
     @Override
     public HostelResponse getHostelById(Long hostelId) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new CustomNotFoundException("User not found"));
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("User not found"));
 
-            Hostel hostel = hostelRepository.findById(hostelId)
-                    .orElseThrow(() -> new CustomNotFoundException("Hostel not found"));
+        Hostel hostel = hostelRepository.findByIdAndSchoolId(hostelId, user.getSchool().getId())
+                .orElseThrow(() -> new CustomNotFoundException("Hostel not found with ID: " + hostelId));
 
-            return mapToHostelResponse(hostel);
-        } catch (CustomNotFoundException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new CustomInternalServerException("Error fetching hostel: " + e.getMessage());
-        }
+        return mapToHostelResponse(hostel);
     }
 
-
     @Override
+    @Transactional
     public HostelResponse createHostel(HostelRequest hostelRequest) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new CustomNotFoundException("User not found"));
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User user = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                .orElseThrow(() -> new AuthenticationFailedException("Please login as an Admin"));
 
-            if (user.getRoles() != Roles.ADMIN) {
-                throw new AuthenticationFailedException("Only admins can create hostels");
-            }
-
-            Hostel newHostel = Hostel.builder()
-                    .numberOfBed(hostelRequest.getNumberOfBed())
-                    .hostelName(hostelRequest.getHostelName())
-                    .school(user.getSchool())
-                    .costPerBed(hostelRequest.getCostPerBed())
-                    .availabilityStatus(AvailabilityStatus.AVAILABLE)
-                    .build();
-
-            Hostel savedHostel = hostelRepository.save(newHostel);
-            return mapToHostelResponse(savedHostel);
-        } catch (CustomNotFoundException e) {
-            throw new CustomInternalServerException("Error creating hostel: ");
-        } catch (Exception e) {
-            throw new CustomInternalServerException("Error creating hostel: " + e.getMessage());
+        if (hostelRequest.getNumberOfBed() <= 0) {
+            throw new IllegalArgumentException("Number of beds must be greater than zero");
         }
+        if (hostelRequest.getCostPerBed().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Cost per bed must be greater than zero");
+        }
+
+        Profile warden = null;
+        if (hostelRequest.getWardenId() != null) {
+            warden = profileRepository.findById(hostelRequest.getWardenId())
+                    .orElseThrow(() -> new CustomNotFoundException("Warden not found with ID: " + hostelRequest.getWardenId()));
+        }
+
+        Hostel newHostel = Hostel.builder()
+                .hostelName(hostelRequest.getHostelName())
+                .costPerBed(hostelRequest.getCostPerBed())
+                .numberOfBed(hostelRequest.getNumberOfBed())
+                .availabilityStatus(AvailabilityStatus.AVAILABLE)
+                .warden(warden)
+                .school(user.getSchool())
+                .build();
+
+        Hostel savedHostel = hostelRepository.save(newHostel);
+        return mapToHostelResponse(savedHostel);
     }
 
-
     @Override
+    @Transactional
     public HostelResponse updateHostel(Long hostelId, HostelRequest updatedHostel) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new CustomNotFoundException("User not found"));
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User user = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                .orElseThrow(() -> new AuthenticationFailedException("Please login as an Admin"));
 
-            if (user.getRoles() != Roles.ADMIN) {
-                throw new AuthenticationFailedException("Only admins can update hostels");
-            }
+        Hostel hostel = hostelRepository.findByIdAndSchoolId(hostelId, user.getSchool().getId())
+                .orElseThrow(() -> new CustomNotFoundException("Hostel not found with ID: " + hostelId));
 
-            Hostel hostel = hostelRepository.findById(hostelId)
-                    .orElseThrow(() -> new CustomNotFoundException("Hostel not found"));
-
-            hostel.setHostelName(updatedHostel.getHostelName());
-            hostel.setCostPerBed(updatedHostel.getCostPerBed());
-            hostel.setNumberOfBed(updatedHostel.getNumberOfBed());
-
-            Hostel updated = hostelRepository.save(hostel);
-            return mapToHostelResponse(updated);
-        } catch ( CustomNotFoundException e) {
-            throw new CustomInternalServerException("Error updating hostel: ");
-        } catch (Exception e) {
-            throw new CustomInternalServerException("Error updating hostel: " + e.getMessage());
+        if (updatedHostel.getNumberOfBed() <= 0) {
+            throw new IllegalArgumentException("Number of beds must be greater than zero");
         }
-    }
+        if (updatedHostel.getCostPerBed().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Cost per bed must be greater than zero");
+        }
 
+        Profile warden = null;
+        if (updatedHostel.getWardenId() != null) {
+            warden = profileRepository.findById(updatedHostel.getWardenId())
+                    .orElseThrow(() -> new CustomNotFoundException("Warden not found with ID: " + updatedHostel.getWardenId()));
+        }
+
+        hostel.setHostelName(updatedHostel.getHostelName());
+        hostel.setCostPerBed(updatedHostel.getCostPerBed());
+        hostel.setNumberOfBed(updatedHostel.getNumberOfBed());
+        hostel.setWarden(warden);
+
+        // Update availability status based on bed tracker (if exists)
+        Optional<HostelBedTracker> tracker = hostelBedTrackerRepository.findByHostelAndAcademicYear(
+                hostel, academicSessionRepository.findCurrentSession1(LocalDate.now()).orElse(null));
+        if (tracker.isPresent() && tracker.get().getNumberOfBedLeft() == 0) {
+            hostel.setAvailabilityStatus(AvailabilityStatus.UNAVAILABLE);
+        } else {
+            hostel.setAvailabilityStatus(AvailabilityStatus.AVAILABLE);
+        }
+
+        Hostel updated = hostelRepository.save(hostel);
+        return mapToHostelResponse(updated);
+    }
 
     @Override
+    @Transactional
     public void deleteHostel(Long hostelId) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            Optional<User> optionalUser = userRepository.findByEmail(email);
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User user = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                .orElseThrow(() -> new AuthenticationFailedException("Please login as an Admin"));
 
-            if (optionalUser.isPresent()) {
-                User user = optionalUser.get();
+        Hostel hostel = hostelRepository.findByIdAndSchoolId(hostelId, user.getSchool().getId())
+                .orElseThrow(() -> new CustomNotFoundException("Hostel not found with ID: " + hostelId));
 
-                if (user.getRoles() == Roles.ADMIN) {
-                    // Retrieve the hostel from the database
-                    Optional<Hostel> existingHostel = hostelRepository.findById(hostelId);
-
-                    if (existingHostel.isPresent()) {
-                        hostelRepository.deleteById(hostelId);
-                    } else {
-                        throw new EntityNotFoundException("Hostel not found with ID: " + hostelId);
-                    }
-                } else {
-                    throw new CustomNotFoundException("Please log in as an Admin");
-                }
-            } else {
-                throw new EntityNotFoundException("User not found");
-            }
-        } catch (Exception e) {
-            throw new CustomInternalServerException("Error occurred while deleting the hostel with ID: " + hostelId + ". " + e.getMessage());
+        if (hostelAllocationRepository.existsByHostel(hostel)) {
+            throw new IllegalStateException("Cannot delete hostel with active allocations");
         }
+
+        hostelRepository.delete(hostel);
     }
-
-
 
     private HostelResponse mapToHostelResponse(Hostel hostel) {
         return HostelResponse.builder()
@@ -190,7 +170,7 @@ public class HostelServiceImpl implements HostelService {
                 .availabilityStatus(hostel.getAvailabilityStatus())
                 .schoolId(hostel.getSchool().getId())
                 .schoolName(hostel.getSchool().getSchoolName())
+                .wardenId(hostel.getWarden() != null ? hostel.getWarden().getId() : null)
                 .build();
     }
-
 }

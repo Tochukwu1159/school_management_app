@@ -4,6 +4,8 @@ import examination.teacherAndStudents.dto.TaskRequest;
 import examination.teacherAndStudents.dto.TaskResponse;
 import examination.teacherAndStudents.service.TaskService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,9 +37,14 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TaskResponse>> getAllTasks() {
-        List<TaskResponse> responses = taskService.getAllTasks();
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<Page<TaskResponse>> TaskResponse(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        Page<TaskResponse> responses = taskService.getAllTasks(page, size, sortBy, sortDirection);
+        return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")

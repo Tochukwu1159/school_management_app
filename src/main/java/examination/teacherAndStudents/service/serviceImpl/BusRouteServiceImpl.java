@@ -1,11 +1,10 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
-import examination.teacherAndStudents.dto.RouteRequest;
-import examination.teacherAndStudents.dto.RouteResponse;
+import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.BusRoute;
+import examination.teacherAndStudents.entity.Stop;
 import examination.teacherAndStudents.entity.User;
-import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.BusRouteRepository;
 import examination.teacherAndStudents.repository.UserRepository;
@@ -17,8 +16,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,79 +27,113 @@ public class BusRouteServiceImpl implements BusRouteService {
     private final BusRouteRepository busRouteRepository;
     private final UserRepository userRepository;
 
-
+    @Override
     public Page<RouteResponse> getAllRoutes(int pageNo, int pageSize, String sortBy) {
-
-        try {
-            Pageable paging = PageRequest.of(pageNo, pageSize, Sort.by(sortBy).ascending());
-            Page<BusRoute> busRoutes = busRouteRepository.findAll(paging);
-            return busRoutes.map(this::mapToRouteResponse);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to retrieve all routes", e);
-        }
+        Pageable paging = PageRequest.of(pageNo, pageSize, Sort.by(sortBy).ascending());
+        Page<BusRoute> busRoutes = busRouteRepository.findAll(paging);
+        return busRoutes.map(this::mapToRouteResponse);
     }
 
+    @Override
     public RouteResponse getRouteById(Long id) {
-        try {
-            BusRoute busRoute = busRouteRepository.findById(id).orElse(null);
-            if (busRoute == null) {
-                throw new IllegalArgumentException("Route not found for id: " + id);
-            }
-            return mapToRouteResponse(busRoute);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to retrieve route by id: " + id, e);
-        }
+        BusRoute busRoute = busRouteRepository.findByIdWithStops(id)
+                .orElseThrow(() -> new CustomNotFoundException("Route not found for id: " + id));
+        return mapToRouteResponse(busRoute);
     }
 
+    @Override
+    @Transactional
     public RouteResponse createRoute(RouteRequest routeRequest) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
-                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-            Optional<User> userDetails = userRepository.findByEmail(email);
-            BusRoute newRoute = new BusRoute();
-            newRoute.setRouteName(routeRequest.getRouteName());
-            newRoute.setStartPoint(routeRequest.getStartPoint());
-            newRoute.setEndPoint(routeRequest.getEndPoint());
-            newRoute.setSchool(userDetails.get().getSchool());
-            BusRoute savedRoute = busRouteRepository.save(newRoute);
-            return mapToRouteResponse(savedRoute);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create route", e);
+        BusRoute newRoute = BusRoute.builder()
+                .routeName(routeRequest.getRouteName())
+                .school(admin.getSchool())
+                .startPoint(routeRequest.getStartPoint())
+                .endPoint(routeRequest.getEndPoint())
+                .build();
+
+        // Add stops to the route
+        if (routeRequest.getStops() != null) {
+            routeRequest.getStops().forEach(stopRequest -> {
+                Stop stop = Stop.builder()
+                        .stopName(stopRequest.getStopName())
+                        .address(stopRequest.getAddress())
+                        .sequenceOrder(stopRequest.getSequenceOrder())
+                        .arrivalTime(stopRequest.getArrivalTime())
+                        .build();
+                newRoute.addStop(stop);
+            });
         }
+
+        BusRoute savedRoute = busRouteRepository.save(newRoute);
+        return mapToRouteResponse(savedRoute);
     }
 
+    @Override
+    @Transactional
     public RouteResponse updateRoute(Long id, RouteRequest routeRequest) {
-        try {
-            BusRoute existingRoute = busRouteRepository.findById(id).orElse(null);
-            if (existingRoute == null) {
-                throw new IllegalArgumentException("Route not found for id: " + id);
-            }
-            existingRoute.setRouteName(routeRequest.getRouteName());
-            existingRoute.setStartPoint(routeRequest.getStartPoint());
-            existingRoute.setEndPoint(routeRequest.getEndPoint());
-            BusRoute updatedRoute = busRouteRepository.save(existingRoute);
-            return mapToRouteResponse(updatedRoute);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to update route with id: " + id, e);
+        BusRoute existingRoute = busRouteRepository.findByIdWithStops(id)
+                .orElseThrow(() -> new CustomNotFoundException("Route not found for id: " + id));
+
+        existingRoute.setRouteName(routeRequest.getRouteName());
+        existingRoute.setStartPoint(routeRequest.getStartPoint());
+        existingRoute.setEndPoint(routeRequest.getEndPoint());
+
+        // Update stops
+        existingRoute.getStops().clear();
+        if (routeRequest.getStops() != null) {
+            routeRequest.getStops().forEach(stopRequest -> {
+                Stop stop = Stop.builder()
+                        .stopName(stopRequest.getStopName())
+                        .address(stopRequest.getAddress())
+                        .sequenceOrder(stopRequest.getSequenceOrder())
+                        .arrivalTime(stopRequest.getArrivalTime())
+                        .build();
+                existingRoute.addStop(stop);
+            });
         }
+
+        BusRoute updatedRoute = busRouteRepository.save(existingRoute);
+        return mapToRouteResponse(updatedRoute);
     }
 
+    @Override
+    @Transactional
     public void deleteRoute(Long id) {
-        try {
-            busRouteRepository.deleteById(id);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to delete route with id: " + id, e);
+        BusRoute route = busRouteRepository.findById(id)
+                .orElseThrow(() -> new CustomNotFoundException("Route not found for id: " + id));
+        if (!route.getBuses().isEmpty()) {
+            throw new IllegalStateException("Cannot delete route with assigned buses");
         }
+        busRouteRepository.delete(route);
     }
 
     private RouteResponse mapToRouteResponse(BusRoute busRoute) {
-        RouteResponse routeResponse = new RouteResponse();
-        routeResponse.setId(busRoute.getId());
-        routeResponse.setRouteName(busRoute.getRouteName());
-        routeResponse.setStartPoint(busRoute.getStartPoint());
-        routeResponse.setEndPoint(busRoute.getEndPoint());
-        return routeResponse;
+        List<StopResponse> stopResponses = busRoute.getStops().stream()
+                .map(this::mapToStopResponse)
+                .collect(Collectors.toList());
+
+        return RouteResponse.builder()
+                .id(busRoute.getId())
+                .routeName(busRoute.getRouteName())
+                .startPoint(busRoute.getStartPoint())
+                .endPoint(busRoute.getEndPoint())
+                .createdAt(busRoute.getCreatedAt())
+                .updatedAt(busRoute.getUpdatedAt())
+                .stops(stopResponses)
+                .build();
+    }
+
+    private StopResponse mapToStopResponse(Stop stop) {
+        return StopResponse.builder()
+                .stopId(stop.getStopId())
+                .stopName(stop.getStopName())
+                .address(stop.getAddress())
+                .sequenceOrder(stop.getSequenceOrder())
+                .arrivalTime(stop.getArrivalTime())
+                .build();
     }
 }

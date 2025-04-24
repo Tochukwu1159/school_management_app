@@ -4,46 +4,71 @@ import examination.teacherAndStudents.dto.ComplaintDto;
 import examination.teacherAndStudents.dto.ComplaintResponse;
 import examination.teacherAndStudents.dto.ReplyComplaintDto;
 import examination.teacherAndStudents.service.ComplaintService;
-import examination.teacherAndStudents.utils.AccountUtils;
+import examination.teacherAndStudents.utils.ComplainStatus;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
+@RequestMapping("/api/v1/complaints")
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/feedbacks")
 public class ComplaintController {
 
+    private static final Logger logger = LoggerFactory.getLogger(ComplaintController.class);
 
-    private final ComplaintService feedbackService;
+    private final ComplaintService complaintService;
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<ComplaintResponse>> getUserComplaints(@PathVariable Long userId) {
-        List<ComplaintResponse> feedbacks = feedbackService.getUserComplaints(userId);
-        return ResponseEntity.ok(feedbacks);
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<Page<ComplaintResponse>> getUserComplaints(
+            @PathVariable @Min(1) Long userId,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection
+    ) {
+        logger.debug("Request to get complaints for user ID: {}, page: {}, size: {}", userId, page, size);
+        Page<ComplaintResponse> complaints = complaintService.getUserComplaints(
+                userId, page, size, sortBy, sortDirection
+        );
+        return ResponseEntity.ok(complaints);
     }
 
     @PostMapping
-    public ResponseEntity<ComplaintResponse> submitComplaint(@RequestBody ComplaintDto feedback) {
-        ComplaintResponse submittedComplaint = feedbackService.submitComplaint(feedback);
+    public ResponseEntity<ComplaintResponse> submitComplaint(@Valid @RequestBody ComplaintDto complaintDto) {
+        logger.debug("Request to submit complaint with feedback: {}", complaintDto.getFeedbackText());
+        ComplaintResponse submittedComplaint = complaintService.submitComplaint(complaintDto);
         return ResponseEntity.ok(submittedComplaint);
     }
 
-    @PutMapping("/reply/{feedbackId}")
-    public ResponseEntity<ComplaintResponse> replyToComplaint(@PathVariable  Long feedbackId, @RequestBody ReplyComplaintDto feedback) {
-        ComplaintResponse submittedComplaint = feedbackService.replyToComplaint(feedbackId, feedback);
-        return ResponseEntity.ok(submittedComplaint);
+    @PutMapping("/{complaintId}/reply")
+    public ResponseEntity<ComplaintResponse> replyToComplaint(
+            @PathVariable @Min(1) Long complaintId,
+            @Valid @RequestBody ReplyComplaintDto replyComplaintDto
+    ) {
+        logger.debug("Request to reply to complaint ID: {}", complaintId);
+        ComplaintResponse repliedComplaint = complaintService.replyToComplaint(complaintId, replyComplaintDto);
+        return ResponseEntity.ok(repliedComplaint);
     }
 
-    @GetMapping("/all")
-        public ResponseEntity<Page<ComplaintResponse>> getAllComplaint(@RequestParam(defaultValue = AccountUtils.PAGENO) Integer pageNo,
-                @RequestParam(defaultValue = AccountUtils.PAGESIZE) Integer pageSize,
-                @RequestParam(defaultValue = "id") String sortBy) {
-        Page<ComplaintResponse> feedbackList = feedbackService.getAllComplaint(pageNo, pageSize, sortBy);
-
-        return ResponseEntity.ok(feedbackList);
+    @GetMapping
+    public ResponseEntity<Page<ComplaintResponse>> getAllComplaints(
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "10") @Min(1) int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection,
+            @RequestParam(required = false) String userName,
+            @RequestParam(required = false) ComplainStatus status
+    ) {
+        logger.debug("Request to get all complaints, page: {}, size: {}, userName: {}, status: {}",
+                page, size, userName, status);
+        Page<ComplaintResponse> complaints = complaintService.getAllComplaint(
+                page, size, sortBy, sortDirection, userName, status
+        );
+        return ResponseEntity.ok(complaints);
     }
 }

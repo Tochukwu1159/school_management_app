@@ -40,16 +40,16 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
     @Override
     public void takeTeacherAttendance(TeacherAttendanceRequest attendanceRequest) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        User teacher = userRepository.findByIdAndRoles(attendanceRequest.getTeacherId(), Roles.TEACHER);
+        Optional<User> teacher = userRepository.findByIdAndRole(attendanceRequest.getTeacherId(), Roles.TEACHER);
         if (teacher == null) {
             throw new EntityNotFoundException("Teacher not found with ID: " + attendanceRequest.getTeacherId());
         }
 
-        Profile teacherProfile = profileRepository.findByUser(teacher)
-                .orElseThrow(() -> new EntityNotFoundException("Profile not found for teacher ID: " + teacher.getId()));
+        Profile teacherProfile = profileRepository.findByUser(teacher.get())
+                .orElseThrow(() -> new EntityNotFoundException("Profile not found for teacher ID: " + teacher.get().getId()));
 
         examination.teacherAndStudents.entity.StudentTerm studentTerm = studentTermRepository.findById(attendanceRequest.getStudentTermId())
                 .orElseThrow(() -> new EntityNotFoundException("StudentTerm not found with ID: " + attendanceRequest.getStudentTermId()));
@@ -68,7 +68,7 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
         if (teacherAttendanceRepository.existsByTeacherAndDateAndAcademicYearAndStudentTerm(
                 teacherProfile, attendanceRequest.getAttendanceDate(), session, studentTerm)) {
             throw new AttendanceAlreadyTakenException("Attendance for date " + attendanceRequest.getAttendanceDate()
-                    + " already taken for teacher ID: " + teacher.getId());
+                    + " already taken for teacher ID: " + teacher.get().getId());
         }
 
         // Save attendance
@@ -153,7 +153,7 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
                 .orElseThrow(() -> new NotFoundException("Student term not found"));
 
         // Get all teachers
-        List<User> teachers = userRepository.findAllByRoles(Roles.TEACHER);
+        List<User> teachers = userRepository.findUsersByRole(Roles.TEACHER);
         List<TeacherAttendanceResponse> teacherAttendanceResponses = new ArrayList<>();
 
         for (User teacher : teachers) {
@@ -251,11 +251,11 @@ public class TeacherAttendanceServiceImpl implements TeacherAttendanceService {
             LocalDateTime startDateTime = startDate.atStartOfDay();
             LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
             // Fetch teacher by ID
-            User teacher = userRepository.findByIdAndRoles(teacherId, Roles.TEACHER);
+            Optional<User> teacher = userRepository.findByIdAndRole(teacherId, Roles.TEACHER);
             if (teacher == null) {
                 throw new EntityNotFoundException("Teacher not found with ID: " + teacherId);
             }
-            Optional<Profile> teacherProfile = profileRepository.findByUser(teacher);
+            Optional<Profile> teacherProfile = profileRepository.findByUser(teacher.get());
 
             // Fetch teacher attendance records
             return teacherAttendanceRepository.findByTeacherIdAndDateBetween(teacherProfile.get().getId(), startDateTime, endDateTime);

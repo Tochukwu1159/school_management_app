@@ -1,46 +1,48 @@
 package examination.teacherAndStudents.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Entity
+@Table(name = "task")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
-@Table(name = "tasks")
 public class Task {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by_id", nullable = false)
-    private Profile assignedBy;  // Teacher or school owner assigning the task
+    private Profile assignedBy;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_to_id", nullable = false)
-    private Profile assignedTo;  // The person receiving the task (teacher, driver, gatekeeper, etc.)
+    private Profile assignedTo;
 
-    private String description;  // Task description
+    @Column(nullable = false)
+    private String description;
+
+    @Column(nullable = false)
+    private String status;
+
+    private String feedback;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    private String feedback;  // Feedback from the assignee after task completion
-    private String status;  // Status of the task (e.g., "pending", "in-progress", "done")
-
 }

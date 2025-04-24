@@ -2,7 +2,10 @@ package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.SubscriptionType;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.GenericGenerator;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -17,22 +20,25 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class SubscriptionHistory {
-
     @Id
-    @GeneratedValue
+    @GeneratedValue(generator = "UUID")
+    @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "subscription_type", nullable = false)
     private SubscriptionType subscriptionType;
 
+    @NotNull
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
+    @NotNull
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
@@ -40,24 +46,20 @@ public class SubscriptionHistory {
 
     private String transactionStatus;
 
-    private
-    LocalDateTime previousExpiryDate;
+    private LocalDateTime previousExpiryDate;
 
     private long daysCarriedOver;
 
     private int studentCount;
 
-    @Column(name = "amount_paid", nullable = false, precision = 10, scale = 2)
+    @NotNull
+    @Column(name = "amount_paid", nullable = false, precision = 15, scale = 2)
     private BigDecimal amountPaid;
 
     @Column(name = "payment_reference", unique = true)
     private String paymentReference;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }

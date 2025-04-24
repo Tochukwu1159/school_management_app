@@ -6,7 +6,6 @@ import examination.teacherAndStudents.dto.NoticeResponse;
 import examination.teacherAndStudents.dto.UpdateNoticeRequest;
 import examination.teacherAndStudents.entity.Notice;
 import examination.teacherAndStudents.entity.User;
-import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.NoticeRepository;
@@ -42,7 +41,7 @@ public class NoticeServiceImpl implements NoticeService {
     public List<NoticeResponse> getAllNoticePosts() {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+            User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                     .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             return noticeRepository.findAll().stream().map((element) -> modelMapper.map(element, NoticeResponse.class)).collect(Collectors.toList());
         } catch (Exception e) {
@@ -53,7 +52,7 @@ public class NoticeServiceImpl implements NoticeService {
     public NoticeResponse getNoticePostById(Long id) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+            User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                     .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Notice notice = noticeRepository.findById(id)
@@ -73,7 +72,7 @@ public class NoticeServiceImpl implements NoticeService {
     public NoticeResponse createNoticePost(NoticeRequest noticeRequest) {
         try {
                 String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+            User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                     .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
             Optional<User> userDetails = userRepository.findByEmail(email);
             Notice newNotice = new Notice();
@@ -90,7 +89,7 @@ public class NoticeServiceImpl implements NoticeService {
     public NoticeResponse updateNoticePost(Long id, UpdateNoticeRequest updatedNoticePost) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+            User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                     .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Notice existingNoticePost = noticeRepository.findById(id)
@@ -111,7 +110,7 @@ public class NoticeServiceImpl implements NoticeService {
     public boolean deleteNoticePost(Long id) {
         try {
             String email = SecurityConfig.getAuthenticatedUserEmail();
-            User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+            User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                     .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
             Notice existingNoticePost = noticeRepository.findById(id)

@@ -1,14 +1,9 @@
 package examination.teacherAndStudents.repository;
 
-import examination.teacherAndStudents.entity.AuditLogEntry;
+import examination.teacherAndStudents.entity.AuditLog;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
-public interface AuditLogRepository extends JpaRepository<AuditLogEntry, Long> {
-    List<AuditLogEntry> findByEntityTypeAndEntityId(String entityType, String entityId);
-
-    List<AuditLogEntry> findByEntityTypeAndEntityIdAndTimestampBetween(
-            String entityType, String entityId, LocalDateTime from, LocalDateTime to);
+@Repository
+public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 }

@@ -6,6 +6,7 @@ import examination.teacherAndStudents.dto.AcademicSessionResponse;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.entity.StudentTerm;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
+import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
@@ -16,6 +17,10 @@ import examination.teacherAndStudents.service.AcademicSessionService;
 import examination.teacherAndStudents.utils.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -71,10 +76,41 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
         return mapToResponse(session);
     }
 
-    public List<AcademicSessionResponse> getAllAcademicSessions() {
-        return academicSessionRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+    public Page<AcademicSessionResponse> getAllAcademicSessions(
+            String name,
+            SessionStatus status,
+            SessionPromotion promotion,
+            Long id,
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection) {
+
+        try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Admin not found"));
+
+            // Create Pageable object
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            // Fetch filtered academic sessions
+            Page<AcademicSession> sessionsPage = academicSessionRepository.findAllWithFilters(
+                    admin.getSchool().getId(),
+                    name,
+                    status,
+                    promotion,
+                    id,
+                    pageable);
+
+            // Map to response DTO
+            return sessionsPage.map(this::mapToResponse);
+        } catch (CustomNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CustomInternalServerException("Error fetching academic sessions: " + e.getMessage());
+        }
     }
 
     public void deleteAcademicSession(Long id) {
@@ -89,7 +125,7 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
 
         // Get authenticated admin user and school
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN)
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         School school = admin.getSchool();
 

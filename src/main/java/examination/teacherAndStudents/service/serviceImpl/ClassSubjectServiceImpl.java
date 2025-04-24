@@ -2,23 +2,29 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.EntityAlreadyExistException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
+import examination.teacherAndStudents.error_handler.UnauthorizedException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.ClassSubjectService;
+import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ClassSubjectServiceImpl implements ClassSubjectService {
@@ -27,10 +33,14 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     private final SubjectRepository subjectRepository;
     private final ClassBlockRepository classBlockRepository;
     private final AcademicSessionRepository academicSessionRepository;
+    private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
+    private final ClassLevelRepository classLevelRepository;
 
-
+    @Override
+    @Transactional
     public ClassSubjectResponse saveClassSubject(ClassSubjectRequest request) {
-        // Fetch the required entities from the repositories
+        validateAdminUser();
         Subject subject = subjectRepository.findById(request.getSubjectId())
                 .orElseThrow(() -> new NotFoundException("Subject with id " + request.getSubjectId() + " not found"));
 
@@ -40,7 +50,6 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
         AcademicSession academicSession = academicSessionRepository.findById(request.getAcademicYearId())
                 .orElseThrow(() -> new NotFoundException("AcademicSession with id " + request.getAcademicYearId() + " not found"));
 
-        // Check if the subject already exists for the class block and academic year
         boolean exists = classSubjectRepository.existsBySubjectAndClassBlockAndAcademicYear(
                 subject, classBlock, academicSession
         );
@@ -48,7 +57,6 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
             throw new EntityAlreadyExistException("Subject already added for this class and academic year");
         }
 
-        // Create or update the ClassSubject entity
         ClassSubject classSubject = new ClassSubject();
         classSubject.setSubject(subject);
         classSubject.setClassBlock(classBlock);
@@ -60,61 +68,155 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
 
         return toResponse(classSubject);
     }
+
+    @Override
+    @Transactional(readOnly = true)
     public ClassSubjectResponse getClassSubjectById(Long id) {
-        Optional<ClassSubject> classSubjectOptional = classSubjectRepository.findById(id);
-        if (classSubjectOptional.isPresent()) {
-            ClassSubject classSubject = classSubjectOptional.get();
-            return toResponse(classSubject);
-        } else {
-            throw new RuntimeException("ClassSubject with id " + id + " not found");
-        }
+        validateAdminUser();
+        ClassSubject classSubject = classSubjectRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("ClassSubject with id " + id + " not found"));
+        return toResponse(classSubject);
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public Page<ClassSubjectResponse> getAllClassSubjects(
-            Long academicYearId,
-            Long subjectId,
-            Long classSubjectId,
-            String subjectName,
-            int page,
-            int size,
-            String sortBy,
-            String sortDirection) {
-
-        // Create Pageable object
+            Long academicYearId, Long subjectId, Long classSubjectId, String subjectName,
+            int page, int size, String sortBy, String sortDirection) {
+        validateAdminUser();
         Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        // Fetch filtered and paginated results
         Page<ClassSubject> classSubjects = classSubjectRepository.findAllWithFilters(
-                academicYearId,
-                subjectId,
-                classSubjectId,
-                subjectName,
-                pageable);
+                academicYearId, subjectId, classSubjectId, subjectName, pageable);
 
-        // Map to response DTO
         return classSubjects.map(this::toResponse);
     }
 
+    @Override
+    @Transactional
     public void deleteClassSubject(Long id) {
-        Optional<ClassSubject> classSubjectOptional = classSubjectRepository.findById(id);
-        if (classSubjectOptional.isPresent()) {
-            classSubjectRepository.deleteById(id);
-        } else {
-            throw new RuntimeException("ClassSubject with id " + id + " not found");
+        validateAdminUser();
+        ClassSubject classSubject = classSubjectRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("ClassSubject with id " + id + " not found"));
+        classSubjectRepository.delete(classSubject);
+        log.info("ClassSubject deleted [id={}]", id);
+    }
+
+    @Override
+    @Transactional
+    public void assignClassSubjectToTeacher(TeacherAssignmentRequest request) {
+        validateAdminUser();
+
+        ClassLevel classLevel = classLevelRepository.findByIdAndAcademicYearId(request.getClassLevelId(), request.getSessionId())
+                .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
+
+        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+                .orElseThrow(() -> new CustomNotFoundException("Student Class not found"));
+
+        if (request.getAssignments() == null || request.getAssignments().isEmpty()) {
+            throw new IllegalArgumentException("Assignments list cannot be empty");
+        }
+
+        for (TeacherAssignmentRequest.Assignment assignment : request.getAssignments()) {
+            // Validate ClassSubject
+            ClassSubject classSubject = classSubjectRepository.findById(assignment.getClassSubjectId())
+                    .orElseThrow(() -> new NotFoundException("ClassSubject with id " + assignment.getClassSubjectId() + " not found"));
+
+            // Validate Teacher
+            User teacher = userRepository.findById(assignment.getTeacherId())
+                    .orElseThrow(() -> new NotFoundException("Teacher with id " + assignment.getTeacherId() + " not found"));
+
+            Profile teacherProfile = profileRepository.findByUser(teacher)
+                    .orElseThrow(() -> new NotFoundException("Teacher with id " + assignment.getTeacherId() + " not found"));
+
+            if (!teacher.getRoles().contains(Roles.TEACHER)) {
+                throw new IllegalArgumentException("User with id " + assignment.getTeacherId() + " is not a teacher");
+            }
+
+            // Check if the ClassSubject already has a teacher assigned
+            if (classSubject.getTeacher() != null) {
+                throw new EntityAlreadyExistException("ClassSubject with id " + assignment.getClassSubjectId() + " already has a teacher assigned");
+            }
+
+            // Assign teacher
+            classSubject.setTeacher(teacherProfile);
+            classSubject.setUpdatedAt(LocalDateTime.now());
+            classSubjectRepository.save(classSubject);
+            log.info("Assigned teacher [teacherId={}] to ClassSubject [classSubjectId={}]", teacher.getId(), classSubject.getId());
         }
     }
 
-    public ClassSubjectResponse toResponse(ClassSubject classSubject) {
+    @Override
+    @Transactional
+    public void updateClassSubjectTeacherAssignment(TeacherAssignmentRequest request) {
+        validateAdminUser();
+
+        ClassLevel classLevel = classLevelRepository.findByIdAndAcademicYearId(request.getClassLevelId(), request.getSessionId())
+                .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
+
+        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+                .orElseThrow(() -> new CustomNotFoundException("Student Class not found"));
+
+        if (request.getAssignments() == null || request.getAssignments().isEmpty()) {
+            throw new IllegalArgumentException("Assignments list cannot be empty");
+        }
+
+        for (TeacherAssignmentRequest.Assignment assignment : request.getAssignments()) {
+            // Validate ClassSubject
+            ClassSubject classSubject = classSubjectRepository.findById(assignment.getClassSubjectId())
+                    .orElseThrow(() -> new NotFoundException("ClassSubject with id " + assignment.getClassSubjectId() + " not found"));
+
+            // Validate Teacher
+            User teacher = userRepository.findById(assignment.getTeacherId())
+                    .orElseThrow(() -> new NotFoundException("Teacher with id " + assignment.getTeacherId() + " not found"));
+
+            Profile teacherProfile = profileRepository.findByUser(teacher)
+                    .orElseThrow(() -> new NotFoundException("Teacher with id " + assignment.getTeacherId() + " not found"));
+
+            if (!teacher.getRoles().contains(Roles.TEACHER)) {
+                throw new IllegalArgumentException("User with id " + assignment.getTeacherId() + " is not a teacher");
+            }
+
+            // Update teacher assignment (even if no teacher was previously assigned)
+            classSubject.setTeacher(teacherProfile);
+            classSubject.setUpdatedAt(LocalDateTime.now());
+            classSubjectRepository.save(classSubject);
+            log.info("Updated teacher assignment [teacherId={}] for ClassSubject [classSubjectId={}]", teacher.getId(), classSubject.getId());
+        }
+    }
+
+    private User validateAdminUser() {
+        String email = getAuthenticatedUserEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("User not found with email: " + email));
+
+        if (!user.getRoles().contains(Roles.ADMIN)) {
+            throw new UnauthorizedException("Please login as an Admin");
+        }
+
+        return user;
+    }
+
+    private String getAuthenticatedUserEmail() {
+        try {
+            return SecurityContextHolder.getContext().getAuthentication().getName();
+        } catch (Exception e) {
+            log.error("Failed to retrieve authenticated user email", e);
+            throw new UnauthorizedException("Unable to authenticate user");
+        }
+    }
+
+    private ClassSubjectResponse toResponse(ClassSubject classSubject) {
         return ClassSubjectResponse.builder()
                 .id(classSubject.getId())
                 .subject(new SubjectResponse(
-                classSubject.getSubject().getId(),
-                classSubject.getSubject().getName()
-        ))
+                        classSubject.getSubject().getId(),
+                        classSubject.getSubject().getName()
+                ))
                 .classBlock(new ClassBlockResponses(
                         classSubject.getClassBlock().getId(),
-                        classSubject.getClassBlock().getCurrentStudentClassName(),
+                        classSubject.getClassBlock().getName(),
                         new ClassLevelResponse(
                                 classSubject.getClassBlock().getClassLevel().getId(),
                                 classSubject.getClassBlock().getClassLevel().getClassName()
@@ -124,9 +226,14 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
                         classSubject.getAcademicYear().getId(),
                         classSubject.getAcademicYear().getName()
                 ))
+                .teacher(classSubject.getTeacher() != null ? new SubjectUserResponse(
+                        classSubject.getTeacher().getId(),
+                        classSubject.getTeacher().getUser().getFirstName(),
+                        classSubject.getTeacher().getUser().getLastName(),
+                        classSubject.getTeacher().getUser().getEmail()
+                ) : null)
                 .createdAt(classSubject.getCreatedAt())
                 .updatedAt(classSubject.getUpdatedAt())
                 .build();
     }
 }
-

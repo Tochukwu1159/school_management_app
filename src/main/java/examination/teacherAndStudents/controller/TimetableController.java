@@ -8,6 +8,7 @@ import examination.teacherAndStudents.repository.TimetableRepository;
 import examination.teacherAndStudents.service.SubjectService;
 import examination.teacherAndStudents.service.TimetableService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -51,14 +52,34 @@ public class TimetableController {
     }
     @GetMapping("/{timetableId}")
     public ResponseEntity<Timetable> getTimetableById(@PathVariable Long timetableId){
-        return timetableService.getTimetableById(timetableId);
+        Timetable timeTable =   timetableService.getTimetableById(timetableId);
+        return new ResponseEntity<>(timeTable, HttpStatus.OK);
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<Page<Timetable>> getAllTimetables(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        Page<Timetable> timetables = timetableService.getAllTimetables(page, size, sortBy, sortDirection);
+        return new ResponseEntity<>(timetables, HttpStatus.OK);
     }
 
     @GetMapping
-    public ResponseEntity<List<Timetable>> getAllTimetables() {
-        List<Timetable> timetables = timetableService.getAllTimetables();
-        return new ResponseEntity<>(timetables, HttpStatus.OK);
+    public ResponseEntity<Page<SubjectSchedule>> getSubjectSchedules(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+
+        Page<SubjectSchedule> subjectSchedules = timetableService.getAllSubjectSchedules(page, size, sortBy, sortDirection);
+        return new ResponseEntity<>(subjectSchedules, HttpStatus.OK);
     }
+
+
+
     public void deleteTimetable(Long timetableId) {
         if (!timetableRepository.existsById(timetableId)) {
             throw new CustomNotFoundException("Timetable not found with ID: " + timetableId);
@@ -66,9 +87,4 @@ public class TimetableController {
 
         timetableService.deleteTimetable(timetableId);
     }
-
-
-
-
-    // Other API endpoints as needed
 }

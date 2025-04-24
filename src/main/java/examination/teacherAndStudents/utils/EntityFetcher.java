@@ -24,14 +24,12 @@ public class EntityFetcher {
     private final StudentTermRepository studentTermRepository;
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
-    private final DuesPaymentRepository duesPaymentRepository;
     private final TimetableRepository timetableRepository;
     private final StaffLevelRepository staffLevelRepository;
     private final StaffAttendanceRepository staffAttendanceRepository;
     private final SubjectRepository subjectRepository;
     private final BookRepository bookRepository;
     private final NoticeRepository noticeRepository;
-    private final DuesRepository duesRepository;
     private final BookBorrowingRepository bookBorrowingRepository;
     private final ResultRepository resultRepository;
     private final PositionRepository positionRepository;
@@ -44,20 +42,18 @@ public class EntityFetcher {
 
     public EntityFetcher(AcademicSessionRepository academicSessionRepository,
                          ClassBlockRepository classBlockRepository,
-                         StudentTermRepository studentTermRepository, UserRepository userRepository, ProfileRepository profileRepository, DuesPaymentRepository duesPaymentRepository, TimetableRepository timetableRepository, StaffLevelRepository staffLevelRepository, StaffAttendanceRepository staffAttendanceRepository, SubjectRepository subjectRepository, BookRepository bookRepository, NoticeRepository noticeRepository, DuesRepository duesRepository, BookBorrowingRepository bookBorrowingRepository, ResultRepository resultRepository, PositionRepository positionRepository, SessionAverageRepository sessionAverageRepository, ClassLevelRepository classLevelRepository, BusRouteRepository busRouteRepository, RatingRepository ratingRepository, ClassSubjectRepository classSubjectRepository, CurriculumRepository curriculumRepository) {
+                         StudentTermRepository studentTermRepository, UserRepository userRepository, ProfileRepository profileRepository,TimetableRepository timetableRepository, StaffLevelRepository staffLevelRepository, StaffAttendanceRepository staffAttendanceRepository, SubjectRepository subjectRepository, BookRepository bookRepository, NoticeRepository noticeRepository, BookBorrowingRepository bookBorrowingRepository, ResultRepository resultRepository, PositionRepository positionRepository, SessionAverageRepository sessionAverageRepository, ClassLevelRepository classLevelRepository, BusRouteRepository busRouteRepository, RatingRepository ratingRepository, ClassSubjectRepository classSubjectRepository, CurriculumRepository curriculumRepository) {
         this.academicSessionRepository = academicSessionRepository;
         this.classBlockRepository = classBlockRepository;
         this.studentTermRepository = studentTermRepository;
         this.userRepository = userRepository;
         this.profileRepository = profileRepository;
-        this.duesPaymentRepository = duesPaymentRepository;
         this.timetableRepository = timetableRepository;
         this.staffLevelRepository = staffLevelRepository;
         this.staffAttendanceRepository = staffAttendanceRepository;
         this.subjectRepository = subjectRepository;
         this.bookRepository = bookRepository;
         this.noticeRepository = noticeRepository;
-        this.duesRepository = duesRepository;
         this.bookBorrowingRepository = bookBorrowingRepository;
         this.resultRepository = resultRepository;
         this.positionRepository = positionRepository;
@@ -70,7 +66,7 @@ public class EntityFetcher {
     }
 
 public User fetchLoggedInAdmin(String email) {
-            Optional<User> admin = userRepository.findByEmailAndRoles(email, Roles.ADMIN);
+            Optional<User> admin = userRepository.findByEmailAndRole(email, Roles.ADMIN);
     if (admin == null) {
         throw new AuthenticationFailedException("Please login as an Admin");
     }
@@ -124,10 +120,6 @@ public ClassLevel fetchClassLevel(String className) {
     }
 
 
-    public Dues fetchDues(Long duesId) {
-      return   duesRepository.findById(duesId)
-                .orElseThrow(() -> new EntityNotFoundException("Dues not found with id: " + duesId));
-    }
     public BusRoute fetchBusRoute(Long busRouteId) {
         BusRoute busRoute = busRouteRepository.findById(busRouteId).orElse(null);
         if (busRoute == null) {
@@ -168,19 +160,7 @@ public ClassLevel fetchClassLevel(String className) {
            .orElseThrow(() -> new BadRequestException("Class block not found with ID: " + classLevelId));
 }
 
-public DuePayment fetchDuePayment(Long dueId, AcademicSession academicSession, StudentTerm studentTerm, Profile profile) {
-   return duesPaymentRepository.findByDueIdAndAcademicYearAndStudentTermAndProfile(dueId,academicSession, studentTerm, profile);
-}
-public BookBorrowing fetchExistingBookBorrowing(Profile profile, Book book) {
-        return bookBorrowingRepository.findByStudentProfileAndBookAndStatusNot(
-                profile, book, BorrowingStatus.RETURNED);
 
-}
-public BookBorrowing fetchBookBorrowing(Long borrowingId) {
-        return bookBorrowingRepository.findById(borrowingId)
-                .orElseThrow(() -> new CustomInternalServerException("Borrowing entry not found"));
-
-}
 
 public  Map<Profile, Position>  fetchExistingPositions(ClassBlock classBlock, AcademicSession academicSession, StudentTerm studentTerm) {
         return positionRepository.findByClassBlockAndAcademicYearAndStudentTerm(

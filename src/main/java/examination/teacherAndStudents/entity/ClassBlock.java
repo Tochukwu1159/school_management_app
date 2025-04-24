@@ -1,10 +1,19 @@
 package examination.teacherAndStudents.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @AllArgsConstructor
@@ -17,49 +26,64 @@ public class ClassBlock {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Block name is required")
+    @Size(max = 100, message = "Block name cannot exceed 100 characters")
     @Column(nullable = false, length = 100)
-    private String currentStudentClassName;  // More descriptive name for the class section
+    private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_level_id", nullable = false)
     @ToString.Exclude
-    private ClassLevel classLevel; // Relates to the class level
-
+    private ClassLevel classLevel;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")
     @ToString.Exclude
     private Profile formTeacher;
 
-    @Column(nullable = false, unique = true, length = 255)
+    @Pattern(regexp = "^[a-zA-Z0-9-]{1,255}$", message = "Invalid URL format")
+    @Column(unique = true, length = 255)
     private String classUniqueUrl;
 
+    @Min(0)
     @Column(columnDefinition = "int default 0")
     private int numberOfStudents;
 
-    @OneToMany(mappedBy = "classBlock", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "classBlock", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
+    @Builder.Default
     @ToString.Exclude
-    private List<Profile> studentList; // Many profiles belong to a class block
+    private List<Profile> studentList = new ArrayList<>();
 
-    @OneToMany(mappedBy = "classBlock", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "classBlock", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
+    @Builder.Default
     @ToString.Exclude
-    private List<ClassSubject> subjects;
+    private List<ClassSubject> subjects = new ArrayList<>();
 
+    @ManyToMany(mappedBy = "classBlocks")
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<Assignment> assignments = new HashSet<>();
+
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt; // Timestamp for updates
+    private LocalDateTime updatedAt;
 
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
+    public void addAssignment(Assignment assignment) {
+        if (assignment != null && !assignments.contains(assignment)) {
+            assignments.add(assignment);
+            assignment.getClassBlocks().add(this);
+        }
     }
 
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }// Timestamp for the class block, could be adjusted to suit needs
-
-
+    public void removeAssignment(Assignment assignment) {
+        if (assignment != null && assignments.contains(assignment)) {
+            assignments.remove(assignment);
+            assignment.getClassBlocks().remove(this);
+        }
+    }
 }

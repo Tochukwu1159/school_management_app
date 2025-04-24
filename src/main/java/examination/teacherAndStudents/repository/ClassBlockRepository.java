@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,4 +25,10 @@ public interface  ClassBlockRepository extends JpaRepository<ClassBlock, Long> {
             @Param("classLevelId") Long classLevelId,
             @Param("classBlockId") Long classBlockId,
             @Param("academicYearId") Long academicYearId);
+
+    Collection<ClassBlock> findByClassLevelId(Long id);
+
+    List<ClassBlock> findByClassLevel(ClassLevel classLevel);
+
+    Optional<ClassBlock> findByIdAndClassLevelId(Long id, Long classLevelId);
 };

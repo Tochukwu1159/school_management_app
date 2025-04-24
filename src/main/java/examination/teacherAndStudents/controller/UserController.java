@@ -55,6 +55,7 @@ public class UserController {
             @RequestParam(required = false) Long academicYearId,
             @RequestParam(required = false) String uniqueRegistrationNumber,
             @RequestParam(required = false) String firstName,
+            @RequestParam(required = false) String lastName,
             @RequestParam(defaultValue = "0") int pageNo,
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(defaultValue = "id") String sortBy) {
@@ -65,6 +66,7 @@ public class UserController {
                 academicYearId,
                 uniqueRegistrationNumber,
                 firstName,
+                lastName,
                 pageNo,
                 pageSize,
                 sortBy);
@@ -123,6 +125,11 @@ public class UserController {
         UserResponse userResponse = userService.generateIdCard(uniqueRegistrationNumber);
         return new ResponseEntity<>(userResponse, HttpStatus.OK);
 
+    }
+
+    @GetMapping("/active-users")
+    public ResponseEntity<SchoolActiveUsersResponse> getActiveUsersStatistics() {
+        return ResponseEntity.ok(userService.getActiveUsersStatistics());
     }
 
     @PutMapping("/{studentId}/updateClassLevel")

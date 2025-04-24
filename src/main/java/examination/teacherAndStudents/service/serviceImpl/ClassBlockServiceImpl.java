@@ -2,16 +2,10 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.dto.ClassBlockRequest;
 import examination.teacherAndStudents.dto.ClassBlockResponse;
-import examination.teacherAndStudents.entity.ClassBlock;
-import examination.teacherAndStudents.entity.ClassLevel;
-import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.User;
-import examination.teacherAndStudents.error_handler.EntityAlreadyExistException;
+import examination.teacherAndStudents.dto.UpdateFormTeacherRequest;
+import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
-import examination.teacherAndStudents.repository.ClassBlockRepository;
-import examination.teacherAndStudents.repository.ClassLevelRepository;
-import examination.teacherAndStudents.repository.ProfileRepository;
-import examination.teacherAndStudents.repository.UserRepository;
+import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.ClassBlockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +21,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
     private final ClassLevelRepository classLevelRepository;
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
+    private final AcademicSessionRepository academicSessionRepository;
 
     public ClassBlockResponse createClassBlock(ClassBlockRequest request) {
         try {
@@ -39,7 +34,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             // Build the ClassBlock entity
             ClassBlock classBlock = ClassBlock.builder()
                     .classLevel(classLevel)
-                    .currentStudentClassName(request.getSubClassName())
+                    .name(request.getSubClassName())
                     .classUniqueUrl(request.getClassUniqueUrl())
                     .numberOfStudents(0)
                     .build();
@@ -141,14 +136,16 @@ public class ClassBlockServiceImpl implements ClassBlockService {
     }
 
 
-    public ClassBlockResponse updateFormTeacher(Long id, Long formTeacherId) {
+    public ClassBlockResponse updateFormTeacher(UpdateFormTeacherRequest request) {
         try {
+            AcademicSession session = academicSessionRepository.findById(request.getSessionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
             // Fetch the class block
-            ClassBlock classBlock = classBlockRepository.findById(id)
-                    .orElseThrow(() -> new ResourceNotFoundException("Class Block not found"));
+            ClassBlock classBlock = classBlockRepository.findByIdAndClassLevelId(request.getSubclassId(),request.getClassLevelId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Class  not found or does not exist in the class level"));
 
             // Fetch the new form teacher's profile
-            Profile newFormTeacher = profileRepository.findById(formTeacherId)
+            Profile newFormTeacher = profileRepository.findById(request.getTeacherId())
                     .orElseThrow(() -> new ResourceNotFoundException("Form Teacher not found"));
 
             // Update the form teacher
@@ -216,7 +213,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
     private ClassBlockResponse mapToResponse(ClassBlock classBlock) {
         return ClassBlockResponse.builder()
                 .id(classBlock.getId())
-                .currentStudentClassName(classBlock.getCurrentStudentClassName())
+                .name(classBlock.getName())
                 .classLevelId(classBlock.getClassLevel().getId())
                 .classUniqueUrl(classBlock.getClassUniqueUrl())
                 .numberOfStudents(classBlock.getNumberOfStudents())

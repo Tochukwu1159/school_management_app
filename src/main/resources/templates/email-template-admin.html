@@ -61,6 +61,9 @@
 <div class="container">
     <h1 th:text="'Welcome, ' + ${name}"></h1>
     <p>Thank you for successfully completing the registration process, you are an Admin. As an admin, the progress of this school should be your top priority.</p>
+    <h2>Below is your login credentials</h2>
+    <h5 th:text=" 'User Name : ' + ${username}"></h5>
+    <h5 th:text=" 'Password : ' + ${password}"></h5>
     <blockquote>
         <p>Let's work together to build future leaders</p>
     </blockquote>

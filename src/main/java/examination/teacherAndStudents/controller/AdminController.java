@@ -11,7 +11,9 @@ import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.service.AdminService;
 import examination.teacherAndStudents.service.TeacherAttendanceService;
+import examination.teacherAndStudents.utils.ProfileStatus;
 import examination.teacherAndStudents.utils.StudentTerm;
+import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,14 +36,28 @@ public class AdminController {
     }
 
     @GetMapping("/students")
-    public ResponseEntity<List<User>> getAllStudents() {
+    public ResponseEntity<Page<User>> getAllStudents(
+            @RequestParam(required = false) String firstName,
+            @RequestParam(required = false) String lastName,
+            @RequestParam(required = false) String middleName,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) ProfileStatus profileStatus,
+            @RequestParam(required = false) Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "lastName") String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+
         try {
-            List<User> studentsList = userService.getAllStudents();
-            return ResponseEntity.ok(studentsList);
+            Page<User> studentsPage = userService.getAllStudents(
+                    firstName, lastName, middleName, email,
+                    profileStatus, id, page, size, sortBy, sortDirection);
+
+            return ResponseEntity.ok(studentsPage);
         } catch (CustomNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // You can customize the response as needed
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         } catch (CustomInternalServerException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // You can customize the response as needed
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

@@ -130,7 +130,7 @@ public class ResultController {
 
         Map<String, List<SessionAverageResponse>> response = top5Students.entrySet().stream()
                 .collect(Collectors.toMap(
-                        entry -> entry.getKey().getCurrentStudentClassName(),
+                        entry -> entry.getKey().getName(),
                         entry -> entry.getValue().stream()
                                 .map(SessionAverageResponse::fromEntity)
                                 .collect(Collectors.toList())

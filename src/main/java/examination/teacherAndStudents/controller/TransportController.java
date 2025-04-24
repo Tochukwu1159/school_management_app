@@ -1,11 +1,8 @@
 package examination.teacherAndStudents.controller;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.StudentTransportAllocation;
-import examination.teacherAndStudents.entity.Transport;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.service.TransactionService;
 import examination.teacherAndStudents.service.TransportService;
-import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -31,20 +28,16 @@ public class TransportController {
         }
     }
     @PostMapping("/pay")
-    public ResponseEntity<StudentTransportAllocation> payforTransport(@RequestParam Long dueId, @RequestParam Long sessionId, @RequestParam Long termId) {
-        StudentTransportAllocation response = transportService.payForTransport(dueId, sessionId, termId);
+    public ResponseEntity<TransportAllocationResponse> payforTransport(@RequestBody TransportPaymentRequest transportPaymentRequest) {
+        TransportAllocationResponse response = transportService.payForTransport(transportPaymentRequest);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/add-student-to-transport")
-    public ResponseEntity<TransportResponse> addStudentToTransport(@RequestBody AddStudentToTransportRequest request) {
+    public ResponseEntity<TransportAllocationResponse> addStudentToTransport(@RequestBody AddStudentToTransportRequest request) {
         try {
-            TransportResponse createdTransport = transportService.addStudentToTransport(
-                    request.getTransportTrackerId(),
-                    request.getStudentId(),
-                    request.getTransportId(),
-                    request.getAcademicYearId(),
-                    request.getTermId()
+            TransportAllocationResponse createdTransport = transportService.assignTransportToStudent(request
+
             );
             return new ResponseEntity<>(createdTransport, HttpStatus.CREATED);
         } catch (Exception e) {

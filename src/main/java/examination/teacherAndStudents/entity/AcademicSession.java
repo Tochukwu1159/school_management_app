@@ -38,7 +38,7 @@ public class AcademicSession {
     private LocalDate resultReadyDate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+//    @Column(nullable = false)
     private SessionPromotion sessionPromotion = SessionPromotion.PENDING;
 
 

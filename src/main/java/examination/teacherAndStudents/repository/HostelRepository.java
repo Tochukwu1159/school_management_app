@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface HostelRepository extends JpaRepository<Hostel, Long> {
     List<Hostel> findByAvailabilityStatus(AvailabilityStatus available);
@@ -24,4 +26,7 @@ public interface HostelRepository extends JpaRepository<Hostel, Long> {
             @Param("hostelName") String hostelName,
             @Param("availabilityStatus") AvailabilityStatus availabilityStatus,
             @Param("id") Long id,
-            Pageable pageable);}
+            Pageable pageable);
+
+    Optional<Hostel> findByIdAndSchoolId(Long hostelId, Long id);
+}

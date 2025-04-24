@@ -1,65 +1,67 @@
 package examination.teacherAndStudents.entity;
 
-import java.time.LocalDateTime;
-
 import examination.teacherAndStudents.utils.AllocationStatus;
 import examination.teacherAndStudents.utils.PaymentStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "student_transport_allocation")
-@Builder
 @Entity
+@Builder
+@Table(name = "student_transport_allocation")
 public class StudentTransportAllocation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "student_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "profile_id", nullable = false)
     private Profile profile;
 
-    @ManyToOne
-    @JoinColumn(name = "due_id", nullable = false)
-    private Dues dues;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bus_id")
+    private Bus transport;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "route_id", nullable = false)
+    private BusRoute route;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "stop_id", nullable = false)
+    private Stop stop;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "payment_id", nullable = false)
+    private Payment payment;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    PaymentStatus paymentStatus;
-
-    @ManyToOne
-    @JoinColumn(name = "transport_id")
-    private Transport transport;
-
-    @ManyToOne
-    @JoinColumn(name = "session_id", nullable = false)
-    private AcademicSession academicSession;
-
-    @ManyToOne
-    @JoinColumn(name = "term_Id", nullable = false)
-    private StudentTerm term;
+    private PaymentStatus paymentStatus;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AllocationStatus status;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "session_id", nullable = false)
+    private AcademicSession academicSession;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm term;
+
     @CreationTimestamp
-    @Column(name = "created_date", updatable = false, nullable = false)
+    @Column(name = "created_date", updatable = false)
     private LocalDateTime createdDate;
 
     @UpdateTimestamp
     @Column(name = "updated_date")
     private LocalDateTime updatedDate;
-
-
 }

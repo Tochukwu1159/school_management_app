@@ -19,7 +19,7 @@ public class SessionAverageResponse {
         return new SessionAverageResponse(
                 sessionAverage.getUserProfile().getUser().getFirstName() + " " +sessionAverage.getUserProfile().getUser().getLastName(),
                 sessionAverage.getAverageScore(),
-                sessionAverage.getClassBlock().getCurrentStudentClassName(),
+                sessionAverage.getClassBlock().getName(),
                 sessionAverage.getAcademicYear().getName()
         );
     }

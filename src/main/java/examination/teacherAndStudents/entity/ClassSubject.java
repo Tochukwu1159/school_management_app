@@ -30,6 +30,10 @@ public class ClassSubject {
     @JoinColumn(name = "class_block_id", nullable = false)
     private ClassBlock classBlock;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id")
+    private Profile teacher;
+
     @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;

@@ -1,22 +1,9 @@
 package examination.teacherAndStudents.entity;
 
-
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import examination.teacherAndStudents.utils.ServiceType;
-import examination.teacherAndStudents.utils.SubscriptionType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import lombok.*;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
 
 @Data
 @AllArgsConstructor
@@ -30,9 +17,12 @@ public class ServiceOffered {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true)
     private String name;
 
+    @Column(name = "is_default", nullable = false)
+    private boolean isDefault = false;
 
-
-
+    @ManyToMany(mappedBy = "selectedServices")
+    private List<School> schools;
 }

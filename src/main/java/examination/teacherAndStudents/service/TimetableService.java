@@ -9,6 +9,7 @@ import examination.teacherAndStudents.utils.DayOfWeek;
 import examination.teacherAndStudents.utils.StudentTerm;
 import examination.teacherAndStudents.utils.TimetableType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,7 @@ public interface TimetableService {
 
     Timetable createTimetable( DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, TimetableType timetableType, Long termId, Long sessionId, Long classBlockId);
     Timetable updateTimetable(Long timetableId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, Long termId, Long sessionId);
-    List<Timetable> getAllTimetables();
-
-    ResponseEntity<Timetable> getTimetableById(Long timetableId);
+    Page<Timetable> getAllTimetables(int page, int size, String sortBy, String sortDirection);
+    Page<SubjectSchedule> getAllSubjectSchedules(int page, int size, String sortBy, String sortDirection);
+    Timetable getTimetableById(Long timetableId);
     void deleteTimetable(Long timetableId);}

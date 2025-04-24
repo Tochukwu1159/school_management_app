@@ -16,6 +16,7 @@ public interface UserService {
     UserResponse createStaff(UserRequestDto userRequest) throws MessagingException;
 
     LoginResponse loginUser(LoginRequest loginRequest);
+    UserResponse selfRegisterStudent(UserRequestDto userRequest);
 
     UserResponse editUserDetails(EditUserRequest editUserDto);
 
@@ -31,18 +32,18 @@ public interface UserService {
     ResponseEntity<Void> deleteUser(Long userId);
     UserResponse generateIdCard(String uniqueRegistrationNumber);
     String updateUserStatus(Long userId, ProfileStatus newStatus, LocalDate suspensionEndDate);
-
+    SchoolActiveUsersResponse getActiveUsersStatistics();
     Page<UserResponse> getAllStudentsFilteredAndPaginated(
             Long classId,
             Long subClassId,
             Long academicYearId,
             String uniqueRegistrationNumber,
             String firstName,
+            String lastName,
             int page,
             int size,
             String sortBy);
     Page<UserProfileResponse> getProfilesByRoleAndStatus(String role, String status, int page, int size);
-
 
 
 }

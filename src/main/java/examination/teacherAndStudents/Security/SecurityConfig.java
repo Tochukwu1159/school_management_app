@@ -61,6 +61,7 @@ public class SecurityConfig {
                                         "/api/v1/users/admin/login",
                                         "/api/v1/users/admin/create",
                                         "/api/v1/users/teacher/create",
+                                        "api/v1/services-offered",
                                         "/api/v1/schedules/event/client/**",
                                         "api/v1/events/speaker/client/all",
                                         "/api/v1/users/workshops/client/all-workshops",

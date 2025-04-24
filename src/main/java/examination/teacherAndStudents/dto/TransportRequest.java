@@ -12,7 +12,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class TransportRequest {
-    private Long   busRouteId;;
+    private Long busRouteId;
     private String vehicleName;
     private String vehicleNumber;
     private Long driverId;

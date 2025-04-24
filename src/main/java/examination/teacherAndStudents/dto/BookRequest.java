@@ -13,7 +13,8 @@ public class BookRequest {
     private String title;
 
     private String author;
-    private String rackNo;
+    private String shelfLocation;
 
     private int quantityAvailable;
+
 }

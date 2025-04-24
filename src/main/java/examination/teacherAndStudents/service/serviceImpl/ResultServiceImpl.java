@@ -1,13 +1,11 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.dto.GradeRatingPair;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.*;
-import examination.teacherAndStudents.service.GradeService;
-import examination.teacherAndStudents.service.RatingService;
-import examination.teacherAndStudents.service.ResultService;
-import examination.teacherAndStudents.service.ScoreService;
+import examination.teacherAndStudents.service.*;
 import examination.teacherAndStudents.utils.SessionStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,16 +31,15 @@ public class ResultServiceImpl implements ResultService {
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final SessionAverageRepository sessionAverageRepository;
-    private final GradeService gradeService;
-    private final RatingService ratingService;
     private final PromotionCriteriaRepository promotionCriteriaRepository;
+    private final GradeRatingService gradeRatingService;
 
 
     @Autowired
     public ResultServiceImpl(ScoreService scoreService, UserRepository userRepository, ScoreRepository scoreRepository,
                              ResultRepository resultRepository,
                              PositionRepository positionRepository,
-                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository, GradeService gradeService, RatingService ratingService, PromotionCriteriaRepository promotionCriteriaRepository) {
+                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository, PromotionCriteriaRepository promotionCriteriaRepository, GradeRatingService gradeRatingService) {
         this.scoreService = scoreService;
         this.userRepository = userRepository;
         this.scoreRepository = scoreRepository;
@@ -54,9 +51,8 @@ public class ResultServiceImpl implements ResultService {
         this.academicSessionRepository = academicSessionRepository;
         this.studentTermRepository = studentTermRepository;
         this.sessionAverageRepository = sessionAverageRepository;
-        this.gradeService = gradeService;
-        this.ratingService = ratingService;
         this.promotionCriteriaRepository = promotionCriteriaRepository;
+        this.gradeRatingService = gradeRatingService;
     }
 
 
@@ -89,12 +85,15 @@ public class ResultServiceImpl implements ResultService {
             // Retrieve school information
             School school = student.getSchool();
 
-            //            // Calculate total marks and grade based on your logic
+// Calculate total marks based on your logic
             double totalMarks = calculateTotalMarks(score.getExamScore(), score.getAssessmentScore());
 
-            // Fetch grade and rating
-            Grade grade = gradeService.calculateGrade(school, totalMarks);
-            Rating rating = ratingService.calculateRating(school, totalMarks);
+// Fetch both grade and rating in a single call
+            GradeRatingPair gradeRating = gradeRatingService.calculateGradeAndRating(school, totalMarks);
+
+// Now you can access both grade and rating from the pair:
+            String grade = gradeRating.getGrade();
+            String rating = gradeRating.getRating();
 
 
 
@@ -104,8 +103,8 @@ public class ResultServiceImpl implements ResultService {
             if (existingResult != null) {
                 // Update the existing result
                 existingResult.setTotalMarks(totalMarks);
-                existingResult.setGrade(grade.getGrade());
-                existingResult.setRating(rating.getRating());
+                existingResult.setGrade(grade);
+                existingResult.setRating(rating);
                 resultRepository.save(existingResult);
                 return existingResult;
             }
@@ -117,8 +116,8 @@ public class ResultServiceImpl implements ResultService {
             result.setAcademicYear(academicSession);
             result.setStudentTerm(studentTerm);
             result.setSubjectName(subjectName);
-            result.setGrade(grade.getGrade());
-            result.setRating(rating.getRating());
+            result.setGrade(grade);
+            result.setRating(rating);
             resultRepository.save(result);
 
             return result;

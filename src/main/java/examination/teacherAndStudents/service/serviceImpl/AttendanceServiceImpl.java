@@ -47,6 +47,10 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     public void takeBulkAttendance(BulkAttendanceRequest request) {
         try {
+
+            // Validate session exists
+            ClassLevel classLevel = classLevelRepository.findByIdAndAcademicYearId(request.getClassLevelId(), request.getSessionId())
+                    .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
             // Validate the class block exists
             ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
                     .orElseThrow(() -> new CustomNotFoundException("Class block not found"));
@@ -170,7 +174,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                         .studentName(attendance.getUserProfile().getUser().getFirstName() + " " +
                                 attendance.getUserProfile().getUser().getLastName())
                         .classBlockId(attendance.getClassBlock().getId())
-                        .classBlockName(attendance.getClassBlock().getCurrentStudentClassName())
+                        .classBlockName(attendance.getClassBlock().getName())
                         .academicYearId(attendance.getAcademicYear().getId())
                         .academicYearName(attendance.getAcademicYear().getName())
                         .studentTermId(attendance.getStudentTerm().getId())
@@ -384,7 +388,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .studentId(attendance.getUserProfile().getId())
                 .studentName(attendance.getUserProfile().getUser().getFirstName() + " " + attendance.getUserProfile().getUser().getLastName())
                 .classBlockId(attendance.getClassBlock().getId())
-                .classBlockName(attendance.getClassBlock().getCurrentStudentClassName())
+                .classBlockName(attendance.getClassBlock().getName())
                 .academicYearId(attendance.getAcademicYear().getId())
                 .academicYearName(attendance.getAcademicYear().getName())
                 .studentTermId(attendance.getStudentTerm().getId())

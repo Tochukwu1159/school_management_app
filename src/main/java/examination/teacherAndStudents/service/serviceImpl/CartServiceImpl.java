@@ -5,71 +5,157 @@ import examination.teacherAndStudents.dto.CartResponse;
 import examination.teacherAndStudents.entity.Cart;
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.StoreItem;
+import examination.teacherAndStudents.entity.User;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.UnauthorizedException;
 import examination.teacherAndStudents.repository.CartRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.StoreItemRepository;
+import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.CartService;
+import examination.teacherAndStudents.utils.Roles;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
+
     private final CartRepository cartRepository;
     private final ProfileRepository profileRepository;
-    private final StoreItemRepository storeRepository;
+    private final StoreItemRepository storeItemRepository;
+    private final UserRepository userRepository;
 
-    public CartServiceImpl(CartRepository cartRepository, ProfileRepository profileRepository, StoreItemRepository storeRepository) {
-        this.cartRepository = cartRepository;
-        this.profileRepository = profileRepository;
-        this.storeRepository = storeRepository;
+    @Override
+    @Transactional
+    public CartResponse addToCart(@NotNull Long profileId, @Valid CartRequest request) {
+        User student = validateStudentUser();
+        Profile profile = validateProfile(profileId, student);
+
+        StoreItem storeItem = storeItemRepository.findById(request.getStoreItemId())
+                .orElseThrow(() -> new CustomNotFoundException("Store item not found with ID: " + request.getStoreItemId()));
+
+        validateSizeAndQuantity(storeItem, request.getSize(), request.getQuantity());
+
+        Cart cart = Cart.builder()
+                .profile(profile)
+                .storeItem(storeItem)
+                .size(request.getSize())
+                .quantity(request.getQuantity())
+                .checkedOut(false)
+                .build();
+
+        Cart savedCart = cartRepository.save(cart);
+        log.info("Item added to cart [cartId={}, profileId={}, storeItemId={}]", savedCart.getId(), profileId, request.getStoreItemId());
+
+        return mapToCartResponse(savedCart);
     }
 
     @Override
-    public void removeFromCart(Long cartId) {
+    @Transactional
+    public void removeFromCart(@NotNull Long cartId) {
+        User student = validateStudentUser();
         Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new RuntimeException("Cart item not found"));
+                .orElseThrow(() -> new CustomNotFoundException("Cart item not found with ID: " + cartId));
+
+        validateCartOwnership(student, cart);
 
         cartRepository.delete(cart);
+        log.info("Item removed from cart [cartId={}]", cartId);
     }
 
     @Override
-    public List<CartResponse> getCartForProfile(Long profileId) {
+    @Transactional(readOnly = true)
+    public List<CartResponse> getCartForProfile(@NotNull Long profileId) {
+        User student = validateStudentUser();
+        Profile profile = validateProfile(profileId, student);
+
         List<Cart> cartItems = cartRepository.findByProfileId(profileId);
-        return cartItems.stream().map(this::mapToCartResponse).collect(Collectors.toList());
+        log.debug("Retrieved {} cart items for profile [profileId={}]", cartItems.size(), profileId);
+
+        return cartItems.stream()
+                .map(this::mapToCartResponse)
+                .collect(Collectors.toList());
     }
 
-    @Override
-    public CartResponse addToCart(Long profileId, CartRequest request) {
+    private User validateStudentUser() {
+        String email = getAuthenticatedUserEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("User not found with email: " + email));
+
+        if (!user.getRoles().contains(Roles.STUDENT)) {
+            throw new UnauthorizedException("Please login as a Student");
+        }
+
+        return user;
+    }
+
+    private String getAuthenticatedUserEmail() {
+        try {
+            return SecurityContextHolder.getContext().getAuthentication().getName();
+        } catch (Exception e) {
+            log.error("Failed to retrieve authenticated user email", e);
+            throw new UnauthorizedException("Unable to authenticate user");
+        }
+    }
+
+    private Profile validateProfile(Long profileId, User user) {
         Profile profile = profileRepository.findById(profileId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new CustomNotFoundException("Profile not found with ID: " + profileId));
 
-        StoreItem store = storeRepository.findById(request.getStoreItemId())
-                .orElseThrow(() -> new RuntimeException("Store item not found"));
+        if (!profile.getUser().getId().equals(user.getId())) {
+            throw new UnauthorizedException("You do not have access to this profile");
+        }
 
-        Cart cart = new Cart();
-        cart.setProfile(profile);
-        cart.setStoreItem(store);
-        cart.setSize(request.getSize());
-        cart.setQuantity(request.getQuantity());
+        return profile;
+    }
 
-        cart = cartRepository.save(cart);
+    private void validateCartOwnership(User student, Cart cart) {
+        if (!cart.getProfile().getUser().getId().equals(student.getId())) {
+            throw new UnauthorizedException("You do not have permission to modify this cart");
+        }
+    }
 
-        return mapToCartResponse(cart);
+    private void validateSizeAndQuantity(StoreItem storeItem, String size, Integer quantity) {
+        if (storeItem.getSizes() != null && !storeItem.getSizes().isEmpty()) {
+            if (size == null || !storeItem.getSizes().containsKey(size)) {
+                throw new IllegalArgumentException("Invalid size: " + size);
+            }
+            if (quantity <= 0 || quantity > storeItem.getSizes().get(size)) {
+                throw new IllegalArgumentException("Invalid quantity: " + quantity + " for size: " + size);
+            }
+        } else if (storeItem.getQuantity() != null) {
+            if (size != null) {
+                throw new IllegalArgumentException("Size not applicable for this item");
+            }
+            if (quantity <= 0 || quantity > storeItem.getQuantity()) {
+                throw new IllegalArgumentException("Invalid quantity: " + quantity);
+            }
+        } else {
+            throw new IllegalArgumentException("Item has no stock information");
+        }
     }
 
     private CartResponse mapToCartResponse(Cart cart) {
-        CartResponse response = new CartResponse();
-        response.setId(cart.getId());
-        response.setStoreId(cart.getStoreItem().getId());
-        response.setProfileId(cart.getProfile().getId());
-        response.setItemName(cart.getStoreItem().getName());
-        response.setItemPhoto(cart.getStoreItem().getPhotoUrl());
-        response.setItemPrice(cart.getStoreItem().getPrice());
-        response.setSize(cart.getSize());
-        response.setQuantity(cart.getQuantity());
-        response.setCheckedOut(cart.isCheckedOut());
-        return response;
+        return new CartResponse(
+                cart.getId(),
+                cart.getStoreItem().getId(),
+                cart.getProfile().getId(),
+                cart.getStoreItem().getName(),
+                cart.getStoreItem().getPhotoUrl(),
+                cart.getStoreItem().getPrice(),
+                cart.getSize(),
+                cart.getQuantity(),
+                cart.isCheckedOut()
+        );
     }
 }

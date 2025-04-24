@@ -9,21 +9,11 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
 @Builder
-//@Table(
-//        name = "notification",
-//        indexes = {
-//                @Index(name = "idx_notification_user_id", columnList = "user_id"),
-//                @Index(name = "idx_notification_type", columnList = "notification_type"),
-//                @Index(name = "idx_notification_status", columnList = "notification_status"),
-//                @Index(name = "idx_notification_created_at", columnList = "createdAt")
-//        }
-//)
 @Table(
         name = "notification")
 public class Notification {
@@ -33,10 +23,11 @@ public class Notification {
     private Long id;
 
     @Column(
-            name = "message",
+            name = "title",
             nullable = false,
             columnDefinition = "TEXT"
     )
+    private String title;
     private String message;
 
     @Enumerated(EnumType.STRING)
@@ -48,6 +39,8 @@ public class Notification {
     @CreationTimestamp
     @Column(name = "createdAt", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    private String reference;
 
     @JsonBackReference
     @ManyToOne

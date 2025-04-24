@@ -30,7 +30,7 @@ public class StoreItemResponse {
                 .name(item.getName())
                 .description(item.getDescription())
                 .photoUrl(item.getPhotoUrl())
-                .sizes(new HashMap<>(item.getSizes()))
+//                .sizes(new HashMap<>(item.getSizes()))
                 .price(item.getPrice())
                 .storeId(item.getStore().getId())
                 .build();

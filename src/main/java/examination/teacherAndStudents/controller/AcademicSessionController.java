@@ -5,7 +5,10 @@ import examination.teacherAndStudents.dto.AcademicSessionRequest;
 import examination.teacherAndStudents.dto.AcademicSessionResponse;
 import examination.teacherAndStudents.dto.GraduationRequest;
 import examination.teacherAndStudents.service.AcademicSessionService;
+import examination.teacherAndStudents.utils.SessionPromotion;
+import examination.teacherAndStudents.utils.SessionStatus;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -46,8 +49,19 @@ public class AcademicSessionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AcademicSessionResponse>> getAllAcademicSessions() {
-        return ResponseEntity.ok(academicSessionService.getAllAcademicSessions());
+    public ResponseEntity<Page<AcademicSessionResponse>> getAllAcademicSessions(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) SessionStatus status,
+            @RequestParam(required = false) SessionPromotion promotion,
+            @RequestParam(required = false) Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "startDate") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+
+        return ResponseEntity.ok(academicSessionService.getAllAcademicSessions(
+                name, status, promotion, id,
+                page, size, sortBy, sortDirection));
     }
 
     @DeleteMapping("/{id}")

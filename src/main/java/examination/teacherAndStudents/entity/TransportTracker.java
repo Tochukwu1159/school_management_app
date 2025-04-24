@@ -15,9 +15,21 @@ public class TransportTracker {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
-    @JoinColumn(name = "transport_id", unique = true, nullable = false)
-    private Transport transport;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "bus_id", nullable = false)
+    private Bus bus;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "route_id", nullable = false)
+    private BusRoute busRoute;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "session_id", nullable = false)
+    private AcademicSession session;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "term_id", nullable = false)
+    private StudentTerm term;
 
     @Column(name = "remaining_capacity", nullable = false)
     private int remainingCapacity;

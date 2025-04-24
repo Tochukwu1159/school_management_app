@@ -20,4 +20,5 @@ public class HostelResponse {
     private AvailabilityStatus availabilityStatus;
     private Long schoolId;
     private String schoolName;
+    private Long wardenId;
 }

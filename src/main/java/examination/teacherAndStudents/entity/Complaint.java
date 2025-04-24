@@ -39,6 +39,10 @@ public class Complaint{
     private ComplainStatus complainStatus;
 
     @ManyToOne
+    @JoinColumn(name = "school_id")
+    private School school;
+
+    @ManyToOne
     @JoinColumn(name = "replied_user_id")
     private Profile repliedBy;
     @PrePersist

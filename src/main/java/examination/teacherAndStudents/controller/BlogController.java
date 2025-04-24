@@ -3,11 +3,16 @@ package examination.teacherAndStudents.controller;
 import examination.teacherAndStudents.dto.BlogRequest;
 import examination.teacherAndStudents.dto.BlogResponse;
 import examination.teacherAndStudents.entity.Blog;
+import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.service.BlogService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -22,16 +27,29 @@ public class BlogController {
     }
 
     @GetMapping("/posts")
-    public ResponseEntity<List<BlogResponse>> getAllBlogPosts() {
+    public ResponseEntity<Page<BlogResponse>> getAllBlogPosts(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) Long schoolId,
+            @RequestParam(required = false) Long authorId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdAtStart,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime createdAtEnd,
+            @RequestParam(required = false) Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String sortDirection) {
+
         try {
-            List<BlogResponse> blogPosts = blogService.getAllBlogPosts();
+            Page<BlogResponse> blogPosts = blogService.getAllBlogPosts(
+                    title, schoolId, authorId,
+                    createdAtStart, createdAtEnd,
+                    id, page, size, sortBy, sortDirection);
+
             return ResponseEntity.ok(blogPosts);
-        } catch (Exception e) {
-            // Handle unexpected exceptions
-            return ResponseEntity.status(500).build();
+        } catch (CustomInternalServerException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
     @GetMapping("/posts/{id}")
     public ResponseEntity<BlogResponse> getBlogPostById(@PathVariable Long id) {
         try {

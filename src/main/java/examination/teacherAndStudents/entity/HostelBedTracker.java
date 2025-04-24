@@ -1,12 +1,8 @@
 package examination.teacherAndStudents.entity;
-import examination.teacherAndStudents.utils.PaymentStatus;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
+import lombok.*;
+
 @Entity
 @Table(name = "hostel_bed_tracker")
 @Data
@@ -30,8 +26,28 @@ public class HostelBedTracker {
     @Column(name = "beds_allocated", nullable = false)
     private int bedsAllocated;
 
+    @Column(name = "number_of_bed_left", nullable = false)
+    private int numberOfBedLeft;
+
     @PrePersist
     protected void onCreate() {
         this.bedsAllocated = 0;
+        this.numberOfBedLeft = hostel != null ? hostel.getNumberOfBed() : 0;
+    }
+
+    public void allocateBed() {
+        if (numberOfBedLeft <= 0) {
+            throw new IllegalStateException("No beds available in hostel");
+        }
+        bedsAllocated++;
+        numberOfBedLeft--;
+    }
+
+    public void deallocateBed() {
+        if (bedsAllocated <= 0) {
+            throw new IllegalStateException("No beds allocated to deallocate");
+        }
+        bedsAllocated--;
+        numberOfBedLeft++;
     }
 }

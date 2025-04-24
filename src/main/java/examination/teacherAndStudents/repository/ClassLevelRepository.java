@@ -16,10 +16,16 @@ public interface ClassLevelRepository extends JpaRepository<ClassLevel, Long> {
 
     @Query("SELECT cl FROM ClassLevel cl WHERE " +
             "(:classLevelId IS NULL OR cl.id = :classLevelId) AND " +
-            "(:academicYearId IS NULL OR cl.academicYear.id = :academicYearId)")
+            "(:academicYearId IS NULL OR cl.academicYear.id = :academicYearId) AND " +
+            "(:className IS NULL OR cl.className = :className) AND " +
+            "(:schoolId IS NULL OR cl.school.id = :schoolId)")
     Page<ClassLevel> findAllWithFilters(
             @Param("classLevelId") Long classLevelId,
             @Param("academicYearId") Long academicYearId,
+            @Param("className") String className,
+            @Param("schoolId") Long schoolId,
             Pageable pageable);
 
+
+    Optional<ClassLevel> findByIdAndAcademicYearId(Long classLevelId, Long sessionId);
 }

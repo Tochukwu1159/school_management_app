@@ -15,6 +15,8 @@ public class HostelRequest {
     private int numberOfBed;
     private BigDecimal costPerBed;
 
+    private Long wardenId;
+
     private String hostelName;
 
 

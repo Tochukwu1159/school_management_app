@@ -2,18 +2,16 @@ package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.TransactionRequest;
-import examination.teacherAndStudents.entity.Notification;
-import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.Transaction;
+import examination.teacherAndStudents.entity.*;
 
 import examination.teacherAndStudents.dto.NotificationResponse;
-import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.NotificationRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.TransactionRepository;
 import examination.teacherAndStudents.repository.UserRepository;
+import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.NotificationService;
 import examination.teacherAndStudents.utils.AccountUtils;
 import examination.teacherAndStudents.utils.NotificationStatus;
@@ -21,10 +19,14 @@ import examination.teacherAndStudents.utils.NotificationType;
 import examination.teacherAndStudents.utils.Roles;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,6 +39,9 @@ public class NotificationServiceImpl implements NotificationService {
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
     private final ProfileRepository profileRepository;
+    private final EmailService emailService;
+    private static final Logger logger = LoggerFactory.getLogger(NotificationServiceImpl.class);
+
 
     @Override
     public Notification studentSendMoneyNotification(TransactionRequest transactionRequest) {
@@ -74,10 +79,6 @@ public class NotificationServiceImpl implements NotificationService {
         Optional<User> student = userRepository.findById(studentId);
         Optional<Profile> profile = profileRepository.findByUser(student.get());
 
-        if (student == null) {
-            throw new CustomNotFoundException("Student with Id " + studentId + " is not valid");
-        }
-
         Notification notification = new Notification();
         String message = "You have successfully funded your wallet with ₦" + transactionRequest.getAmount();
         notification.setCreatedAt(transactionRequest.getCreatedAt());
@@ -92,7 +93,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<NotificationResponse> allNotificationsOfA_StudentById() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User student = userRepository.findByEmailAndRoles(email, Roles.STUDENT)
+        User student = userRepository.findByEmailAndRole(email, Roles.STUDENT)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         List<Notification> notificationEntity = notificationRepository.findNotificationByUserOrderByCreatedAtDesc(student);
 
@@ -108,7 +109,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public List<NotificationResponse> allUnreadNotificationsOfAStudentById() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User student = userRepository.findByEmailAndRoles(email, Roles.STUDENT)
+        User student = userRepository.findByEmailAndRole(email, Roles.STUDENT)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         List<Notification> unreadNotifications = notificationRepository.findNotificationByUserAndNotificationStatusOrderByCreatedAtDesc(student, NotificationStatus.UNREAD);
 
@@ -152,6 +153,7 @@ public class NotificationServiceImpl implements NotificationService {
         // Build and save notification
         Notification notification = Notification.builder()
                 .message(formatNotificationMessage(title, message))
+                .title(title)
                 .notificationType(notificationType)
                 .notificationStatus(NotificationStatus.UNREAD)
                 .user(userProfile)
@@ -163,6 +165,75 @@ public class NotificationServiceImpl implements NotificationService {
 
     private String formatNotificationMessage(String title, String message) {
         return String.format("%s: %s", title, message);
+    }
+@Override
+    public void sendTransferNotifications(Wallet senderWallet, Wallet recipientWallet, BigDecimal amount) {
+        try {
+            // Prepare common notification details
+            String formattedAmount = String.format("%,.2f", amount);
+            LocalDateTime now = LocalDateTime.now();
+
+            // 1. Send notification to sender
+            Notification senderNotification = Notification.builder()
+                    .user(senderWallet.getUserProfile())
+                    .title("Transfer Successful")
+                    .message(String.format(
+                            "You have successfully transferred %s to %s (%s). Your new balance is %s.",
+                            formattedAmount,
+                            recipientWallet.getUserProfile().getUser().getFirstName() + " " + recipientWallet.getUserProfile().getUser().getLastName(),
+                            recipientWallet.getUserProfile().getUniqueRegistrationNumber(),
+                            String.format("%,.2f", senderWallet.getBalance())
+                    ))
+                    .notificationType(NotificationType.TRANSACTION)
+                    .notificationStatus(NotificationStatus.UNREAD)
+                    .reference(generateNotificationReference())
+                    .build();
+
+            // 2. Send notification to recipient
+            Notification recipientNotification = Notification.builder()
+                    .user(recipientWallet.getUserProfile())
+                    .title("Money Received")
+                    .message(String.format(
+                            "You have received %s from %s (%s). Your new balance is %s.",
+                            formattedAmount,
+                            senderWallet.getUserProfile().getUser().getFirstName() + " " + senderWallet.getUserProfile().getUser().getLastName(),
+                            senderWallet.getUserProfile().getUniqueRegistrationNumber(),
+                            String.format("%,.2f", recipientWallet.getBalance())
+                    ))
+                    .notificationType(NotificationType.TRANSACTION)
+                    .notificationStatus(NotificationStatus.UNREAD)
+                    .reference(generateNotificationReference())
+                    .build();
+
+            // Save both notifications
+            notificationRepository.saveAll(List.of(senderNotification, recipientNotification));
+
+            // 3. Send email notifications (async)
+//            emailService.sendEmailNotification(
+//                    senderWallet.getUserProfile().getUser().getEmail(),
+//                    "Transfer Notification",
+//                    senderNotification.getMessage()
+//            );
+//
+//            emailService.sendEmailNotification(
+//                    recipientWallet.getUserProfile().getUser().getEmail(),
+//                    "Credit Alert",
+//                    recipientNotification.getMessage()
+//            );
+
+
+            logger.info("Sent transfer notifications for transaction between {} and {}",
+                    senderWallet.getUserProfile().getUniqueRegistrationNumber(),
+                    recipientWallet.getUserProfile().getUniqueRegistrationNumber());
+
+        } catch (Exception e) {
+            logger.error("Failed to send transfer notifications: {}", e.getMessage());
+            // Consider adding to dead letter queue for retry
+        }
+    }
+
+    private String generateNotificationReference() {
+        return "NOTIF-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
     }
 
 

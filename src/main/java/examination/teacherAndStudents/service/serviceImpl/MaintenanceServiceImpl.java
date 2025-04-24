@@ -4,7 +4,7 @@ import examination.teacherAndStudents.dto.MaintenanceRequest;
 import examination.teacherAndStudents.dto.MaintenanceResponse;
 import examination.teacherAndStudents.entity.Maintenance;
 import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.Transport;
+import examination.teacherAndStudents.entity.Bus;
 import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
@@ -13,7 +13,6 @@ import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.TransportRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.MaintenanceService;
-import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,9 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,7 +39,7 @@ public class MaintenanceServiceImpl implements MaintenanceService {
         Profile repairerProfile = profileRepository.findByUser(repairer.get())
                 .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + request.getTransportId()));
 
-        Transport transport = transportRepository.findById(request.getTransportId())
+        Bus transport = transportRepository.findById(request.getTransportId())
                 .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + request.getTransportId()));
 
         Maintenance maintenance = Maintenance.builder()
@@ -59,7 +56,7 @@ public class MaintenanceServiceImpl implements MaintenanceService {
         Maintenance maintenance = maintenanceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Maintenance not found"));
 
-        Transport transport = transportRepository.findById(request.getTransportId())
+        Bus transport = transportRepository.findById(request.getTransportId())
                 .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + request.getTransportId()));
 
         maintenance.setDescription(request.getDescription());
@@ -117,7 +114,7 @@ public class MaintenanceServiceImpl implements MaintenanceService {
                 .id(maintenance.getId())
                 .description(maintenance.getDescription())
                 .amountSpent(maintenance.getAmountSpent())
-                .transportId(maintenance.getTransport().getId())
+                .transportId(maintenance.getTransport().getBusId())
                 .transportVehicleNumber(maintenance.getTransport().getVehicleNumber())
                 .maintainedById(maintenance.getMaintainedBy().getId())
                 .maintainedByName(maintenance.getMaintainedBy().getUser().getFirstName() + " " + maintenance.getMaintainedBy().getUser().getLastName())

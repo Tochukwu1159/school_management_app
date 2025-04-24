@@ -21,6 +21,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -82,9 +83,9 @@ public class EmailTemplateService {
 
     private void sendToSchoolAdmins(School school, String subject, String template, Map<String, Object> baseModel) {
         // Get all admin users for the school
-        List<User> admins = userRepository.findBySchoolAndRolesIn(
+        List<User> admins = userRepository.findBySchoolAndAnyRoles(
                 school,
-                List.of(Roles.ADMIN)
+                Set.of(Roles.ADMIN)
         );
 
         for (User admin : admins) {

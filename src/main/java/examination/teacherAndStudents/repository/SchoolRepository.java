@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface SchoolRepository extends JpaRepository<School, Long> {
-    School findBySubscriptionKey(String subscriptionKey);
+   Optional<School> findBySubscriptionKey(String subscriptionKey);
 
     boolean existsByEmail(String email);
 
@@ -27,4 +27,5 @@ public interface SchoolRepository extends JpaRepository<School, Long> {
 
     List<School> findByIsActiveTrueAndSubscriptionExpiryDateAfter(LocalDateTime now);
 
+    Iterable<School> findBySubscriptionExpiryDateBefore(LocalDateTime now);
 }

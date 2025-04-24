@@ -1,5 +1,5 @@
 package examination.teacherAndStudents.utils;
 
 public enum ContractType {
-    PERMANENT, CONTRACT
+    FULL_TIME, PART_TIME, CONTRACT
 }

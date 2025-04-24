@@ -1,9 +1,13 @@
 package examination.teacherAndStudents.dto;
 
+import examination.teacherAndStudents.dto.StopResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -14,6 +18,7 @@ public class RouteResponse {
     private String routeName;
     private String startPoint;
     private String endPoint;
-
-    // Constructors, getters, and setters
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private List<StopResponse> stops;
 }

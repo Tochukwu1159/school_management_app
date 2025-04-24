@@ -32,6 +32,11 @@ public class ExceptionController {
         return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.UNAUTHORIZED);
     }
 
+    @ExceptionHandler(PaymentGatewayException.class)
+    public ResponseEntity<?> PaymentGatewayException(PaymentGatewayException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(SubscriptionExpiredException.class)
     public ResponseEntity<?> SubscriptionExpiredException(SubscriptionExpiredException ex) {
         return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.FORBIDDEN);

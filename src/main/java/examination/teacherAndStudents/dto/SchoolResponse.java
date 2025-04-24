@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -16,14 +18,14 @@ public class SchoolResponse {
     private String schoolAddress;
     private String schoolLogoUrl;
     private String email;
+    boolean isActive;
 
     private String phoneNumber;
 
     @Column(unique = true)
     private String subscriptionKey;
 
-    @ElementCollection
-    private List<String> selectedServices; // Store selected services by their names
+    Set<Long> serviceIds; // Store selected services by their names
 
     private LocalDate subscriptionExpiryDate;
 }

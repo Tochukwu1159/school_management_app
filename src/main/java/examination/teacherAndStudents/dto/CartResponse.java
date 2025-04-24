@@ -16,8 +16,9 @@ public class CartResponse {
     private String itemName;
     private String itemPhoto;
     private BigDecimal itemPrice;
-    private Integer quantity;
     private String size;
+    private Integer quantity;
+
     private boolean isCheckedOut;
 
     // Getters and Setters

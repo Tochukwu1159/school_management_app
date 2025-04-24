@@ -9,12 +9,13 @@ import examination.teacherAndStudents.service.PayStackPaymentService;
 import examination.teacherAndStudents.service.SchoolService;
 import examination.teacherAndStudents.utils.Roles;
 import examination.teacherAndStudents.utils.SubscriptionType;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.service.spi.ServiceException;
 import org.modelmapper.ModelMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -23,9 +24,14 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of SchoolService for managing school operations.
+ */
 @Service
 @RequiredArgsConstructor
 public class SchoolServiceImpl implements SchoolService {
+
+    private static final Logger logger = LoggerFactory.getLogger(SchoolServiceImpl.class);
 
     private final SchoolRepository schoolRepository;
     private final ModelMapper modelMapper;
@@ -37,77 +43,69 @@ public class SchoolServiceImpl implements SchoolService {
     private final EmailTemplateService emailTemplateService;
 
     @Value("${amount_charged_per_student}")
-    private String amountChargedPerStudent;
+    private BigDecimal amountChargedPerStudent;
 
-    private static ProfileData apply(Profile profile) {
-        ProfileData profileData = new ProfileData();
-        profileData.setId(profile.getId());
-        profileData.setPhoneNumber(profile.getPhoneNumber());
-        profileData.setUniqueRegistrationNumber(profile.getUniqueRegistrationNumber());
-        return profileData;
-    }
-
+    @Override
     @Transactional
     public SchoolResponse onboardSchool(SchoolRequest schoolRequest) {
-        // Validate input
-        Objects.requireNonNull(schoolRequest, "School request cannot be null");
+        if (schoolRequest == null) {
+            throw new BadRequestException("School request cannot be null.");
+        }
 
-        // Get authenticated admin with proper authorization check
         User admin = getAuthenticatedAdmin();
-
-        // Validate school uniqueness
         validateSchoolUniqueness(schoolRequest);
 
-        // Create and save school
-        School newSchool = createSchoolEntity(schoolRequest);
-        School savedSchool = schoolRepository.save(newSchool);
+        School school = createSchoolEntity(schoolRequest);
+        School savedSchool = schoolRepository.save(school);
 
-        // Associate admin with school
         associateAdminWithSchool(admin, savedSchool);
-
-        // Send notifications
         emailTemplateService.sendOnboardingNotifications(savedSchool, admin);
 
-        return convertToResponse(savedSchool);
+        logger.info("Onboarded school ID {} with name {}", savedSchool.getId(), savedSchool.getSchoolName());
+        return modelMapper.map(savedSchool, SchoolResponse.class);
     }
 
     private User getAuthenticatedAdmin() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-     Optional<User> optionalUser =   userRepository.findByEmailAndRoles(email, Roles.ADMIN);
-        return  optionalUser.get();
+        return userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                .orElseThrow(() -> new AuthenticationFailedException("Admin access required for email: " + email));
     }
 
     private void validateSchoolUniqueness(SchoolRequest request) {
         if (schoolRepository.existsByEmail(request.getEmail())) {
-            throw new UserAlreadyExistException("Email already exists");
+            throw new UserAlreadyExistException("Email already exists: " + request.getEmail());
         }
         if (schoolRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new UserAlreadyExistException("Phone number already exists");
+            throw new UserAlreadyExistException("Phone number already exists: " + request.getPhoneNumber());
         }
         if (schoolRepository.existsBySchoolName(request.getSchoolName())) {
-            throw new UserAlreadyExistException("School name already exists");
+            throw new UserAlreadyExistException("School name already exists: " + request.getSchoolName());
         }
         if (schoolRepository.existsBySchoolIdentificationNumber(request.getSchoolIdentificationNumber())) {
-            throw new UserAlreadyExistException("School identification number already exists");
+            throw new UserAlreadyExistException("School identification number already exists: " + request.getSchoolIdentificationNumber());
         }
     }
 
     private School createSchoolEntity(SchoolRequest request) {
         School school = modelMapper.map(request, School.class);
-
-        // Set default values
         school.setIsActive(false);
+        school.setSocialMediaLinks(request.getSocialMediaLinks() != null ? request.getSocialMediaLinks() : new HashMap<>());
 
-        // Set social media links if provided
-        Optional.ofNullable(request.getSocialMediaLinks())
-                .ifPresent(school::setSocialMediaLinks);
+        // Fetch default services and requested services
+        List<ServiceOffered> defaultServices = serviceOfferedRepository.findByIsDefaultTrue();
+        Set<Long> requestedServiceIds = request.getSelectedServices() != null ? new HashSet<>(request.getSelectedServices()) : new HashSet<>();
 
-        // Fetch and associate services
-        List<ServiceOffered> services = serviceOfferedRepository.findAllById(
-                Optional.ofNullable(request.getSelectedServices())
-                        .orElse(Collections.emptyList())
-        );
+        // Combine default and requested services, avoiding duplicates
+        Set<Long> allServiceIds = new HashSet<>(requestedServiceIds);
+        defaultServices.forEach(service -> allServiceIds.add(service.getId()));
+
+        List<ServiceOffered> services = serviceOfferedRepository.findAllById(allServiceIds);
+        if (services.size() < allServiceIds.size()) {
+            throw new BadRequestException("One or more selected services are invalid.");
+        }
+
         school.setSelectedServices(services);
+        logger.info("Assigned {} services to school (including {} default services)", services.size(), defaultServices.size());
 
         return school;
     }
@@ -117,209 +115,103 @@ public class SchoolServiceImpl implements SchoolService {
         userRepository.save(admin);
     }
 
-    private SchoolResponse convertToResponse(School school) {
-        return modelMapper.map(school, SchoolResponse.class);
-    }
-
+    @Override
     public void accessibleService(Long schoolId, String serviceName) {
-        try {
-            School school = schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new ResourceNotFoundException("School not found"));
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
 
-            if (!school.isSubscriptionValid()) {
-                throw new SubscriptionExpiredException("Subscription expired");
-            }
+        if (!school.isSubscriptionValid()) {
+            throw new SubscriptionExpiredException("Subscription expired for school ID: " + schoolId);
+        }
 
-            boolean serviceSubscribed = school.getSelectedServices().stream()
-                    .anyMatch(service -> service.getName().equals(serviceName));
-            if (!serviceSubscribed) {
-                throw new SubscriptionExpiredException("Service not subscribed");
-            }
-
-            System.out.println("Access granted for " + serviceName + " service.");
-        } catch (ResourceNotFoundException | SubscriptionExpiredException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("Error accessing service: " + e.getMessage(), e);
+        boolean serviceSubscribed = school.getSelectedServices().stream()
+                .anyMatch(service -> service.getName().equalsIgnoreCase(serviceName));
+        if (!serviceSubscribed) {
+            throw new SubscriptionExpiredException("Service '" + serviceName + "' not subscribed for school ID: " + schoolId);
         }
     }
 
-    public School subscribeSchool(SubscriptionRequest subscriptionRequest) {
-        try {
-            String email = SecurityConfig.getAuthenticatedUserEmail();
-
-            // Validate user existence
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new NotFoundException("User not found with email: " + email));
-            Objects.requireNonNull(subscriptionRequest, "Subscription request cannot be null");
-
-            // Find the school by ID
-            School school = schoolRepository.findById(user.getSchool().getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + user.getSchool().getId()));
-
-            if (school.getActualNumberOfStudents() == null || school.getActualNumberOfStudents() <= 0) {
-                throw new IllegalStateException("School has no students registered");
-            }
-
-            int amountInKobo;
-            long totalAmount;
-            try {
-                 totalAmount = Math.multiplyExact(
-                        school.getActualNumberOfStudents(),
-                        Integer.parseInt(amountChargedPerStudent)
-                );
-
-                if (totalAmount <= 0) {
-                    throw new IllegalStateException("Calculated amount must be greater than zero");
-                }
-                amountInKobo = Math.toIntExact(totalAmount);
-
-            } catch (ArithmeticException e) {
-                throw new IllegalArgumentException("Amount too large", e);
-            }
-
-            PayStackTransactionRequest payStackTransactionRequest = PayStackTransactionRequest.builder()
-                    .email(school.getEmail())
-                    .amount(new BigDecimal(amountInKobo))
-                    .metadata(Map.of(
-                            "schoolId", user.getSchool().getId().toString(),
-                            "subscriptionType", subscriptionRequest.getSubscriptionType().name(),
-                            "purpose", "SUBSCRIPTION"
-                    ))
-                    .build();
-
-            // Initialize payment transaction
-            PayStackTransactionResponse paymentSuccessful = paymentService.initTransaction(payStackTransactionRequest);
-//            boolean paymentSuccessful = true;
-
-            if (paymentSuccessful.isStatus()) {
-
-                LocalDateTime now = LocalDateTime.now();
-                LocalDateTime currentExpiryDate = Optional.ofNullable(school.getSubscriptionExpiryDate())
-                        .filter(date -> date.isAfter(now))
-                        .orElse(now);
-
-                LocalDateTime newExpiryDate = calculateNewExpiryDate(currentExpiryDate, subscriptionRequest.getSubscriptionType());
-
-                SubscriptionHistory subscriptionHistory = SubscriptionHistory.builder()
-                        .school(school)
-                        .subscriptionType(subscriptionRequest.getSubscriptionType())
-                        .startDate(currentExpiryDate.toLocalDate())
-                        .endDate(newExpiryDate.toLocalDate())
-                        .amountPaid(new BigDecimal(totalAmount))
-                        .paymentReference(paymentSuccessful.getData().getReference())
-                        .paymentMethod("Paystack")
-                        .transactionStatus("completed")
-                        .build();
-                subscriptionHistoryRepository.save(subscriptionHistory);
-
-                // Update subscription details
-                school.setSubscriptionExpiryDate(newExpiryDate);
-                school.setIsActive(newExpiryDate.isAfter(now)); // Check if the subscription is valid
-                school.setSubscriptionKey(generateSubscriptionKey());
-                school.setSubscriptionType(subscriptionRequest.getSubscriptionType());
-                schoolRepository.save(school);
-
-                // Send confirmation email
-                emailTemplateService.sendSubscriptionConfirmationEmail(school, subscriptionRequest, newExpiryDate,  amountInKobo);
-
-
-                return school;
-            } else {
-                throw new PaymentFailedException("Subscription payment failed");
-            }
-        } catch (ResourceNotFoundException | IllegalArgumentException | PaymentFailedException e) {
-            throw e; // Re-throw known exceptions
-        } catch (Exception e) {
-            throw new ServiceException("Error processing subscription: " + e.getMessage(), e);
-        }
-    }
-
-
+    @Override
     @Transactional
-    public School renewSubscription(SubscriptionType subscriptionType) throws Exception {
-        String email = SecurityConfig.getAuthenticatedUserEmail();
-
-        // Validate user existence
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("User not found with email: " + email));
-
-        Objects.requireNonNull(subscriptionType, "Subscription type cannot be null");
-
-        // Retrieve school with lock
-        School school = schoolRepository.findById(user.getSchool().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + user.getSchool().getId()));
-
-        // Validate school has students
-        if (school.getActualNumberOfStudents() == null || school.getActualNumberOfStudents() <= 0) {
-            throw new IllegalStateException("Cannot renew subscription - school has no students");
+    public School subscribeSchool(SubscriptionRequest subscriptionRequest) throws Exception {
+        if (subscriptionRequest == null) {
+            throw new BadRequestException("Subscription request cannot be null.");
         }
 
-        // Calculate amount
-        int amountInKobo = calculateSubscriptionAmount(school.getActualNumberOfStudents());
+        User user = getAuthenticatedUser();
+        School school = validateSchoolForSubscription(user.getSchool().getId());
 
-        // Process payment
-        PayStackTransactionResponse paymentResponse = processPayment(school, amountInKobo, subscriptionType);
+        BigDecimal amount = calculateSubscriptionAmount(school.getActualNumberOfStudents());
+        PayStackTransactionResponse paymentResponse = processPayment(school, amount, subscriptionRequest.getSubscriptionType(), "SUBSCRIPTION");
 
-        // Calculate new expiry date with remaining days
-        LocalDateTime newExpiryDate = calculateNewExpiryWithRemainingDays(school, subscriptionType);
+        LocalDateTime newExpiryDate = calculateNewExpiryDate(LocalDateTime.now(), subscriptionRequest.getSubscriptionType());
+        createSubscriptionHistory(school, subscriptionRequest.getSubscriptionType(), amount, paymentResponse, newExpiryDate);
 
-        // Save subscription history
-        createSubscriptionHistory(school, subscriptionType, amountInKobo, paymentResponse, newExpiryDate);
+        updateSchoolSubscription(school, subscriptionRequest.getSubscriptionType(), newExpiryDate);
+        emailTemplateService.sendSubscriptionConfirmationEmail(school, subscriptionRequest, newExpiryDate, amount.intValue());
 
-        // Update school subscription
-        updateSchoolSubscription(school, subscriptionType, newExpiryDate);
-
-        // Send confirmation
-        emailTemplateService.sendRenewalConfirmation(school, subscriptionType, newExpiryDate, amountInKobo);
-
+        logger.info("Subscribed school ID {} with type {}", school.getId(), subscriptionRequest.getSubscriptionType());
         return school;
     }
 
-    private int calculateSubscriptionAmount(int studentCount) {
-        try {
-            return Math.multiplyExact(studentCount, Integer.parseInt(amountChargedPerStudent));
-        } catch (ArithmeticException e) {
-            throw new IllegalStateException("Amount calculation overflow for " +
-                    studentCount + " students", e);
-        }
-    }
-
-    private LocalDateTime calculateNewExpiryWithRemainingDays(School school, SubscriptionType subscriptionType) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime currentExpiry = school.getSubscriptionExpiryDate();
-
-        if (currentExpiry != null && currentExpiry.isAfter(now)) {
-            // Calculate remaining days from current subscription
-            long remainingDays = ChronoUnit.DAYS.between(now, currentExpiry);
-
-            // Calculate base new expiry date from today
-            LocalDateTime baseNewExpiry = calculateBaseExpiryDate(now, subscriptionType);
-
-            // Add remaining days to the new expiry date
-            return baseNewExpiry.plusDays(remainingDays);
+    @Override
+    @Transactional
+    public School renewSubscription(SubscriptionType subscriptionType) throws Exception {
+        if (subscriptionType == null) {
+            throw new BadRequestException("Subscription type cannot be null.");
         }
 
-        // If expired or no current expiry, start from now
-        return calculateBaseExpiryDate(now, subscriptionType);
+        User user = getAuthenticatedUser();
+        School school = validateSchoolForSubscription(user.getSchool().getId());
+
+        BigDecimal amount = calculateSubscriptionAmount(school.getActualNumberOfStudents());
+        PayStackTransactionResponse paymentResponse = processPayment(school, amount, subscriptionType, "SUBSCRIPTION_RENEWAL");
+
+        LocalDateTime newExpiryDate = calculateNewExpiryWithRemainingDays(school, subscriptionType);
+        createSubscriptionHistory(school, subscriptionType, amount, paymentResponse, newExpiryDate);
+
+        updateSchoolSubscription(school, subscriptionType, newExpiryDate);
+        emailTemplateService.sendRenewalConfirmation(school, subscriptionType, newExpiryDate, amount.intValue());
+
+        logger.info("Renewed subscription for school ID {} with type {}", school.getId(), subscriptionType);
+        return school;
     }
 
-    private LocalDateTime calculateBaseExpiryDate(LocalDateTime startDate, SubscriptionType type) {
-        return switch (type) {
-            case MONTHLY -> startDate.plusMonths(1);
-            case QUARTERLY -> startDate.plusMonths(3);
-            case YEARLY -> startDate.plusYears(1);
-        };
+    private User getAuthenticatedUser() {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("User not found with email: " + email));
     }
 
-    private PayStackTransactionResponse processPayment(School school, int amountInKobo, SubscriptionType type) throws Exception {
+    private School validateSchoolForSubscription(Long schoolId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+
+        if (school.getActualNumberOfStudents() <= 0) {
+            throw new BadRequestException("School has no students registered for ID: " + schoolId);
+        }
+        return school;
+    }
+
+    private BigDecimal calculateSubscriptionAmount(int studentCount) {
+        if (studentCount <= 0) {
+            throw new BadRequestException("Student count must be positive.");
+        }
+        return amountChargedPerStudent.multiply(BigDecimal.valueOf(studentCount));
+    }
+
+    private PayStackTransactionResponse processPayment(School school, BigDecimal amount, SubscriptionType type, String purpose) throws Exception {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Payment amount must be positive.");
+        }
+
         PayStackTransactionRequest request = PayStackTransactionRequest.builder()
                 .email(school.getEmail())
-                .amount(new BigDecimal(amountInKobo))
+                .amount(amount)
                 .metadata(Map.of(
                         "schoolId", school.getId().toString(),
                         "subscriptionType", type.name(),
-                        "purpose", "SUBSCRIPTION_RENEWAL"
+                        "purpose", purpose
                 ))
                 .build();
 
@@ -330,15 +222,33 @@ public class SchoolServiceImpl implements SchoolService {
         return response;
     }
 
-    private void createSubscriptionHistory(School school, SubscriptionType type,
-                                           int amountInKobo, PayStackTransactionResponse paymentResponse,
-                                           LocalDateTime newExpiryDate) {
+    private LocalDateTime calculateNewExpiryWithRemainingDays(School school, SubscriptionType subscriptionType) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime currentExpiry = school.getSubscriptionExpiryDate();
+
+        if (currentExpiry != null && currentExpiry.isAfter(now)) {
+            long remainingDays = ChronoUnit.DAYS.between(now, currentExpiry);
+            return calculateNewExpiryDate(now, subscriptionType).plusDays(remainingDays);
+        }
+        return calculateNewExpiryDate(now, subscriptionType);
+    }
+
+    private LocalDateTime calculateNewExpiryDate(LocalDateTime currentDate, SubscriptionType subscriptionType) {
+        return switch (subscriptionType) {
+            case MONTHLY -> currentDate.plusMonths(1);
+            case QUARTERLY -> currentDate.plusMonths(3);
+            case YEARLY -> currentDate.plusYears(1);
+        };
+    }
+
+    private void createSubscriptionHistory(School school, SubscriptionType type, BigDecimal amount,
+                                           PayStackTransactionResponse paymentResponse, LocalDateTime newExpiryDate) {
         SubscriptionHistory history = SubscriptionHistory.builder()
                 .school(school)
                 .subscriptionType(type)
                 .startDate(LocalDate.now())
                 .endDate(newExpiryDate.toLocalDate())
-                .amountPaid(new BigDecimal(amountInKobo / 100.0))
+                .amountPaid(amount)
                 .paymentReference(paymentResponse.getData().getReference())
                 .paymentMethod("Paystack")
                 .transactionStatus("completed")
@@ -351,12 +261,8 @@ public class SchoolServiceImpl implements SchoolService {
     }
 
     private long calculateCarriedOverDays(School school) {
-        if (school.getSubscriptionExpiryDate() == null) {
-            return 0;
-        }
-
         LocalDateTime now = LocalDateTime.now();
-        return school.getSubscriptionExpiryDate().isAfter(now)
+        return school.getSubscriptionExpiryDate() != null && school.getSubscriptionExpiryDate().isAfter(now)
                 ? ChronoUnit.DAYS.between(now, school.getSubscriptionExpiryDate())
                 : 0;
     }
@@ -365,229 +271,132 @@ public class SchoolServiceImpl implements SchoolService {
         school.setSubscriptionExpiryDate(newExpiryDate);
         school.setIsActive(true);
         school.setSubscriptionType(type);
+        school.setSubscriptionKey(UUID.randomUUID().toString());
         school.setLastRenewalDate(LocalDateTime.now());
         schoolRepository.save(school);
     }
 
-    private LocalDateTime calculateNewExpiryDate(LocalDateTime currentDate, SubscriptionType subscriptionType) {
-        return switch (subscriptionType) {
-            case MONTHLY -> currentDate.plusMonths(1);
-            case QUARTERLY -> currentDate.plusMonths(3);
-            case YEARLY -> currentDate.plusYears(1);
-            default -> throw new IllegalArgumentException("Unsupported subscription type: " + subscriptionType);
-        };
-    }
-
-    private String generateSubscriptionKey() {
-        return UUID.randomUUID().toString();
-    }
-
-
+    @Override
     public School findBySubscriptionKey(String subscriptionKey) {
-        try {
-            return schoolRepository.findBySubscriptionKey(subscriptionKey);
-        } catch (Exception e) {
-            throw new RuntimeException("Error finding subscription key: " + e.getMessage(), e);
-        }
+        return schoolRepository.findBySubscriptionKey(subscriptionKey)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with subscription key: " + subscriptionKey));
     }
 
+    @Override
     public List<ServiceOffered> getSelectedServices(Long schoolId) {
-        try {
-            School school = schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
-            return school.getSelectedServices();
-        } catch (Exception e) {
-            throw new RuntimeException("Error fetching selected services: " + e.getMessage(), e);
-        }
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+        return school.getSelectedServices();
     }
 
+    @Override
     public BigDecimal getAmountToSubscribe(Long schoolId) {
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
-        long numberOfUsers = school.getUsers().size();
-        return BigDecimal.valueOf(numberOfUsers * 2000);
+        return calculateSubscriptionAmount(school.getActualNumberOfStudents());
     }
 
+    @Override
     public boolean canAccessService(Long schoolId, Long serviceId) {
-
-        ServiceOffered serviceOffered = serviceOfferedRepository.findById(serviceId)
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+        ServiceOffered service = serviceOfferedRepository.findById(serviceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Service not found with ID: " + serviceId));
+
+        return school.getSelectedServices().contains(service);
+    }
+
+    @Override
+    @Transactional
+    public void deactivateExpiredSubscriptions() {
+        schoolRepository.findAll().forEach(school -> {
+            if (!school.isSubscriptionValid()) {
+                school.setIsActive(false);
+                schoolRepository.save(school);
+                logger.info("Deactivated expired subscription for school ID {}", school.getId());
+            }
+        });
+    }
+
+    @Override
+    public boolean isValidSubscriptionKey(Long schoolId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+        if (!school.isSubscriptionValid()) {
+            throw new SubscriptionExpiredException("Subscription expired for school ID: " + schoolId);
+        }
+        return true;
+    }
+
+    @Override
+    public List<School> getAllSchools() {
+        return schoolRepository.findAll();
+    }
+
+    @Override
+    public School getSchoolById(Long schoolId) {
+        return schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+    }
+
+    @Override
+    @Transactional
+    public void deleteSchool(Long schoolId) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+        schoolRepository.delete(school);
+        logger.info("Deleted school ID {}", schoolId);
+    }
+
+    @Override
+    @Transactional
+    public School updateSchool(Long schoolId, SchoolRequest schoolRequest) {
+        if (schoolRequest == null) {
+            throw new BadRequestException("School request cannot be null.");
+        }
 
         School school = schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
-
-        return school.getSelectedServices().stream()
-                .anyMatch(service -> service.getName().equalsIgnoreCase(serviceOffered.getName()));
+        modelMapper.map(schoolRequest, school);
+        validateSchoolUniqueness(schoolRequest);
+        School updatedSchool = schoolRepository.save(school);
+        logger.info("Updated school ID {}", schoolId);
+        return updatedSchool;
     }
 
-
-    public void deactivateExpiredSubscriptions() {
-        try {
-            List<School> schools = schoolRepository.findAll();
-            for (School school : schools) {
-                if (!school.isSubscriptionValid()) {
-                    school.setIsActive(false);
-                    schoolRepository.save(school);
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Error deactivating expired subscriptions: " + e.getMessage(), e);
-        }
-    }
-
-    public boolean isValidSubscriptionKey(Long schoolId) {
-        try {
-            School school = schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
-            if (!school.isSubscriptionValid()) {
-                throw new SubscriptionExpiredException("Subscription expired. Please renew.");
-            }
-            return true;
-        } catch (Exception e) {
-            throw new RuntimeException("Error validating subscription key: " + e.getMessage(), e);
-        }
-    }
-
-    public List<School> getAllSchools() {
-        try {
-            return schoolRepository.findAll();
-        } catch (Exception e) {
-            throw new RuntimeException("Error fetching all schools: " + e.getMessage(), e);
-        }
-    }
-
-    public School getSchoolById(Long schoolId) {
-        try {
-            return schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
-        } catch (Exception e) {
-            throw new RuntimeException("Error fetching school by ID: " + e.getMessage(), e);
-        }
-    }
-
-    public void deleteSchool(Long schoolId) {
-        try {
-            School school = schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
-            schoolRepository.delete(school);
-        } catch (Exception e) {
-            throw new RuntimeException("Error deleting school: " + e.getMessage(), e);
-        }
-    }
-
-    public School updateSchool(Long schoolId, SchoolRequest schoolRequest) {
-        try {
-            School school = schoolRepository.findById(schoolId)
-                    .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
-            modelMapper.map(schoolRequest, school);
-            schoolRepository.save(school);
-            return school;
-        } catch (Exception e) {
-            throw new RuntimeException("Error updating school: " + e.getMessage(), e);
-        }
-    }
-
-
+    @Override
     public List<ProfileData> teacherProfilesForSchool(Long schoolId) {
-        try {
-            List<User> teachers = userRepository.findByRolesAndSchoolId(Roles.TEACHER, schoolId);
-
-            // Extract their user IDs
-            List<Long> teacherIds = teachers.stream()
-                    .map(User::getId)
-                    .collect(Collectors.toList());
-
-            List<Profile> teacherProfiles = profileRepository.findByUserIdIn(teacherIds);
-
-            // Map profiles to ProfileData format
-
-            return teacherProfiles.stream()
-                    .map(profile -> {
-                        ProfileData profileData = new ProfileData();
-                        profileData.setId(profile.getId());
-                        profileData.setPhoneNumber(profile.getPhoneNumber());
-                        profileData.setUniqueRegistrationNumber(profile.getUniqueRegistrationNumber());
-                        return profileData;
-                    })
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new RuntimeException("Error fetching teacher profiles for the school: " + e.getMessage(), e);
-        }
+        return getProfilesForRole(schoolId, Roles.TEACHER);
     }
 
+    @Override
     public List<ProfileData> studentsProfilesForSchool(Long schoolId) {
-        try {
-            List<User> students = userRepository.findByRolesAndSchoolId(Roles.STUDENT, schoolId);
-
-            // Extract their user IDs
-            List<Long> studentIds = students.stream()
-                    .map(User::getId)
-                    .collect(Collectors.toList());
-
-            List<Profile>studentProfiles = profileRepository.findByUserIdIn(studentIds);
-
-            // Map profiles to ProfileData format
-
-            return studentProfiles.stream()
-                    .map(profile -> {
-                        ProfileData profileData = new ProfileData();
-                        profileData.setId(profile.getId());
-                        profileData.setPhoneNumber(profile.getPhoneNumber());
-                        profileData.setUniqueRegistrationNumber(profile.getUniqueRegistrationNumber());
-                        return profileData;
-                    })
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new RuntimeException("Error fetching student profiles for the school: " + e.getMessage(), e);
-        }
+        return getProfilesForRole(schoolId, Roles.STUDENT);
     }
 
+    @Override
     public List<ProfileData> adminProfilesForSchool(Long schoolId) {
-        try {
-            List<User> admins = userRepository.findByRolesAndSchoolId(Roles.ADMIN, schoolId);
-
-            // Extract their user IDs
-            List<Long> teacherIds = admins.stream()
-                    .map(User::getId)
-                    .collect(Collectors.toList());
-
-            List<Profile> adminProfiles = profileRepository.findByUserIdIn(teacherIds);
-
-            // Map profiles to ProfileData format
-
-            return adminProfiles.stream()
-                    .map(profile -> {
-                        ProfileData profileData = new ProfileData();
-                        profileData.setId(profile.getId());
-                        profileData.setPhoneNumber(profile.getPhoneNumber());
-                        profileData.setUniqueRegistrationNumber(profile.getUniqueRegistrationNumber());
-                        return profileData;
-                    })
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new RuntimeException("Error fetching admin profiles for the school: " + e.getMessage(), e);
-        }
+        return getProfilesForRole(schoolId, Roles.ADMIN);
     }
 
+    @Override
     public List<ProfileData> gateManProfilesForSchool(Long schoolId) {
-        try {
-            List<User> gateMen = userRepository.findByRolesAndSchoolId(Roles.GATEMAN, schoolId);
+        return getProfilesForRole(schoolId, Roles.GATEMAN);
+    }
 
-            // Extract their user IDs
-            List<Long> gateMenIds = gateMen.stream()
-                    .map(User::getId)
-                    .collect(Collectors.toList());
+    private List<ProfileData> getProfilesForRole(Long schoolId, Roles role) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+        List<User> users = userRepository.findByRoleAndSchoolId(role, schoolId);
+        List<Long> userIds = users.stream().map(User::getId).toList();
+        List<Profile> profiles = profileRepository.findByUserIdIn(userIds);
 
-            List<Profile> gateMenProfiles = profileRepository.findByUserIdIn(gateMenIds);
-
-            // Map profiles to ProfileData format
-
-            return gateMenProfiles.stream()
-                    .map(SchoolServiceImpl::apply)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new RuntimeException("Error fetching gate men profiles for the school: " + e.getMessage(), e);
-        }
+        return profiles.stream()
+                .map(profile -> new ProfileData(
+                        profile.getId(),
+                        profile.getPhoneNumber(),
+                        profile.getUniqueRegistrationNumber()
+                ))
+                .toList();
     }
 }
-

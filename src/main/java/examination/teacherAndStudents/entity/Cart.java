@@ -3,31 +3,32 @@ package examination.teacherAndStudents.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Table(name = "cart") // Renamed for better clarity
 @Entity
+@Table(name = "cart")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Cart {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "profile_id")
-    private Profile profile; // The student adding items to the cart
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_id", nullable = false)
+    private Profile profile;
 
-    @ManyToOne
-    @JoinColumn(name = "store_item_id")
-    private StoreItem storeItem; // The store item being added
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_item_id", nullable = false)
+    private StoreItem storeItem;
 
-    private Integer quantity; // Quantity of the item in the cart
-
+    @Column(name = "size")
     private String size;
 
-    private boolean isCheckedOut = false; // Status of the cart item (checked out or not)
+    @Column(name = "quantity", nullable = false)
+    private Integer quantity;
 
-    // Getters and Setters
+    @Column(name = "checked_out", nullable = false)
+    private boolean checkedOut;
 }
-

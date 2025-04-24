@@ -26,6 +26,8 @@ import java.util.Set;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String name;
 
     @CreationTimestamp
@@ -36,7 +38,6 @@ import java.util.Set;
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)
     private School school;

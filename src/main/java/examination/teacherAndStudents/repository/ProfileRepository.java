@@ -32,9 +32,7 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     List<Profile> findByClassBlock(ClassBlock classLevel);
 
     @Query("""
-           SELECT new examination.teacherAndStudents.dto.UserProfileResponse(
-               p.id, p.uniqueRegistrationNumber, p.phoneNumber, u.roles
-           )
+           SELECT p
            FROM Profile p
            JOIN p.user u
            WHERE u.roles = :role AND p.profileStatus = :status
@@ -48,13 +46,16 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
             "(:classLevel IS NULL OR p.classBlock.classLevel = :classLevel) AND " +
             "(:academicYear IS NULL OR p.classBlock.classLevel.academicYear = :academicYear) AND " +
             "(:uniqueRegistrationNumber IS NULL OR p.uniqueRegistrationNumber LIKE %:uniqueRegistrationNumber%) AND " +
-            "(:firstName IS NULL OR p.user.firstName LIKE %:firstName%)")
+            "(:firstName IS NULL OR p.user.firstName LIKE %:firstName%) AND " +
+            "(:lastName IS NULL OR p.user.lastName LIKE %:lastName%)")
+
     Page<Profile> findAllWithFilters(
             @Param("classBlock") ClassBlock classBlock,
             @Param("classLevel") ClassLevel classLevel,
             @Param("academicYear") AcademicSession academicYear,
             @Param("uniqueRegistrationNumber") String uniqueRegistrationNumber,
             @Param("firstName") String firstName,
+            @Param("lastName") String lastName,
             Pageable pageable);
 
     List<Profile> findByUserIdIn(List<Long> teacherIds);
@@ -65,4 +66,10 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
 
 
     List<Profile> findByClassBlockIdInAndClassBlockClassLevelAcademicYearAndClassBlockClassLevelSchoolAndProfileStatus(List<Long> classBlockIds, AcademicSession session, School school, ProfileStatus profileStatus);
+
+    boolean existsByReferralCode(String code);
+
+    Optional<Profile> findByReferralCode(String referralCode);
+
+    List<Profile> findByUserIn(List<User> activeUsers);
 }

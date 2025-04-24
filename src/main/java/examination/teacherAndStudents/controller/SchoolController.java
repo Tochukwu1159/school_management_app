@@ -6,6 +6,7 @@ import examination.teacherAndStudents.entity.ServiceOffered;
 import examination.teacherAndStudents.service.SchoolService;
 import examination.teacherAndStudents.utils.ServiceType;
 import examination.teacherAndStudents.utils.SubscriptionType;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -57,6 +58,27 @@ public class SchoolController {
     public ResponseEntity<String> deactivateExpiredSubscriptions() {
         schoolService.deactivateExpiredSubscriptions();
         return ResponseEntity.ok("Expired subscriptions deactivated successfully.");
+    }
+
+    @GetMapping
+    public ResponseEntity<List<School>> getAllSchools() {
+        return ResponseEntity.ok(schoolService.getAllSchools());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<School> getSchoolById(@PathVariable Long id) {
+        return ResponseEntity.ok(schoolService.getSchoolById(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<School> updateSchool(@PathVariable Long id, @Valid @RequestBody SchoolRequest request) {
+        return ResponseEntity.ok(schoolService.updateSchool(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSchool(@PathVariable Long id) {
+        schoolService.deleteSchool(id);
+        return ResponseEntity.noContent().build();
     }
 
     // Other endpoints for managing schools

@@ -10,16 +10,21 @@ import com.google.api.services.drive.model.File;
 import examination.teacherAndStudents.dto.StudyMaterialRequest;
 import examination.teacherAndStudents.dto.StudyMaterialResponse;
 import examination.teacherAndStudents.entity.StudyMaterial;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.service.StudyMaterialService;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -47,11 +52,23 @@ public class StudyMaterialController {
     private final StudyMaterialService studyMaterialService;
 
     @GetMapping
-    public ResponseEntity<List<StudyMaterialResponse>> getAllMaterials() {
-        List<StudyMaterialResponse> materials = studyMaterialService.getAllMaterials();
-        return new ResponseEntity<>(materials, HttpStatus.OK);
+    @PreAuthorize("hasAnyRole('TEACHER', 'STUDENT', 'ADMIN')")
+    public ResponseEntity<Page<StudyMaterialResponse>> getAllMaterials(
+            @RequestParam(defaultValue = "0") @PositiveOrZero int page,
+            @RequestParam(defaultValue = "10") @Positive int size,
+            @RequestParam(defaultValue = "title") String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+        try {
+            Page<StudyMaterialResponse> materials = studyMaterialService.getAllMaterials(page, size, sortBy, sortDirection);
+            return ResponseEntity.ok(materials);
+        } catch (CustomNotFoundException e) {
+            throw e; // Handled by global exception handler
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid request parameters: " + e.getMessage());
+        } catch (Exception e) {
+            throw new CustomNotFoundException("Failed to retrieve study materials: " + e.getMessage());
+        }
     }
-
     @GetMapping("/{id}")
     public ResponseEntity<StudyMaterialResponse> getMaterialById(@PathVariable Long id) {
         StudyMaterialResponse material = studyMaterialService.getMaterialById(id);

@@ -1,9 +1,10 @@
 package examination.teacherAndStudents.service;
 
-import examination.teacherAndStudents.service.serviceImpl.PaymentServiceImpl;
-import examination.teacherAndStudents.utils.PaymentStatus;
-import examination.teacherAndStudents.utils.StudentTerm;
+import org.springframework.stereotype.Service;
 
+@Service
 public interface PaymentService {
-    PaymentServiceImpl.PaymentResult payDue(Long dueId, Long termId, Long sessionId);
+    void recordFailedPayment(String reference, String failureReason,
+                             String provider, String customerEmail);
+    boolean paymentExists(String reference);
 }

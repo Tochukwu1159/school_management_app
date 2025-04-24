@@ -8,6 +8,7 @@ public interface LibraryMemberService {
     LibraryMemberResponse createLibraryMember(LibraryMembershipRequest request);
     LibraryMemberResponse updateLibraryMember(Long id, LibraryMembershipRequest request);
     LibraryMemberResponse findById(Long id);
-    Page<LibraryMemberResponse> findAll(int pageNo, int pageSize, String sortBy);
+    Page<LibraryMemberResponse> findAll(int pageNo, int pageSize, String sortBy, String sortDirection);
     void deleteLibraryMember(Long id);
+    void suspendMembership(Long memberId, String reason);
 }

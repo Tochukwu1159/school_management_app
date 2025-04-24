@@ -8,58 +8,63 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-//@Table(name = "book_borrowing", indexes = {
-//        @Index(name = "idx_book_borrowing_book_id", columnList = "book_id"),
-//        @Index(name = "idx_book_borrowing_user_id", columnList = "user_id"),
-//        @Index(name = "idx_book_borrowing_status", columnList = "status")
-//})
 @Entity
 @Builder
 @Table(name = "book_borrowing")
 public class BookBorrowing {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "book_id", nullable = false)
-    private Book book;  // The book being borrowed
+    private Book book;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profile_id", nullable = false)
-    private Profile studentProfile;  // The student borrowing the book (assuming User represents student)
+    private Profile studentProfile;
 
     @NotNull
-    private LocalDateTime borrowDate;  // Date and time when the book was borrowed
+    private LocalDateTime borrowDate;
 
+    @NotNull
     private LocalDateTime dueDate;
 
     private boolean late;
-
-    private LocalDateTime supposedReturnedDate;  // Date and time when the book is expected/was returned
 
     private LocalDateTime actualReturnDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private BorrowingStatus status;  // The status of the borrowing (e.g., borrowed, returned)
+    private BorrowingStatus status;
+
+    @Column(nullable = false, columnDefinition = "DECIMAL(10,2)")
+    private BigDecimal fineAmount;
 
     @PrePersist
     protected void onCreate() {
         if (borrowDate == null) {
-            borrowDate = LocalDateTime.now();  // Set the borrowDate to current time if not provided
+            borrowDate = LocalDateTime.now();
+        }
+        if (dueDate == null) {
+            dueDate = borrowDate.plusWeeks(2);
+        }
+        if (fineAmount == null) {
+            fineAmount = BigDecimal.ZERO;
         }
     }
 
     @PreUpdate
     protected void onUpdate() {
         if (status == BorrowingStatus.RETURNED && actualReturnDate == null) {
-            actualReturnDate = LocalDateTime.now();  // Set returnDate when the status is 'RETURNED'
+            actualReturnDate = LocalDateTime.now();
         }
     }
 }

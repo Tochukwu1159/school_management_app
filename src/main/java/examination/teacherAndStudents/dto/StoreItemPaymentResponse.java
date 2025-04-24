@@ -1,7 +1,6 @@
 
 package examination.teacherAndStudents.dto;
 
-import examination.teacherAndStudents.entity.BookSale;
 import examination.teacherAndStudents.entity.StoreItem;
 import lombok.Builder;
 import lombok.Getter;

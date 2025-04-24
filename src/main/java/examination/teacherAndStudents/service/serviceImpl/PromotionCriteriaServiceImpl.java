@@ -125,15 +125,17 @@ public class PromotionCriteriaServiceImpl implements PromotionCriteriaService {
 
         // Map additional fields
         response.setClassBlockId(criteria.getClassBlock().getId());
-        response.setClassBlockName(criteria.getClassBlock().getCurrentStudentClassName());
+        response.setClassBlockName(criteria.getClassBlock().getName());
         response.setCurrentSessionId(criteria.getCurrentSession().getId());
         response.setCurrentSessionName(criteria.getCurrentSession().getName());
         response.setFutureSessionId(criteria.getFutureSession().getId());
         response.setFutureSessionName(criteria.getFutureSession().getName());
         response.setPromotedClassId(criteria.getPromotedClass().getId());
-        response.setPromotedClassName(criteria.getPromotedClass().getCurrentStudentClassName());
+        response.setPromotedClassName(criteria.getPromotedClass().getName()
+        );
+
         response.setDemotedClassId(criteria.getDemotedClassId().getId());
-        response.setDemotedClassName(criteria.getDemotedClassId().getCurrentStudentClassName());
+        response.setDemotedClassName(criteria.getDemotedClassId().getName());
 
         return response;
     }

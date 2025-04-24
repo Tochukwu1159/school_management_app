@@ -2,8 +2,10 @@ package examination.teacherAndStudents.service;
 import examination.teacherAndStudents.dto.NotificationResponse;
 import examination.teacherAndStudents.dto.TransactionRequest;
 import examination.teacherAndStudents.entity.Notification;
+import examination.teacherAndStudents.entity.Wallet;
 import examination.teacherAndStudents.utils.NotificationType;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface NotificationService {
@@ -19,6 +21,8 @@ public interface NotificationService {
     Notification createSystemNotification(Long userId, String title, String message,
                                           Long transactionId, NotificationType type);
     Notification createSystemNotification(Long userId, String title, String message);
+
+    void sendTransferNotifications(Wallet senderWallet, Wallet recipientWallet, BigDecimal amount);
 }
 
 

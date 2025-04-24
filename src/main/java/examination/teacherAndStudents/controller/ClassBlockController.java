@@ -2,6 +2,7 @@ package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.ClassBlockRequest;
 import examination.teacherAndStudents.dto.ClassBlockResponse;
+import examination.teacherAndStudents.dto.UpdateFormTeacherRequest;
 import examination.teacherAndStudents.service.ClassBlockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -57,9 +58,21 @@ public class ClassBlockController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/{id}/form-teacher/{teacherId}")
-    public ResponseEntity<ClassBlockResponse> updateFormTeacher(@PathVariable Long id, @PathVariable Long teacherId) {
-        ClassBlockResponse response = classBlockService.updateFormTeacher(id, teacherId);
+    @PutMapping("/form-teacher/update")
+    public ResponseEntity<ClassBlockResponse> updateFormTeacher(
+            @RequestParam Long academicYearId,
+            @RequestParam Long classLevelId,
+            @RequestParam Long classSubClassId,
+            @RequestParam Long classTeacherId
+    ) {
+        UpdateFormTeacherRequest  request = UpdateFormTeacherRequest.builder()
+                .subclassId(classSubClassId)
+                .teacherId(classTeacherId)
+                .classLevelId(classLevelId)
+                .sessionId(academicYearId)
+                .build();
+
+        ClassBlockResponse response = classBlockService.updateFormTeacher(request);
         return ResponseEntity.ok(response);
     }
 }

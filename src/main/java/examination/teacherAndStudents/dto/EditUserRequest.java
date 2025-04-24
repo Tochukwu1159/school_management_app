@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.Date;
+import java.util.Set;
 
 
 @Data
@@ -41,7 +42,7 @@ public class EditUserRequest {
     @NotEmpty(message = "Phone Number cannot be empty")
     private String phoneNumber;
     private String registrationNumber;
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
     private String formTeacher;
     private String classAssigned;
     private String address;
@@ -56,4 +57,6 @@ public class EditUserRequest {
     @NotNull(message = "Gender is required")
     @NotEmpty(message = "Gender  cannot be empty")
     private String gender;
+
+    private Set<UserRequestDto.AddressDto> addresses;
 }

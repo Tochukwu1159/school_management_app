@@ -51,13 +51,13 @@ public class AcademicScheduler {
 //    @Scheduled(cron = "0 */2 * * * ?")
     @Transactional
     public void updateSessionAverageAndTop5Students() {
-        AcademicSession session = academicSessionRepository.findByResultReadyDateBeforeOrEqualAndStatus(LocalDate.now(),
-                SessionStatus.ACTIVE);
-            resultService.updateSessionAverageForJob(session);
-            resultService.getTop5StudentsForAllClasses(session);
-            session.setStatus(
-                    SessionStatus.CLOSED);
-            academicSessionRepository.save(session);
+//        AcademicSession session = academicSessionRepository.findByResultReadyDateBeforeOrEqualAndStatus(LocalDate.now(),
+//                SessionStatus.ACTIVE);
+//            resultService.updateSessionAverageForJob(session);
+//            resultService.getTop5StudentsForAllClasses(session);
+//            session.setStatus(
+//                    SessionStatus.CLOSED);
+//            academicSessionRepository.save(session);
 
     }
 }
