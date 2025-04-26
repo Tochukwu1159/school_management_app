@@ -19,5 +19,7 @@ public class HostelRequest {
 
     private String hostelName;
 
+    private String description;
+
 
 }

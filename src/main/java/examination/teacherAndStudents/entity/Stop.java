@@ -5,8 +5,8 @@ import lombok.*;
 
 import java.time.LocalTime;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter@AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "stop")
 @Entity

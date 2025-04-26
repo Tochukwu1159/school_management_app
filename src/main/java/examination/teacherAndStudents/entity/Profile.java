@@ -14,12 +14,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @Entity
-//@Table(name = "profile")
+@Table(name = "profile")
 public class Profile implements Serializable {
 
     @Id

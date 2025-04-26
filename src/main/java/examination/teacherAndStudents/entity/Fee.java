@@ -8,7 +8,8 @@ import java.math.BigDecimal;
 /**
  * Entity representing a fee, associated with a fee category.
  */
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "fee")

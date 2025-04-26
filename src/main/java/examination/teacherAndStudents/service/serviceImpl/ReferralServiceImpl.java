@@ -38,14 +38,17 @@ public class ReferralServiceImpl implements ReferralService {
     @Transactional
     public RedeemResponse redeemPoints(Long userId, RedeemPointsRequestDto request) {
 
-        String email = SecurityConfig.getAuthenticatedUserEmail();
-        Profile profile = profileRepository.findByUserEmail(email)
-                .orElseThrow(() -> new CustomNotFoundException("Please login"));
+//        String email = SecurityConfig.getAuthenticatedUserEmail();
+//        Profile profile = profileRepository.findByUserEmail(email)
+//                .orElseThrow(() -> new CustomNotFoundException("Please login"));
+
+        Profile profile = profileRepository.findById(userId)
+              .orElseThrow(() -> new CustomNotFoundException("Please login"));
 
         Wallet wallet = profile.getWallet();
 
         School school = profile.getUser().getSchool();
-        if (school == null || school.getAmountPerPoint() == null) {
+        if (school == null || school.getReferralAmountPerPoint() == null) {
             throw new BadRequestException("School not configured for point redemption");
         }
 
@@ -57,7 +60,7 @@ public class ReferralServiceImpl implements ReferralService {
         }
 
         // Calculate redemption amount
-        BigDecimal redemptionAmount = school.getAmountPerPoint()
+        BigDecimal redemptionAmount = school.getReferralAmountPerPoint()
                 .multiply(BigDecimal.valueOf(request.getPointsToRedeem()));
 
         // Create redemption record
@@ -107,7 +110,7 @@ public class ReferralServiceImpl implements ReferralService {
         return UserPointsResponse.builder()
                 .points(userPoints.getPoints())
                 .schoolName(profile.getUser().getSchool().getSchoolName())
-                .amountPerPoint(profile.getUser().getSchool().getAmountPerPoint())
+                .amountPerPoint(profile.getUser().getSchool().getReferralAmountPerPoint())
                 .build();
     }
 }

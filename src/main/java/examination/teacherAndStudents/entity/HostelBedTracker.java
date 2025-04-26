@@ -5,7 +5,8 @@ import lombok.*;
 
 @Entity
 @Table(name = "hostel_bed_tracker")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

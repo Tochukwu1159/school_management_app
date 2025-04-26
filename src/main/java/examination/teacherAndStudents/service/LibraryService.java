@@ -27,7 +27,7 @@ public interface LibraryService {
             String sortBy,
             String sortDirection);
 
-    BookBorrowing borrowBook(Long memberId, Long bookId, LocalDateTime dueDate);
+    BookBorrowing borrowBook(Long bookId, LocalDateTime dueDate);
 
     BookBorrowing returnBook(Long borrowingId);
 }

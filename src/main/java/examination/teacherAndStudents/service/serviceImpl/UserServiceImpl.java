@@ -284,6 +284,7 @@ public class UserServiceImpl implements UserService {
         AdmissionApplication application = AdmissionApplication.builder()
                 .profile(savedProfile)
                 .school(school)
+                .name(savedUser.getFirstName() + "  " + savedUser.getLastName())
                 .status(ApplicationStatus.PENDING_REVIEW)
                 .session(academicSessionRepository.findCurrentSession(school.getId()).get())
                 .appliedClass(classBlock)
@@ -447,9 +448,9 @@ public class UserServiceImpl implements UserService {
             Optional<User> userDetails = userRepository.findByEmail(user.getUser().getEmail());
             // Check if the subscription has expired
             School school = userDetails.get().getSchool();
-            if (school != null && !school.isSubscriptionValid()) {
-                throw new SubscriptionExpiredException("Your subscription has expired. Please renew your subscription.");
-            }
+//            if (school != null && !school.isSubscriptionValid()) {
+//                throw new SubscriptionExpiredException("Your subscription has expired. Please renew your subscription.");
+//            }
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
 
@@ -1240,6 +1241,7 @@ public class UserServiceImpl implements UserService {
                 .referringUser(referringUser)
                 .referredUser(referredProfile)
                 .status(ReferralStatus.PENDING)
+                .school(referringUser.getUser().getSchool())
                 .referralDate(LocalDateTime.now())
                 .build();
 

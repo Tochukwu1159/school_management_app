@@ -37,9 +37,11 @@ public class CartServiceImpl implements CartService {
 
     @Override
     @Transactional
-    public CartResponse addToCart(@NotNull Long profileId, @Valid CartRequest request) {
+    public CartResponse addToCart( CartRequest request) {
         User student = validateStudentUser();
-        Profile profile = validateProfile(profileId, student);
+
+        Profile profile = profileRepository.findByUser(student)
+                .orElseThrow(() -> new CustomNotFoundException("Profile not found: "));
 
         StoreItem storeItem = storeItemRepository.findById(request.getStoreItemId())
                 .orElseThrow(() -> new CustomNotFoundException("Store item not found with ID: " + request.getStoreItemId()));
@@ -55,7 +57,7 @@ public class CartServiceImpl implements CartService {
                 .build();
 
         Cart savedCart = cartRepository.save(cart);
-        log.info("Item added to cart [cartId={}, profileId={}, storeItemId={}]", savedCart.getId(), profileId, request.getStoreItemId());
+        log.info("Item added to cart [cartId={},  storeItemId={}]", savedCart.getId(), request.getStoreItemId());
 
         return mapToCartResponse(savedCart);
     }
@@ -77,8 +79,6 @@ public class CartServiceImpl implements CartService {
     @Transactional(readOnly = true)
     public List<CartResponse> getCartForProfile(@NotNull Long profileId) {
         User student = validateStudentUser();
-        Profile profile = validateProfile(profileId, student);
-
         List<Cart> cartItems = cartRepository.findByProfileId(profileId);
         log.debug("Retrieved {} cart items for profile [profileId={}]", cartItems.size(), profileId);
 
@@ -108,16 +108,6 @@ public class CartServiceImpl implements CartService {
         }
     }
 
-    private Profile validateProfile(Long profileId, User user) {
-        Profile profile = profileRepository.findById(profileId)
-                .orElseThrow(() -> new CustomNotFoundException("Profile not found with ID: " + profileId));
-
-        if (!profile.getUser().getId().equals(user.getId())) {
-            throw new UnauthorizedException("You do not have access to this profile");
-        }
-
-        return profile;
-    }
 
     private void validateCartOwnership(User student, Cart cart) {
         if (!cart.getProfile().getUser().getId().equals(student.getId())) {

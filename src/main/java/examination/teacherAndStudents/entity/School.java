@@ -5,10 +5,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import examination.teacherAndStudents.utils.ServiceType;
 import examination.teacherAndStudents.utils.SubscriptionType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -16,9 +13,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @Entity
 @Table(name = "school")
@@ -76,6 +74,14 @@ public class School {
     @Column(name = "is_application_fee", nullable = false, columnDefinition = "boolean default false")
     private Boolean isApplicationFee = false;
 
+    @Column(name = "supports_library_membership", nullable = false, columnDefinition = "boolean default false")
+    private Boolean supportsLibraryMembership = false;
+
+    @Column(name = "supports_scratch_card", nullable = false, columnDefinition = "boolean default false")
+    private Boolean supportsScratchCard = false;
+
+    @Column(name = "supports_referral", nullable = false, columnDefinition = "boolean default false")
+    private Boolean supportsReferral = false;
 
     @Column(name = "supports_entry_exam", columnDefinition = "boolean default false")
     private Boolean supportsEntryExam = false; // New field for entry exam support
@@ -90,7 +96,7 @@ public class School {
     @Column(nullable = false)
     private Boolean isActive = false;
 
-    private BigDecimal amountPerPoint;
+    private BigDecimal referralAmountPerPoint;
 
     @Column(columnDefinition = "int default 5")
     private Integer scratchCardMaxUsageCount = 5; // New field for max usage count

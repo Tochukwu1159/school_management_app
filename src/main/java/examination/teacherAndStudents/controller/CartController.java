@@ -17,11 +17,10 @@ public class CartController {
         this.cartService = cartService;
     }
 
-    @PostMapping("/{profileId}/add")
+    @PostMapping("/add")
     public ResponseEntity<CartResponse> addToCart(
-            @PathVariable Long profileId,
             @RequestBody CartRequest request) {
-        CartResponse response = cartService.addToCart(profileId, request);
+        CartResponse response = cartService.addToCart(request);
         return ResponseEntity.ok(response);
     }
 

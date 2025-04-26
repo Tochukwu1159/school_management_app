@@ -38,6 +38,11 @@ public class UserController {
         return userService.createStudent(userRequest);
     }
 
+    @PostMapping("/self-onboarding")
+    public UserResponse selfRegisterStudent(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
+        return userService.selfRegisterStudent(userRequest);
+    }
+
     @PostMapping("/admin/create")
     public UserResponse createAdmin(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
         return userService.createAdmin(userRequest);

@@ -10,5 +10,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ReferralRepository extends JpaRepository<Referral, Long> {
 
-    Referral findByReferringUserAndStatus(Profile profile, ReferralStatus referralStatus);
+
+    Referral findByReferredUserAndStatus(Profile profile, ReferralStatus referralStatus);
 }

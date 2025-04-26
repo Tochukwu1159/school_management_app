@@ -25,7 +25,6 @@ public class ScratchCardAssignmentServiceImpl implements ScratchCardAssignmentSe
     private final WalletRepository walletRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
-    private final ClassBlockRepository classBlockRepository;
 
     @Override
     public ScratchCardDTO buyScratch(ScratchCardPurchaseRequest request) throws Exception {
@@ -46,8 +45,7 @@ public class ScratchCardAssignmentServiceImpl implements ScratchCardAssignmentSe
                 .orElseThrow(() -> new CustomNotFoundException("Term not found"));
 
         // Validate subclass (ClassBlock)
-        ClassBlock classBlock = classBlockRepository.findById(request.getSubClassId())
-                .orElseThrow(() -> new CustomNotFoundException("Subclass not found"));
+        ClassBlock classBlock = profile.getClassBlock();
 
         // Ensure the class block belongs to the student's school
         if (!classBlock.getClassLevel().getSchool().getId().equals(school.getId())) {

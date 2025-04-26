@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
  * Entity representing a fee category (e.g., School Fee, Library Fee).
  */
 @Entity
-@Table(name = "fee_category")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

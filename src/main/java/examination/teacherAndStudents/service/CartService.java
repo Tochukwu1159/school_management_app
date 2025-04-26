@@ -8,5 +8,5 @@ import java.util.List;
 public interface CartService {
     void removeFromCart(Long cartId);
     List<CartResponse> getCartForProfile(Long profileId);
-    CartResponse addToCart(Long profileId, CartRequest request);
+    CartResponse addToCart( CartRequest request);
 }

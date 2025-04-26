@@ -1,20 +1,18 @@
 package examination.teacherAndStudents.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
-@Table(name = "users_device")
-@Entity
+@AllArgsConstructor
 @Builder
+@Entity
+@Table(name = "users_device")
 public class UserDevice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

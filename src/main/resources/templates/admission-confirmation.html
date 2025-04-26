@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admission Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #dddddd;
+            border-radius: 5px;
+        }
+        .header {
+            background-color: #0044cc;
+            color: #ffffff;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            padding: 10px;
+            border-top: 1px solid #dddddd;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px 0;
+            background-color: #0044cc;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #0033a0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Welcome to <span th:text="${schoolName}">Our School</span>!</h1>
+    </div>
+    <div class="content">
+        <p>Dear <span th:text="${studentName}">Student</span>,</p>
+        <p>Congratulations! We are delighted to confirm your admission to <span th:text="${schoolName}">Our School</span>. We look forward to welcoming you to our community.</p>
+        <h3>Your Admission Details</h3>
+        <ul>
+            <li><strong>Registration Number:</strong> <span th:text="${registrationNumber}">12345</span></li>
+            <li th:if="${password} != null"><strong>Initial Password:</strong> <span th:text="${password}">********</span></li>
+
+        </ul>
+        <p>Please log in to the student portal to complete your enrollment, update your profile, and access important resources. If you received an initial password, we recommend changing it after your first login for security.</p>
+        <h3>Orientation Details</h3>
+        <p>We have scheduled an orientation session to help you get started:</p>
+        <ul>
+            <li><strong>Date:</strong> <span th:text="${orientationDate}">May 16, 2025</span></li>
+            <li><strong>Location:</strong> Details will be shared via the student portal or follow-up email.</li>
+        </ul>
+        <p style="text-align: center;">
+            <a th:href="${loginUrl}" class="button">Access Student Portal</a>
+        </p>
+        <h3>Contact Us</h3>
+        <p>If you have any questions or need assistance, please contact our admissions team:</p>
+        <ul>
+            <li><strong>Email:</strong> <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">admissions@school.edu</a></li>
+        </ul>
+        <p>Once again, welcome to <span th:text="${schoolName}">Our School</span>! We are excited to have you join us.</p>
+        <p>Best regards,<br>The Admissions Team<br><span th:text="${schoolName}">Our School</span></p>
+    </div>
+    <div class="footer">
+        <p>© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">Our School</span>. All rights reserved.</p>
+        <p><a href="#">Unsubscribe</a> | <a th:href="'https://' + ${schoolName.toLowerCase().replace(' ', '')} + '.edu/privacy'">Privacy Policy</a></p>
+    </div>
+</div>
+</body>
+</html>

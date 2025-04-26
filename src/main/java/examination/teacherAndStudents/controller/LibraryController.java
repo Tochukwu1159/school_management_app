@@ -86,9 +86,9 @@ public class LibraryController {
         }
     }
     @PostMapping("/borrow_book")
-    public ResponseEntity<BookBorrowing> borrowBook(@RequestParam("studentId") Long memberId, @RequestParam Long bookId, @RequestParam LocalDateTime dueDate) {
+    public ResponseEntity<BookBorrowing> borrowBook( @RequestParam Long bookId, @RequestParam LocalDateTime dueDate) {
         try {
-            BookBorrowing borrowing = libraryService.borrowBook(memberId, bookId, dueDate);
+            BookBorrowing borrowing = libraryService.borrowBook(bookId, dueDate);
             return ResponseEntity.ok(borrowing);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);

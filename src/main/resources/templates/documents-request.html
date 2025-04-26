@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Additional Documents Required</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #dddddd;
+            border-radius: 5px;
+        }
+        .header {
+            background-color: #ff9900;
+            color: #ffffff;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            padding: 10px;
+            border-top: 1px solid #dddddd;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px 0;
+            background-color: #0044cc;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .button:hover {
+            background-color: #0033a0;
+        }
+        ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Additional Documents Required</h1>
+    </div>
+    <div class="content">
+        <p>Dear <span th:text="${studentName}">Student</span>,</p>
+        <p>Thank you for applying to <span th:text="${schoolName}">Our School</span>. Upon reviewing your application, we have identified that some required documents are missing. To proceed with your application, please submit the following documents by <span th:text="${submissionDeadline}">May 2, 2025</span>:</p>
+        <h3>Missing Documents</h3>
+        <ul>
+            <li th:each="doc : ${missingDocuments}" th:text="${doc}">Document Name</li>
+        </ul>
+        <p>You can upload the requested documents through the student portal or send them directly to our admissions office. Failure to submit these documents by the deadline may result in your application being deferred or rejected.</p>
+        <p style="text-align: center;">
+            <a th:href="'https://' + ${schoolName.toLowerCase().replace(' ', '')} + '.edu/portal'" class="button">Upload Documents</a>
+        </p>
+        <h3>Contact Us</h3>
+        <p>If you have any questions or need assistance with submitting the documents, please contact our admissions team:</p>
+        <ul>
+            <li><strong>Email:</strong> <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">admissions@school.edu</a></li>
+        </ul>
+        <p>We appreciate your prompt attention to this matter and look forward to receiving your documents.</p>
+        <p>Best regards,<br>The Admissions Team<br><span th:text="${schoolName}">Our School</span></p>
+    </div>
+    <div class="footer">
+        <p>© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">Our School</span>. All rights reserved.</p>
+        <p><a href="#">Unsubscribe</a> | <a th:href="'https://' + ${schoolName.toLowerCase().replace(' ', '')} + '.edu/privacy'">Privacy Policy</a></p>
+    </div>
+</div>
+</body>
+</html>

@@ -2,14 +2,12 @@ package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.LessonStatus;
 import examination.teacherAndStudents.utils.TeachingStatus;
-import lombok.Data;
+import lombok.*;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "lessoonPLanner")

@@ -3,18 +3,15 @@ package examination.teacherAndStudents.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.utils.Roles;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter@AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "notice")
 @Entity

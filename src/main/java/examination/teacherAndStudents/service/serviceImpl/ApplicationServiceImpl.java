@@ -183,7 +183,7 @@ public class ApplicationServiceImpl implements ApplicationService {
         application.getProfile().getUser().setProfileStatus(ProfileStatus.ACTIVE);
         application.setStatus(ApplicationStatus.APPROVED);
 
-        Referral referral = referralRepository.findByReferringUserAndStatus(application.getProfile(), ReferralStatus.PENDING);
+        Referral referral = referralRepository.findByReferredUserAndStatus(application.getProfile(), ReferralStatus.PENDING);
         if (referral != null) {
             referral.setStatus(ReferralStatus.COMPLETED);
             referralRepository.save(referral);

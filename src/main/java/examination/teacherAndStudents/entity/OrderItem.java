@@ -25,7 +25,7 @@ public class OrderItem {
     @JoinColumn(name = "store_item_id", nullable = false)
     private StoreItem storeItem;
 
-    @Column(nullable = false)
+//    @Column(nullable = false)
     private String size;
 
     @Column(nullable = false)

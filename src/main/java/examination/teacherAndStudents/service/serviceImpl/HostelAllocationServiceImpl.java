@@ -74,6 +74,7 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
         HostelAllocation allocation = HostelAllocation.builder()
                 .profile(profile)
                 .fee(fee)
+                .school(profile.getUser().getSchool())
                 .academicYear(academicSession)
                 .paymentStatus(PaymentStatus.SUCCESS)
                 .allocationStatus(AllocationStatus.PENDING)

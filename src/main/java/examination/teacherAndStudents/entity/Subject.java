@@ -3,10 +3,7 @@ package examination.teacherAndStudents.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -16,7 +13,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@Data
+@Getter
+@Setter
     @AllArgsConstructor
     @NoArgsConstructor
     @Table(name = "subject")

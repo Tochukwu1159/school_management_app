@@ -46,7 +46,7 @@ public class Payment {
     private String transactionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_fee_id", nullable = false)
+    @JoinColumn(name = "student_fee_id")
     private Fee studentFee;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -58,9 +58,17 @@ public class Payment {
     private AcademicSession academicSession;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "term_id", nullable = false)
+    @JoinColumn(name = "term_id")
     private StudentTerm studentTerm;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_level_id")
+    private ClassLevel classLevel;
+
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_block_id")
+    private ClassBlock classBlock;
 
    private boolean paid=false;
 

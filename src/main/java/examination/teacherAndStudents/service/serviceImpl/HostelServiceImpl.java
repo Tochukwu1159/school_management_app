@@ -94,6 +94,7 @@ public class HostelServiceImpl implements HostelService {
                 .hostelName(hostelRequest.getHostelName())
                 .costPerBed(hostelRequest.getCostPerBed())
                 .numberOfBed(hostelRequest.getNumberOfBed())
+                .description(hostelRequest.getDescription())
                 .availabilityStatus(AvailabilityStatus.AVAILABLE)
                 .warden(warden)
                 .school(user.getSchool())

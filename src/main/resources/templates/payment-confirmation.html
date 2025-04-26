@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            text-align: center;
+            background-color: #004aad;
+            color: white;
+            padding: 10px;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+            background-color: white;
+            border-radius: 0 0 5px 5px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            margin-top: 20px;
+        }
+        .details {
+            margin: 20px 0;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+        .details p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h2>Payment Confirmation</h2>
+    </div>
+    <div class="content">
+        <p>Dear <span th:text="${name}">Customer</span>,</p>
+        <p>We are pleased to confirm that your payment has been successfully processed. Below are the details of your transaction:</p>
+
+        <div class="details">
+            <p><strong>Purpose:</strong> <span th:text="${purpose}">Fee Category</span></p>
+            <p><strong>Amount:</strong> ₦<span th:text="${amount}">0.00</span></p>
+        </div>
+
+        <p>Thank you for your payment. If you have any questions or need further assistance, please contact our support team.</p>
+        <p>Best regards,<br>[School Name] Team</p>
+    </div>
+</div>
+<div class="footer">
+    <p>This is an automated message. Please do not reply directly to this email.</p>
+    <p>&copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> [School Name]. All rights reserved.</p>
+</div>
+</body>
+</html>

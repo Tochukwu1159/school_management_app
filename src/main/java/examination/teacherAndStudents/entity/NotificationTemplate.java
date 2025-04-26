@@ -3,10 +3,13 @@ package examination.teacherAndStudents.entity;
 import examination.teacherAndStudents.utils.NotificationType;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "notification_templates")
-@Data
+@Getter
+@Setter
 public class NotificationTemplate {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

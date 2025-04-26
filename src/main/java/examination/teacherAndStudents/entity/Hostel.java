@@ -8,7 +8,8 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "hostel")
@@ -27,6 +28,8 @@ public class Hostel {
 
     @Column(name = "number_of_bed", nullable = false)
     private int numberOfBed;
+
+    private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "availability_status", nullable = false)

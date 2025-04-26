@@ -86,8 +86,16 @@ public class FeePaymentServiceImpl implements FeePaymentService {
         payment.setFeeCategory(fee.getCategory());
         payment.setReferenceNumber(ReferenceGenerator.generateShortReference());
         payment.setTransactionId(ReferenceGenerator.generateTransactionId("BAL"));
-
-
+        payment.setAcademicSession(fee.getSession());
+        if (fee.getClassLevel() != null) {
+            payment.setClassLevel(fee.getClassLevel());
+        }
+        if (fee.getSubClass() != null) {
+            payment.setClassBlock(fee.getSubClass());
+        }
+        if (fee.getTerm() != null) {
+            payment.setStudentTerm(fee.getTerm());
+        }
         payment.setPaid(true);
         payment.setProfile(student); // Link payment to student
         payment.setStudentFee(fee); // Link payment to fee
@@ -146,6 +154,7 @@ public class FeePaymentServiceImpl implements FeePaymentService {
         return Transaction.builder()
                 .transactionType(TransactionType.DEBIT)
                 .user(profile)
+                .status(TransacStatus.SUCCESS)
                 .amount(due.getAmount())
                 .studentTerm(due.getTerm())
                 .session(due.getSession())
@@ -169,6 +178,7 @@ public class FeePaymentServiceImpl implements FeePaymentService {
         Notification notification = Notification.builder()
                 .notificationType(NotificationType.DEBIT_NOTIFICATION)
                 .user(profile)
+                .title(due.getDescription())
                 .notificationStatus(NotificationStatus.UNREAD)
                 .transaction(transaction)
                 .message(String.format("You have paid ₦%s for %s",

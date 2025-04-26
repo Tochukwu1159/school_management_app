@@ -6,10 +6,11 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "redemption")
+@Table(name = "referral")
 @Entity
 @Builder
 public class Referral {

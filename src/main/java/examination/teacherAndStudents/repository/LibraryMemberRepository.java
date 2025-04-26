@@ -19,4 +19,6 @@ public interface LibraryMemberRepository extends JpaRepository<LibraryMembership
     List<LibraryMembership> findByStatusAndExpiryDateBefore(MembershipStatus membershipStatus, LocalDateTime now);
 
     Optional<LibraryMembership> findByStudentAndStatus(Profile profile, MembershipStatus membershipStatus);
+
+    LibraryMembership findByMemberIdAndStatus(String memberId, MembershipStatus membershipStatus);
 }

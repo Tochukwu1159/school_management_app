@@ -3,15 +3,13 @@ package examination.teacherAndStudents.entity;
 import examination.teacherAndStudents.utils.ComplainStatus;
 import examination.teacherAndStudents.utils.StudentTerm;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "complaint")

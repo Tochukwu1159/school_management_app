@@ -3,8 +3,8 @@ package examination.teacherAndStudents.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter@AllArgsConstructor
 @NoArgsConstructor
 @Entity
 @Builder

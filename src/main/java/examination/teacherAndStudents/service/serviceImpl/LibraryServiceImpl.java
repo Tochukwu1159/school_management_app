@@ -226,14 +226,15 @@ public class LibraryServiceImpl implements LibraryService {
 
     @Transactional
     @Override
-    public BookBorrowing borrowBook(Long memberId, Long bookId, LocalDateTime dueDate) {;
+    public BookBorrowing borrowBook( Long bookId, LocalDateTime dueDate) {;
+        String email = SecurityConfig.getAuthenticatedUserEmail();
 
-        Profile profile = profileRepository.findByUserId(memberId)
+        Profile profile = profileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("Member profile not found"));
-
-        LibraryMembership membership = libraryMemberRepository.findByStudentAndStatus(profile, MembershipStatus.ACTIVE)
-                .orElseThrow(() -> new BadRequestException("Student does not have an active library membership"));
-
+      if(profile.getUser().getSchool().getSupportsLibraryMembership()) {
+           LibraryMembership membership = libraryMemberRepository.findByStudentAndStatus(profile, MembershipStatus.ACTIVE)
+            .orElseThrow(() -> new BadRequestException("Student does not have an active library membership"));
+        }
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new CustomNotFoundException("Book not found"));
 
@@ -280,7 +281,7 @@ public class LibraryServiceImpl implements LibraryService {
                 .fineAmount(BigDecimal.ZERO)
                 .build();
 
-        logger.info("Borrowing book {} for member {}", bookId, memberId);
+        logger.info("Borrowing book {} ", bookId);
         return bookBorrowingRepository.save(borrowing);
     }
 

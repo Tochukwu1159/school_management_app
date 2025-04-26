@@ -3,14 +3,12 @@ import examination.teacherAndStudents.utils.AttendanceStatus;
 import jakarta.persistence.*;
         import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 //@Table(name = "attendance_percent", indexes = {

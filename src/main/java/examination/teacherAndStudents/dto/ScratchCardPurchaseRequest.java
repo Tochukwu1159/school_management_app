@@ -13,6 +13,6 @@ public class ScratchCardPurchaseRequest {
     @NotNull(message = "Term ID is required")
     private Long termId;
 
-    @NotNull(message = "Subclass ID is required")
-    private Long subClassId;
+//    @NotNull(message = "Subclass ID is required")
+//    private Long subClassId;
 }

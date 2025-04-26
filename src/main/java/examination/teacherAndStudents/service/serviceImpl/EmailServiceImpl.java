@@ -307,7 +307,6 @@ public class EmailServiceImpl implements EmailService {
             model.put("registrationNumber", registrationNumber);
             model.put("schoolName", school
                     .getSchoolName());
-            model.put("loginUrl", "${school.login.url}"); // Configure in properties
             model.put("contactEmail", school.getEmail());
             model.put("orientationDate", LocalDate.now().plusDays(21).format(DateTimeFormatter.ofPattern("MMMM d, yyyy")));
 

@@ -35,19 +35,19 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final UserRepository userRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
-    private final ClassBlockRepository classBlockRepository;
     private final StoreItemRepository storeItemRepository;
 
     @Override
     @Transactional
-    public CheckoutResponse checkout(Long profileId) {
+    public CheckoutResponse checkout() {
         // Validate student user
         User student = validateStudentUser();
-        Profile profile = validateProfile(profileId, student);
+        Profile profile = profileRepository.findByUser(student)
+                .orElseThrow(() -> new CustomNotFoundException("Profile not found: " ));
         Wallet wallet = validateWallet(profile);
 
         // Fetch cart items
-        List<Cart> cartItems = cartRepository.findByProfileIdAndCheckedOutFalse(profileId);
+        List<Cart> cartItems = cartRepository.findByProfileIdAndCheckedOutFalse(profile.getId());
         if (cartItems.isEmpty()) {
             throw new IllegalArgumentException("Cart is empty");
         }
@@ -134,6 +134,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .transactionType(TransactionType.DEBIT)
                 .user(profile)
                 .amount(totalAmount)
+                .status(TransacStatus.SUCCESS)
                 .session(getCurrentAcademicSession())
                 .classBlock(profile.getClassBlock())
                 .description("Store purchase for order ID: " + order.getId())
@@ -150,11 +151,11 @@ public class CheckoutServiceImpl implements CheckoutService {
         order.setStatus(OrderStatus.COMPLETED);
         orderRepository.save(order);
 
-        log.info("Checkout completed [orderId={}, profileId={}, totalAmount={}]", order.getId(), profileId, totalAmount);
+        log.info("Checkout completed [orderId={}, profileId={}, totalAmount={}]", order.getId(), profile.getId(), totalAmount);
 
         return new CheckoutResponse(
                 order.getId(),
-                profileId,
+                profile.getId(),
                 totalAmount,
                 payment.getTransactionId(),
                 OrderStatus.COMPLETED.name()
@@ -182,16 +183,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         }
     }
 
-    private Profile validateProfile(Long profileId, User user) {
-        Profile profile = profileRepository.findById(profileId)
-                .orElseThrow(() -> new CustomNotFoundException("Profile not found with ID: " + profileId));
 
-        if (!profile.getUser().getId().equals(user.getId())) {
-            throw new UnauthorizedException("You do not have access to this profile");
-        }
-
-        return profile;
-    }
 
     private Wallet validateWallet(Profile profile) {
         return walletRepository.findByUserProfileId(profile.getId())
