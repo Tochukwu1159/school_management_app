@@ -7,6 +7,7 @@ import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.PayStackPaymentService;
 import examination.teacherAndStudents.service.SchoolService;
+import examination.teacherAndStudents.utils.AccountUtils;
 import examination.teacherAndStudents.utils.Roles;
 import examination.teacherAndStudents.utils.SubscriptionType;
 import lombok.RequiredArgsConstructor;
@@ -105,6 +106,7 @@ public class SchoolServiceImpl implements SchoolService {
         }
 
         school.setSelectedServices(services);
+        school.setSchoolCode(AccountUtils.generateSchoolCode());
         logger.info("Assigned {} services to school (including {} default services)", services.size(), defaultServices.size());
 
         return school;

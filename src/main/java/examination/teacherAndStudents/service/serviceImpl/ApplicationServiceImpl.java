@@ -49,6 +49,10 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Autowired
     private PaymentProviderFactory paymentProviderFactory;
+    @Autowired
+    private SchoolRepository schoolRepository;
+    @Autowired
+    private ClassBlockRepository classBlockRepository;
 
     @Transactional
     @Override
@@ -178,11 +182,17 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     private void handleApprovedApplication(AdmissionApplication application, User applicant) {
+        if (applicant == null || application == null || applicant.getUserProfile() == null || applicant.getSchool() == null) {
+            throw new IllegalArgumentException("Applicant, application, user profile, or school cannot be null");
+        }
+
+        // Update profile status and verification
         applicant.setProfileStatus(ProfileStatus.ACTIVE);
+        applicant.setIsVerified(true);
         application.getProfile().setProfileStatus(ProfileStatus.ACTIVE);
-        application.getProfile().getUser().setProfileStatus(ProfileStatus.ACTIVE);
         application.setStatus(ApplicationStatus.APPROVED);
 
+        // Handle referral if it exists
         Referral referral = referralRepository.findByReferredUserAndStatus(application.getProfile(), ReferralStatus.PENDING);
         if (referral != null) {
             referral.setStatus(ReferralStatus.COMPLETED);
@@ -198,10 +208,23 @@ public class ApplicationServiceImpl implements ApplicationService {
             userPointsRepository.save(userPoints);
         }
 
+        // Increment class block student count
+        ClassBlock classBlock = applicant.getUserProfile().getClassBlock();
+        if (classBlock != null) {
+            classBlock.setNumberOfStudents(classBlock.getNumberOfStudents() + 1);
+            classBlockRepository.save(classBlock);
+        }
+
+        // Update school population
+        School school = applicant.getSchool();
+        school.incrementActualNumberOfStudents();
+        schoolRepository.save(school);
+
+        // Send admission confirmation email
         emailService.sendAdmissionConfirmation(
                 applicant.getEmail(),
                 applicant.getFirstName(),
-                null,
+                applicant.getMiddleName(), // Assuming middle name is optional; null if not available
                 application.getApplicationNumber(),
                 application.getSchool()
         );

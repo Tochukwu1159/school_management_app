@@ -69,6 +69,8 @@ public class School {
     @Column(unique = true)
     private String subscriptionKey;
 
+    private String schoolCode;
+
     private String schoolPrimaryColour;
 
     @Column(name = "is_application_fee", nullable = false, columnDefinition = "boolean default false")
@@ -76,6 +78,9 @@ public class School {
 
     @Column(name = "supports_library_membership", nullable = false, columnDefinition = "boolean default false")
     private Boolean supportsLibraryMembership = false;
+
+    @Column(name = "supports_late_book_penalty_fee", nullable = false, columnDefinition = "boolean default false")
+    private Boolean supportsBookLateReturnPenaltyFee = false;
 
     @Column(name = "supports_scratch_card", nullable = false, columnDefinition = "boolean default false")
     private Boolean supportsScratchCard = false;
@@ -87,6 +92,8 @@ public class School {
     private Boolean supportsEntryExam = false; // New field for entry exam support
 
     private BigDecimal applicationFeeAmount;
+
+    private BigDecimal bookLateReturnPenaltyFee;
 
     private BigDecimal libraryBookLateReturnFee;
 

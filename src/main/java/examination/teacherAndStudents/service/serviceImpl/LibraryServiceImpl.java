@@ -288,6 +288,11 @@ public class LibraryServiceImpl implements LibraryService {
     @Transactional
     @Override
     public BookBorrowing returnBook(Long borrowingId) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+
+        Profile profile = profileRepository.findByUserEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("Member profile not found"));
+
         BookBorrowing borrowing = bookBorrowingRepository.findById(borrowingId)
                 .orElseThrow(() -> new CustomNotFoundException("Borrowing record not found"));
 
@@ -306,7 +311,8 @@ public class LibraryServiceImpl implements LibraryService {
         if (returnDate.isAfter(borrowing.getDueDate())) {
             borrowing.setLate(true);
             long daysLate = ChronoUnit.DAYS.between(borrowing.getDueDate(), returnDate);
-            BigDecimal lateFee = book.getSchool().getLibraryBookLateReturnFee();
+
+            BigDecimal lateFee = profile.getUser().getSchool().getLibraryBookLateReturnFee();
 
             if (lateFee != null) {
                 BigDecimal fee = BigDecimal.valueOf(daysLate).multiply(lateFee);

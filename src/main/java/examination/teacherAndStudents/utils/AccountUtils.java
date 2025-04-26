@@ -2,10 +2,7 @@ package examination.teacherAndStudents.utils;
 
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.error_handler.*;
-import examination.teacherAndStudents.repository.LibraryMemberRepository;
-import examination.teacherAndStudents.repository.ProfileRepository;
-import examination.teacherAndStudents.repository.UserRepository;
-import examination.teacherAndStudents.repository.WalletRepository;
+import examination.teacherAndStudents.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Contract;
@@ -47,6 +44,7 @@ public class AccountUtils {
     private static UserRepository userRepository;
     private static ProfileRepository profileRepository;
     private static LibraryMemberRepository libraryMemberRepository;
+    private static SchoolRepository schoolRepository;
 
     // Constructor-based injection
     @Autowired
@@ -60,20 +58,25 @@ public class AccountUtils {
 
 
 
-    public static final String generateStudentId() {
+    public static final String generateStudentId(String schoolCode) {
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
         String yearString = String.valueOf(currentYear);
-        StringBuilder randomNumbers = new StringBuilder();
-        SecureRandom random = new SecureRandom();
-        for (int i = 0; i < 6; i++) {
-            int randomNumber = random.nextInt(10);
-            randomNumbers.append(randomNumber);
-        }
 
-        return "STU" + yearString + randomNumbers;
+        SecureRandom random = new SecureRandom();
+        String studentId;
+        do {
+            StringBuilder randomNumbers = new StringBuilder();
+            for (int i = 0; i < 4; i++) {
+                int randomNumber = random.nextInt(10);
+                randomNumbers.append(randomNumber);
+            }
+            studentId = yearString + schoolCode + randomNumbers;
+
+        } while (profileRepository.existsByUniqueRegistrationNumber(studentId));
+        return studentId;
     }
 
-    public static final String generateAdminId() {
+    public static final String generateAdminId(String schoolCode) {
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
         String yearString = String.valueOf(currentYear);
 
@@ -82,20 +85,20 @@ public class AccountUtils {
 
         do {
             StringBuilder randomNumbers = new StringBuilder();
-            // Generate 3 random numbers
-            for (int i = 0; i < 6; i++) {
+            // Generate 4 random numbers
+            for (int i = 0; i < 4; i++) {
                 int randomNumber = random.nextInt(10);
                 randomNumbers.append(randomNumber);
             }
 
-            // Combine "ADMIN" + current year + 3 random numbers
-            adminId = "ADMIN" + yearString + randomNumbers;
+            // Combine current year + schoolCode + 4 random numbers
+            adminId = yearString + schoolCode + randomNumbers;
         } while (profileRepository.existsByUniqueRegistrationNumber(adminId));
 
         return adminId;
     }
 
-    public static final String generateStaffId() {
+    public static final String generateStaffId(String schoolCode) {
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
         String yearString = String.valueOf(currentYear);
 
@@ -104,14 +107,14 @@ public class AccountUtils {
 
         do {
             StringBuilder randomNumbers = new StringBuilder();
-            // Generate 3 random numbers
-            for (int i = 0; i < 6; i++) {
+            // Generate 4 random numbers
+            for (int i = 0; i < 4; i++) {
                 int randomNumber = random.nextInt(10);
                 randomNumbers.append(randomNumber);
             }
 
-            // Combine "ADMIN" + current year + 3 random numbers
-            staffId = "STAFF" + yearString + randomNumbers;
+            // Combine current year + schoolCode + 4 random numbers
+            staffId = yearString + schoolCode + randomNumbers;
         } while (profileRepository.existsByUniqueRegistrationNumber(staffId));
 
         return staffId;
@@ -137,6 +140,24 @@ public class AccountUtils {
         } while (libraryMemberRepository.existsByMemberId(libraryId));
 
         return libraryId;
+    }
+
+
+    public static final String generateSchoolCode() {
+        SecureRandom random = new SecureRandom();
+        String schoolCode;
+
+        do {
+            StringBuilder randomNumbers = new StringBuilder();
+            // Generate 4 random digits
+            for (int i = 0; i < 4; i++) {
+                int randomNumber = random.nextInt(10);
+                randomNumbers.append(randomNumber);
+            }
+            schoolCode = String.valueOf(randomNumbers);
+        } while (schoolRepository.existsBySchoolCode(schoolCode));
+
+        return schoolCode;
     }
 
     public static void validateProfileStatus(Profile profile) {

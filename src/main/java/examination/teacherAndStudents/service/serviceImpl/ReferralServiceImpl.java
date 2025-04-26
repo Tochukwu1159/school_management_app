@@ -66,6 +66,7 @@ public class ReferralServiceImpl implements ReferralService {
         // Create redemption record
         Redemption redemption = Redemption.builder()
                 .user(profile)
+                .school(profile.getUser().getSchool())
                 .pointsRedeemed(request.getPointsToRedeem())
                 .amount(redemptionAmount)
                 .redemptionDate(LocalDateTime.now())

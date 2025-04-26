@@ -93,7 +93,6 @@ public class UserServiceImpl implements UserService {
         ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
                 .orElseThrow(() -> new BadRequestException("Error: Class block not found"));
 
-        ClassLevel classLevel = classLevelRepository.findById(classBlock.getClassLevel().getId()).orElseThrow(() -> new CustomNotFoundException("Class Level not found."));
 //        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
 //        // Get the secure URL of the uploaded image from Cloudinary
 //        String imageUrl = (String) uploadResult.get("secure_url");
@@ -135,7 +134,7 @@ public class UserServiceImpl implements UserService {
                 .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
                 .studentGuardianName(userRequest.getStudentGuardianName())
                 .studentGuardianPhoneNumber(userRequest.getStudentGuardianPhoneNumber())
-                .uniqueRegistrationNumber(AccountUtils.generateStudentId())
+                .uniqueRegistrationNumber(AccountUtils.generateStudentId(school.getSchoolCode()))
                 .user(savedUser)
                 .isVerified(true)
                 .profileStatus(ProfileStatus.ACTIVE)
@@ -258,7 +257,7 @@ public class UserServiceImpl implements UserService {
                 .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
                 .studentGuardianName(userRequest.getStudentGuardianName())
                 .studentGuardianPhoneNumber(userRequest.getStudentGuardianPhoneNumber())
-                .uniqueRegistrationNumber(AccountUtils.generateStudentId())
+                .uniqueRegistrationNumber(AccountUtils.generateStudentId(school.getSchoolCode()))
                 .user(savedUser)
                 .isVerified(true)
                 .maritalStatus(userRequest.getMaritalStatus())
@@ -270,6 +269,9 @@ public class UserServiceImpl implements UserService {
                 // ... other profile fields
                 .build();
         Profile savedProfile = profileRepository.save(userProfile);
+
+        //create wallet
+        createWallet(savedProfile);
 
 
         // Handle document uploads if provided
@@ -295,7 +297,7 @@ public class UserServiceImpl implements UserService {
         admissionApplicationRepository.save(application);
 
         // Send confirmation email
-        emailService.sendApplicationConfirmation(savedUser.getEmail(), savedUser.getFirstName(),
+        emailService.sendApplicationConfirmation(savedUser, generatedPassword, userProfile.getUniqueRegistrationNumber(),
                 application.getApplicationNumber(), school);
 
         return UserResponse.builder().responseCode("200").responseMessage("Application submitted successfully. Awaiting review.").build();
@@ -345,7 +347,7 @@ public class UserServiceImpl implements UserService {
                 .contractType(userRequest.getContractType())
                 .academicQualification(userRequest.getAcademicQualification())
                 .admissionDate(userRequest.getAdmissionDate())
-                .uniqueRegistrationNumber(AccountUtils.generateStaffId())
+                .uniqueRegistrationNumber(AccountUtils.generateStaffId(savedUser.getSchool().getSchoolCode()))
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .user(savedUser)
                 //                .profilePicture(imageUrl)
@@ -689,7 +691,7 @@ public class UserServiceImpl implements UserService {
                 .studentGuardianOccupation(editUserDto.getStudentGuardianOccupation())
                 .studentGuardianName(editUserDto.getStudentGuardianName())
                 .studentGuardianPhoneNumber(editUserDto.getStudentGuardianPhoneNumber())
-                .uniqueRegistrationNumber(AccountUtils.generateStudentId())
+                .uniqueRegistrationNumber(AccountUtils.generateStudentId(user.getSchool().getSchoolCode()))
                 .addresses(addresses)
                 .dateOfBirth(editUserDto.getDateOfBirth())
                 .admissionDate(editUserDto.getAdmissionDate())
@@ -1073,7 +1075,7 @@ public class UserServiceImpl implements UserService {
                 .schoolGraduatedFrom(userRequest.getSchoolGraduatedFrom())
                 .academicQualification(userRequest.getAcademicQualification())
                 .religion(userRequest.getReligion())
-                .uniqueRegistrationNumber(AccountUtils.generateStaffId())
+                .uniqueRegistrationNumber(AccountUtils.generateStaffId(savedUser.getSchool().getSchoolCode()))
                 .emergencyContacts(emergencyContact)
                 .phoneNumber(userRequest.getPhoneNumber())
                 .user(savedUser);
@@ -1213,9 +1215,9 @@ public class UserServiceImpl implements UserService {
             School school,
             Profile profile) throws Exception {
 
-        // Upload file to Cloudinary and get URL
-        // Map<?, ?> uploadResult = cloudinaryService.uploadFile(docRequest.getFile());
-        // String documentUrl = (String) uploadResult.get("secure_url");
+//         Upload file to Cloudinary and get URL
+//         Map<?, ?> uploadResult = cloudinaryService.uploadFile(docRequest.getFile());
+//         String documentUrl = (String) uploadResult.get("secure_url");
         String documentUrl = "documentUrl"; // Replace with actual upload logic
 
         return Document.builder()

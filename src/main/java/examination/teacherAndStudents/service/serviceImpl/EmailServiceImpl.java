@@ -3,7 +3,9 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.dto.EmailDetails;
 import examination.teacherAndStudents.dto.EmailDetailsToMultipleEmails;
 import examination.teacherAndStudents.entity.AdmissionApplication;
+import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.School;
+import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.service.EmailService;
 import jakarta.mail.MessagingException;
@@ -160,26 +162,29 @@ public class EmailServiceImpl implements EmailService {
 
 
     @Override
-    public void sendApplicationConfirmation(String recipientEmail, String studentName, String applicationNumber, School school) {
+    public void sendApplicationConfirmation(User user, String password, String regNo, String applicationNumber, School school) {
         try {
             EmailDetails emailDetails = new EmailDetails();
-            emailDetails.setRecipient(recipientEmail);
+            emailDetails.setRecipient(user.getEmail());
             emailDetails.setSubject("Application Received - " + school.getSchoolName());
 
             // Prepare model for Thymeleaf template
             Map<String, Object> model = new HashMap<>();
-            model.put("studentName", studentName);
+            model.put("recipientName", user.getFirstName() + " " + user.getLastName());
+            model.put("password", password);
+            model.put("regNo", regNo);
             model.put("applicationNumber", applicationNumber);
             model.put("schoolName", school.getSchoolName());
             model.put("contactEmail", school.getEmail());
             model.put("contactPhone", school.getPhoneNumber());
             model.put("currentYear", Year.now().getValue());
+            model.put("submissionDate", LocalDate.now());
 
             emailDetails.setModel(model);
             emailDetails.setTemplateName("application-confirmation");
 
             sendEmailWithThymeleaf(emailDetails);
-            logger.info("Application confirmation email sent to {}", recipientEmail);
+            logger.info("Application confirmation email sent to {}", user.getEmail());
         } catch (Exception e) {
             logger.error("Failed to send application confirmation email", e);
             throw new CustomInternalServerException("Failed to send application confirmation email");

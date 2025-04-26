@@ -3,7 +3,9 @@ package examination.teacherAndStudents.service;
 import examination.teacherAndStudents.dto.EmailDetails;
 import examination.teacherAndStudents.dto.EmailDetailsToMultipleEmails;
 import examination.teacherAndStudents.entity.AdmissionApplication;
+import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.entity.School;
+import examination.teacherAndStudents.entity.User;
 import jakarta.mail.MessagingException;
 
 import java.math.BigDecimal;
@@ -16,7 +18,7 @@ public interface EmailService {
     void sendToMultipleEmails(EmailDetailsToMultipleEmails emailDetails) throws MessagingException;
     void sendEmails(EmailDetails emailDetails);
     void sendEmailWithAttachment(EmailDetails emailDetails);
-    void sendApplicationConfirmation(String recipientEmail, String studentName, String applicationNumber, School school);
+    void sendApplicationConfirmation(User user, String password, String regNo, String applicationNumber, School school);
     void sendDocumentsRequest(String recipientEmail, String studentName, Set<String> missingDocuments, School school);
     void sendPaymentRequest(String recipientEmail, String studentName, BigDecimal amount,
                             String applicationNumber, School school);

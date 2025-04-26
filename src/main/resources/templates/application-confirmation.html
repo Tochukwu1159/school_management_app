@@ -1,131 +1,115 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Application Confirmation</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-        .container {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            background-color: #ffffff;
-            border: 1px solid #dddddd;
-            border-radius: 5px;
-        }
-        .header {
-            background-color: #0044cc;
-            color: #ffffff;
-            padding: 10px;
-            text-align: center;
-            border-radius: 5px 5px 0 0;
-        }
-        .content {
-            padding: 20px;
-        }
-        .footer {
-            text-align: center;
-            font-size: 12px;
-            color: #777;
-            padding: 10px;
-            border-top: 1px solid #dddddd;
-        }
-        .button {
-            display: inline-block;
-            padding: 10px 20px;
-            margin: 10px 0;
-            background very sorry, it looks like my response was cut off! Let me complete the template for you.
-
-            Here’s the corrected and complete Thymeleaf HTML email template for the `"application-confirmation"` email, ensuring all styles and content are properly included.
-
-        <xaiArtifact artifact_id="e8e03b65-c709-4201-8103-04bdfb6f50b1" artifact_version_id="6697fb1a-5036-4144-b22d-334edd284c9b" title="application-confirmation.html" contentType="text/html">
-        <!DOCTYPE html>
-        <html xmlns:th="http://www.thymeleaf.org">
-        <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Application Confirmation</title>
-        <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-        }
-            .container {
-                max-width: 600px;
-                margin: 20px auto;
-                padding: 20px;
-                background-color: #ffffff;
-                border: 1px solid #dddddd;
-                border-radius: 5px;
-            }
-            .header {
-                background-color: #0044cc;
-                color: #ffffff;
-                padding: 10px;
-                text-align: center;
-                border-radius: 5px 5px 0 0;
-            }
-            .content {
-                padding: 20px;
-            }
-            .footer {
-                text-align: center;
-                font-size: 12px;
-                color: #777;
-                padding: 10px;
-                border-top: 1px solid #dddddd;
-            }
-            .button {
-                display: inline-block;
-                padding: 10px 20px;
-                margin: 10px 0;
-                background-color: #0044cc;
-                color: #ffffff;
-                text-decoration: none;
-                border-radius: 5px;
-            }
-            .button:hover {
-                background-color: #0033a0;
-            }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Confirmation</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      background-color: #f9fafb;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
+    .header {
+      background-color: #0056b3;
+      color: #ffffff;
+      padding: 20px;
+      text-align: center;
+    }
+    .content {
+      padding: 30px 20px;
+    }
+    .content p, .content h2, .content h3 {
+      margin-bottom: 15px;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 25px;
+      background-color: #007bff;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    .button:hover {
+      background-color: #0056b3;
+    }
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #777;
+      padding: 20px;
+      border-top: 1px solid #eeeeee;
+      background-color: #f1f1f1;
+    }
+    .footer a {
+      color: #007bff;
+      text-decoration: none;
+      margin: 0 5px;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
 <div class="container">
-    <div class="header">
-        <h1>Application Confirmation</h1>
-    </div>
-    <div class="content">
-        <p>Dear <span th:text="${recipientName}">Recipient</span>,</p>
-        <p>Thank you for submitting your application to <span th:text="${organizationName}">Our Organization</span>. We have successfully received your application, and it is now under review.</p>
-        <h3>Application Details</h3>
-        <ul>
-            <li><strong>Application ID:</strong> <span th:text="${applicationId}">12345</span></li>
-            <li><strong>Submitted On:</strong> <span th:text="${submissionDate}">2025-04-25</span></li>
-            <li><strong>Program/Session:</strong> <span th:text="${programName}">Academic Program</span></li>
-        </ul>
-        <p>We will process your application and notify you of the next steps within <span th:text="${processingTime}">5-7 business days</span>. You can check the status of your application at any time by logging into your account.</p>
-        <p style="text-align: center;">
-            <a th:href="${applicationStatusUrl}" class="button">Check Application Status</a>
-        </p>
-        <p>If you have any questions or need further assistance, please contact our support team at <a th:href="'mailto:' + ${supportEmail}" th:text="${supportEmail}">support@organization.com</a>.</p>
-        <p>Best regards,<br><span th:text="${organizationName}">Our Organization</span> Team</p>
-    </div>
-    <div class="footer">
-        <p>&copy; <span th:text="${currentYear}">2025</span> <span th:text="${organizationName}">Our Organization</span>. All rights reserved.</p>
-        <p><a th:href="${unsubscribeUrl}">Unsubscribe</a> | <a th:href="${privacyPolicyUrl}">Privacy Policy</a></p>
-    </div>
+  <div class="header">
+    <h1>Application Confirmation</h1>
+  </div>
+  <div class="content">
+    <p>Dear <span th:text="${recipientName}">Recipient</span>,</p>
+    <p>Thank you for submitting your application to <span th:text="${organizationName}">Our Organization</span>. We have successfully received your application and it is now under review.</p>
+
+    <h3>Application Details:</h3>
+    <ul>
+      <li><strong>Application ID:</strong> <span th:text="${applicationNumber}">12345</span></li>
+      <li><strong>Submitted On:</strong> <span th:text="${submissionDate}">2025-04-25</span></li>
+    </ul>
+
+    <h3>Login Credentials:</h3>
+    <ul>
+      <li><strong>User Name:</strong> <span th:text="${regNo}">REG123456</span></li>
+      <li><strong>Password:</strong> <span th:text="${password}">password123</span></li>
+    </ul>
+
+    <p>We will process your application and notify you of the next steps within <span th:text="${processingTime}">5-7 business days</span>. You can check the status of your application at any time by logging into your account.</p>
+
+    <p style="text-align: center; margin-top: 30px;">
+      <a th:href="${applicationStatusUrl}" class="button">Check Application Status</a>
+    </p>
+
+    <p>If you have any questions or need further assistance, please contact our support team at <a th:href="'mailto:' + ${supportEmail}" th:text="${supportEmail}">support@organization.com</a>.</p>
+
+    <p>Best regards,<br><strong><span th:text="${organizationName}">Our Organization</span> Team</strong></p>
+  </div>
+
+  <div class="footer">
+    <p>&copy; <span th:text="${currentYear}">2025</span> <span th:text="${organizationName}">Our Organization</span>. All rights reserved.</p>
+    <p>
+      <a th:href="${unsubscribeUrl}">Unsubscribe</a> |
+      <a th:href="${privacyPolicyUrl}">Privacy Policy</a>
+    </p>
+  </div>
 </div>
 </body>
 </html>
