@@ -42,11 +42,11 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/materials")
 public class StudyMaterialController {
-    @Value("${google.drive.folder.id}")
-    private String googleDriveFolderId;
-
-    @Value("${google.credentials.path}")
-    private String googleCredentialsPath;
+//    @Value("${google.drive.folder.id}")
+//    private String googleDriveFolderId;
+//
+//    @Value("${google.credentials.path}")
+//    private String googleCredentialsPath;
 
 
     private final StudyMaterialService studyMaterialService;
@@ -145,12 +145,14 @@ public class StudyMaterialController {
                                                      @RequestParam("title") String title) {
 
             try {
-                Drive driveService = getDriveService();
+//                Drive driveService = getDriveService();
+
+                Drive driveService = null;
 
                 // Create file metadata
                 File fileMetadata = new File();
                 fileMetadata.setName(file.getOriginalFilename());
-                fileMetadata.setParents(Collections.singletonList(googleDriveFolderId)); // Set the folder ID in Google Drive
+//                fileMetadata.setParents(Collections.singletonList(googleDriveFolderId)); // Set the folder ID in Google Drive
 
                 // Convert MultipartFile to java.io.File
                 java.io.File tempFile = java.io.File.createTempFile("temp", null);
@@ -172,21 +174,21 @@ public class StudyMaterialController {
 
                 return new ResponseEntity<>("File uploaded to Google Drive with ID: " + fileId, HttpStatus.CREATED);
 
-            } catch (IOException | GeneralSecurityException e) {
+            } catch (Exception  e) {
                 e.printStackTrace();
                 return new ResponseEntity<>("Failed to upload file to Google Drive", HttpStatus.INTERNAL_SERVER_ERROR);
             }
         }
 
-    private Drive getDriveService() throws IOException, GeneralSecurityException {
-        GoogleCredential credential = GoogleCredential.fromStream(new FileInputStream(googleCredentialsPath))
-                .createScoped(Collections.singletonList(DriveScopes.DRIVE_FILE));
-
-        return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(),
-                JacksonFactory.getDefaultInstance(), credential)
-                .setApplicationName("Your Application Name")
-                .build();
-    }
+//    private Drive getDriveService() throws IOException, GeneralSecurityException {
+//        GoogleCredential credential = GoogleCredential.fromStream(new FileInputStream(googleCredentialsPath))
+//                .createScoped(Collections.singletonList(DriveScopes.DRIVE_FILE));
+//
+//        return new Drive.Builder(GoogleNetHttpTransport.newTrustedTransport(),
+//                JacksonFactory.getDefaultInstance(), credential)
+//                .setApplicationName("Your Application Name")
+//                .build();
+//    }
 
 
 
