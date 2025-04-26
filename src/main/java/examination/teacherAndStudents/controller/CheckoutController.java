@@ -1,7 +1,6 @@
 package examination.teacherAndStudents.controller;
 
-import examination.teacherAndStudents.dto.CartRequest;
-import examination.teacherAndStudents.dto.CartResponse;
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.CheckoutResponse;
 import examination.teacherAndStudents.service.CheckoutService;
 import lombok.RequiredArgsConstructor;
@@ -19,9 +18,9 @@ public class CheckoutController {
 
 
     @PostMapping()
-    public ResponseEntity<CheckoutResponse> addToCart() {
+    public ResponseEntity<ApiResponse<CheckoutResponse>> addToCart() {
         CheckoutResponse response = checkoutService.checkout();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>("Item added to cart successfully", true, response));
     }
 
 }

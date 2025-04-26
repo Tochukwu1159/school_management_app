@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.CurriculumRequest;
 import examination.teacherAndStudents.dto.CurriculumResponse;
 import examination.teacherAndStudents.service.CurriculumService;
@@ -16,43 +17,37 @@ public class CurriculumController {
 
     private final CurriculumService curriculumService;
 
-    // Add a new curriculum to a class subject
     @PostMapping("/class-subjects/{classSubjectId}")
-    public ResponseEntity<CurriculumResponse> addCurriculumToClassSubject(
+    public ResponseEntity<ApiResponse<CurriculumResponse>> addCurriculumToClassSubject(
             @PathVariable Long classSubjectId,
             @RequestBody CurriculumRequest request) {
         CurriculumResponse response = curriculumService.addCurriculumToClassSubject(classSubjectId, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(201).body(new ApiResponse<>("Curriculum added successfully", true, response));
     }
 
-    // Update an existing curriculum
     @PutMapping("/{curriculumId}")
-    public ResponseEntity<CurriculumResponse> updateCurriculum(
+    public ResponseEntity<ApiResponse<CurriculumResponse>> updateCurriculum(
             @PathVariable Long curriculumId,
             @RequestBody CurriculumRequest request) {
         CurriculumResponse response = curriculumService.updateCurriculum(curriculumId, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>("Curriculum updated successfully", true, response));
     }
 
-    // Get a curriculum by ID
     @GetMapping("/{curriculumId}")
-    public ResponseEntity<CurriculumResponse> getCurriculumById(@PathVariable Long curriculumId) {
+    public ResponseEntity<ApiResponse<CurriculumResponse>> getCurriculumById(@PathVariable Long curriculumId) {
         CurriculumResponse response = curriculumService.getCurriculumById(curriculumId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>("Curriculum retrieved successfully", true, response));
     }
 
-    // Get all curriculums
     @GetMapping
-    public ResponseEntity<List<CurriculumResponse>> getAllCurriculums() {
+    public ResponseEntity<ApiResponse<List<CurriculumResponse>>> getAllCurriculums() {
         List<CurriculumResponse> responses = curriculumService.getAllCurriculums();
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(new ApiResponse<>("Curriculums retrieved successfully", true, responses));
     }
 
-    // Delete a curriculum by ID
     @DeleteMapping("/{curriculumId}")
-    public ResponseEntity<Void> deleteCurriculum(@PathVariable Long curriculumId) {
+    public ResponseEntity<ApiResponse<Void>> deleteCurriculum(@PathVariable Long curriculumId) {
         curriculumService.deleteCurriculum(curriculumId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponse<>("Curriculum deleted successfully", true));
     }
 }
-

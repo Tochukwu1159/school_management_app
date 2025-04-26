@@ -2,19 +2,15 @@ package examination.teacherAndStudents.service;
 
 import examination.teacherAndStudents.dto.BookRequest;
 import examination.teacherAndStudents.dto.BookResponse;
-import examination.teacherAndStudents.entity.Book;
-import examination.teacherAndStudents.entity.BookBorrowing;
+import examination.teacherAndStudents.dto.BookBorrowingResponse;
 import org.springframework.data.domain.Page;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 public interface LibraryService {
-    Book addBook(BookRequest book);
-    Book updateBookQuantity(Long bookId, int quantityToAdd);
-
-    Book editBook(Long bookId, BookRequest updatedBook);
-
+    BookResponse addBook(BookRequest book);
+    BookResponse updateBookQuantity(Long bookId, int quantityToAdd);
+    BookResponse editBook(Long bookId, BookRequest updatedBook);
     void deleteBook(Long bookId);
     Page<BookResponse> getAllBooks(
             Long id,
@@ -26,9 +22,6 @@ public interface LibraryService {
             int pageSize,
             String sortBy,
             String sortDirection);
-
-    BookBorrowing borrowBook(Long bookId, LocalDateTime dueDate);
-
-    BookBorrowing returnBook(Long borrowingId);
+    BookBorrowingResponse borrowBook(Long bookId, LocalDateTime dueDate);
+    BookBorrowingResponse returnBook(Long borrowingId);
 }
-

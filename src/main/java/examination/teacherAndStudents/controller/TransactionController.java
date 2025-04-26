@@ -13,12 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-
 @RestController
 @AllArgsConstructor
-@RequestMapping("/api/v1/transaction")
+@RequestMapping("/api/v1/transactions")
 public class TransactionController {
-
 
     private final TransactionService transactionService;
 
@@ -27,8 +25,8 @@ public class TransactionController {
             @RequestParam("offset") int offset,
             @RequestParam("pageSize") int pageSize
     ) throws Exception {
-       List<TransactionResponse> transactionEntities = transactionService.getProfileTransactions(offset,pageSize);
-        return new ResponseEntity<>(new ApiResponse<>("success",true,transactionEntities), HttpStatus.OK);
+        List<TransactionResponse> transactionResponses = transactionService.getProfileTransactions(offset, pageSize);
+        ApiResponse<List<TransactionResponse>> response = new ApiResponse<>("Transactions fetched successfully", true, transactionResponses);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
-
 }

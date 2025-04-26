@@ -3,6 +3,7 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.BookRequest;
 import examination.teacherAndStudents.dto.BookResponse;
+import examination.teacherAndStudents.dto.BookBorrowingResponse;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
@@ -44,7 +45,7 @@ public class LibraryServiceImpl implements LibraryService {
 
     @Override
     @Transactional
-    public Book addBook(BookRequest bookRequest) {
+    public BookResponse addBook(BookRequest bookRequest) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
@@ -80,12 +81,12 @@ public class LibraryServiceImpl implements LibraryService {
         );
 
         logger.info("Added book: {}", newBook.getTitle());
-        return savedBook;
+        return mapToBookResponse(savedBook);
     }
 
     @Override
     @Transactional
-    public Book updateBookQuantity(Long bookId, int quantityToAdd) {
+    public BookResponse updateBookQuantity(Long bookId, int quantityToAdd) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
@@ -113,12 +114,12 @@ public class LibraryServiceImpl implements LibraryService {
         );
 
         logger.info("Updated quantity for book ID {}: {}", bookId, quantityToAdd);
-        return updatedBook;
+        return mapToBookResponse(updatedBook);
     }
 
     @Override
     @Transactional
-    public Book editBook(Long bookId, BookRequest updatedBook) {
+    public BookResponse editBook(Long bookId, BookRequest updatedBook) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
@@ -145,7 +146,7 @@ public class LibraryServiceImpl implements LibraryService {
         );
 
         logger.info("Edited book ID {}", bookId);
-        return savedBook;
+        return mapToBookResponse(savedBook);
     }
 
     @Override
@@ -178,6 +179,7 @@ public class LibraryServiceImpl implements LibraryService {
         logger.info("Archived book ID {}", bookId);
     }
 
+    @Override
     public Page<BookResponse> getAllBooks(
             Long id,
             String title,
@@ -212,28 +214,16 @@ public class LibraryServiceImpl implements LibraryService {
         return booksPage.map(this::mapToBookResponse);
     }
 
-    private BookResponse mapToBookResponse(Book book) {
-        return BookResponse.builder()
-                .id(book.getId())
-                .title(book.getTitle())
-                .author(book.getAuthor())
-                .rackNo(book.getShelfLocation())
-                .quantityAvailable(book.getQuantityAvailable())
-                .createdAt(book.getCreatedAt())
-                .updatedAt(book.getUpdatedAt())
-                .build();
-    }
-
-    @Transactional
     @Override
-    public BookBorrowing borrowBook( Long bookId, LocalDateTime dueDate) {;
+    @Transactional
+    public BookBorrowingResponse borrowBook(Long bookId, LocalDateTime dueDate) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
 
         Profile profile = profileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("Member profile not found"));
-      if(profile.getUser().getSchool().getSupportsLibraryMembership()) {
-           LibraryMembership membership = libraryMemberRepository.findByStudentAndStatus(profile, MembershipStatus.ACTIVE)
-            .orElseThrow(() -> new BadRequestException("Student does not have an active library membership"));
+        if (profile.getUser().getSchool().getSupportsLibraryMembership()) {
+            LibraryMembership membership = libraryMemberRepository.findByStudentAndStatus(profile, MembershipStatus.ACTIVE)
+                    .orElseThrow(() -> new BadRequestException("Student does not have an active library membership"));
         }
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new CustomNotFoundException("Book not found"));
@@ -281,13 +271,14 @@ public class LibraryServiceImpl implements LibraryService {
                 .fineAmount(BigDecimal.ZERO)
                 .build();
 
-        logger.info("Borrowing book {} ", bookId);
-        return bookBorrowingRepository.save(borrowing);
+        BookBorrowing savedBorrowing = bookBorrowingRepository.save(borrowing);
+        logger.info("Borrowing book {}", bookId);
+        return mapToBookBorrowingResponse(savedBorrowing);
     }
 
-    @Transactional
     @Override
-    public BookBorrowing returnBook(Long borrowingId) {
+    @Transactional
+    public BookBorrowingResponse returnBook(Long borrowingId) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
 
         Profile profile = profileRepository.findByUserEmail(email)
@@ -322,12 +313,11 @@ public class LibraryServiceImpl implements LibraryService {
             }
         }
 
-        logger.info("Returning book for borrowing ID {}", borrowingId);
         BookBorrowing savedBorrowing = bookBorrowingRepository.save(borrowing);
-
+        logger.info("Returning book for borrowing ID {}", borrowingId);
         notifyNextReservation(book);
 
-        return savedBorrowing;
+        return mapToBookBorrowingResponse(savedBorrowing);
     }
 
     @Transactional
@@ -389,11 +379,8 @@ public class LibraryServiceImpl implements LibraryService {
         BookReservation reservation = bookReservationRepository.findFirstByBookAndStatusOrderByReservationDateAsc(
                 book, ReservationStatus.PENDING);
         if (reservation != null) {
-            // Placeholder for notification logic (e.g., email or in-app)
             logger.info("Notifying user {} for reserved book {}",
                     reservation.getStudentProfile().getUser().getEmail(), book.getTitle());
-            // reservation.setStatus(ReservationStatus.FULFILLED); // Optional: Mark as fulfilled
-            // bookReservationRepository.save(reservation);
         }
     }
 
@@ -403,5 +390,32 @@ public class LibraryServiceImpl implements LibraryService {
         } catch (Exception e) {
             throw new CustomNotFoundException("Unable to authenticate user");
         }
+    }
+
+    private BookResponse mapToBookResponse(Book book) {
+        return BookResponse.builder()
+                .id(book.getId())
+                .title(book.getTitle())
+                .author(book.getAuthor())
+                .rackNo(book.getShelfLocation())
+                .quantityAvailable(book.getQuantityAvailable())
+                .createdAt(book.getCreatedAt())
+                .updatedAt(book.getUpdatedAt())
+                .build();
+    }
+
+    private BookBorrowingResponse mapToBookBorrowingResponse(BookBorrowing borrowing) {
+        return BookBorrowingResponse.builder()
+                .id(borrowing.getId())
+                .bookId(borrowing.getBook().getId())
+                .bookTitle(borrowing.getBook().getTitle())
+                .profileId(borrowing.getStudentProfile().getId())
+                .borrowDate(borrowing.getBorrowDate())
+                .dueDate(borrowing.getDueDate())
+                .actualReturnDate(borrowing.getActualReturnDate())
+                .late(borrowing.isLate())
+                .status(borrowing.getStatus())
+                .fineAmount(borrowing.getFineAmount())
+                .build();
     }
 }

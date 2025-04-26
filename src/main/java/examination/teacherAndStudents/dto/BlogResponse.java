@@ -13,7 +13,6 @@ public class BlogResponse {
     private String title;
     private String imageUrl;
     private String content;
-    private School school;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -23,7 +22,7 @@ public class BlogResponse {
         response.setTitle(blog.getTitle());
         response.setImageUrl(blog.getImageUrl());
         response.setContent(blog.getContent());
-        response.setSchool(blog.getSchool());
+//        response.setSchool(blog.getSchool());
         response.setCreatedAt(blog.getCreatedAt());
         response.setUpdatedAt(blog.getUpdatedAt());
         return response;

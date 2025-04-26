@@ -1,6 +1,6 @@
 package examination.teacherAndStudents.controller;
 
-
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.NoticeRequest;
 import examination.teacherAndStudents.dto.NoticeResponse;
 import examination.teacherAndStudents.dto.UpdateNoticeRequest;
@@ -17,87 +17,97 @@ import java.util.List;
 @RequestMapping("/api/v1/notice")
 public class NoticeController {
 
-    private final NoticeService blogService;
+    private final NoticeService noticeService;
 
     @Autowired
-    public NoticeController(NoticeService blogService) {
-        this.blogService = blogService;
+    public NoticeController(NoticeService noticeService) {
+        this.noticeService = noticeService;
     }
 
     @GetMapping("/posts")
-    public ResponseEntity<List<NoticeResponse>> getAllNoticePosts() {
+    public ResponseEntity<ApiResponse<List<NoticeResponse>>> getAllNoticePosts() {
         try {
-            List<NoticeResponse> blogPosts = blogService.getAllNoticePosts();
-            return ResponseEntity.ok(blogPosts);
+            List<NoticeResponse> blogPosts = noticeService.getAllNoticePosts();
+            return ResponseEntity.ok(new ApiResponse<>("Posts fetched successfully", true, blogPosts));
         } catch (Exception e) {
-            // Handle unexpected exceptions
-            return ResponseEntity.status(500).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("An error occurred", false));
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<NoticeResponse> getNoticePostById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<NoticeResponse>> getNoticePostById(@PathVariable Long id) {
         try {
-            NoticeResponse blogPost = blogService.getNoticePostById(id);
+            NoticeResponse blogPost = noticeService.getNoticePostById(id);
             if (blogPost != null) {
-                return ResponseEntity.ok(blogPost);
+                return ResponseEntity.ok(new ApiResponse<>("Post found", true, blogPost));
             } else {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponse<>("Post not found", false));
             }
         } catch (Exception e) {
-            // Handle unexpected exceptions
-            return ResponseEntity.status(500).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("An error occurred", false));
         }
     }
 
     @GetMapping("/date-range")
-    public ResponseEntity<List<NoticeResponse>> getEventsByDateRange(
+    public ResponseEntity<ApiResponse<List<NoticeResponse>>> getEventsByDateRange(
             @RequestParam("startDate") String startDate,
             @RequestParam("endDate") String endDate) {
-        LocalDate start = LocalDate.parse(startDate);
-        LocalDate end = LocalDate.parse(endDate);
-        List<NoticeResponse> events = blogService.getEventsByDateRange(start, end);
-        return new ResponseEntity<>(events, HttpStatus.OK);
+        try {
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+            List<NoticeResponse> events = noticeService.getEventsByDateRange(start, end);
+            return ResponseEntity.ok(new ApiResponse<>("Events fetched successfully", true, events));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("An error occurred", false));
+        }
     }
 
     @PostMapping("/create")
-    public ResponseEntity<NoticeResponse> createNoticePost(@RequestBody NoticeRequest blogPost) {
+    public ResponseEntity<ApiResponse<NoticeResponse>> createNoticePost(@RequestBody NoticeRequest blogPost) {
         try {
-            NoticeResponse createdNoticePost = blogService.createNoticePost(blogPost);
-            return ResponseEntity.ok(createdNoticePost);
+            NoticeResponse createdNoticePost = noticeService.createNoticePost(blogPost);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new ApiResponse<>("Post created successfully", true, createdNoticePost));
         } catch (Exception e) {
-            // Handle unexpected exceptions
-            return ResponseEntity.status(500).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("An error occurred", false));
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<NoticeResponse> updateNoticePost(@PathVariable Long id, @RequestBody UpdateNoticeRequest updatedNoticePost) {
+    public ResponseEntity<ApiResponse<NoticeResponse>> updateNoticePost(@PathVariable Long id,
+                                                                        @RequestBody UpdateNoticeRequest updatedNoticePost) {
         try {
-            NoticeResponse updatedPost = blogService.updateNoticePost(id, updatedNoticePost);
+            NoticeResponse updatedPost = noticeService.updateNoticePost(id, updatedNoticePost);
             if (updatedPost != null) {
-                return ResponseEntity.ok(updatedPost);
+                return ResponseEntity.ok(new ApiResponse<>("Post updated successfully", true, updatedPost));
             } else {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponse<>("Post not found", false));
             }
         } catch (Exception e) {
-            // Handle unexpected exceptions
-            return ResponseEntity.status(500).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("An error occurred", false));
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteNoticePost(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteNoticePost(@PathVariable Long id) {
         try {
-            boolean deleted = blogService.deleteNoticePost(id);
+            boolean deleted = noticeService.deleteNoticePost(id);
             if (deleted) {
-                return ResponseEntity.noContent().build();
+                return ResponseEntity.ok(new ApiResponse<>("Post deleted successfully", true, null));
             } else {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponse<>("Post not found", false));
             }
         } catch (Exception e) {
-            // Handle unexpected exceptions
-            return ResponseEntity.status(500).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("An error occurred", false));
         }
     }
 }

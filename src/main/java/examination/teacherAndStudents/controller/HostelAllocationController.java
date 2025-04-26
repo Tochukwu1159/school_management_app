@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.HostelAllocationRequest;
 import examination.teacherAndStudents.dto.HostelAllocationResponse;
 import examination.teacherAndStudents.service.HostelAllocationService;
@@ -19,40 +20,54 @@ public class HostelAllocationController {
     private final HostelAllocationService hostelAllocationService;
 
     @PostMapping("/pay")
-    public ResponseEntity<HostelAllocationResponse> payHotelAllocation(@RequestParam Long dueId, @RequestParam Long sessionId) {
+    public ResponseEntity<ApiResponse<HostelAllocationResponse>> payHostelAllocation(
+            @RequestParam Long dueId,
+            @RequestParam Long sessionId
+    ) {
         HostelAllocationResponse response = hostelAllocationService.payHotelAllocation(dueId, sessionId);
-        return ResponseEntity.ok(response);
+        ApiResponse<HostelAllocationResponse> apiResponse = new ApiResponse<>("Hostel allocation payment successful", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
+
     @PostMapping("/allocate")
-    public ResponseEntity<HostelAllocationResponse> allocateStudentToHostel(@RequestBody HostelAllocationRequest request) {
+    public ResponseEntity<ApiResponse<HostelAllocationResponse>> allocateStudentToHostel(
+            @RequestBody HostelAllocationRequest request
+    ) {
         HostelAllocationResponse response = hostelAllocationService.allocateStudentToHostel(request);
-        return ResponseEntity.ok(response);
+        ApiResponse<HostelAllocationResponse> apiResponse = new ApiResponse<>("Student allocated to hostel successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping
-    public ResponseEntity<List<HostelAllocationResponse>> getAllHostelAllocations() {
+    public ResponseEntity<ApiResponse<List<HostelAllocationResponse>>> getAllHostelAllocations() {
         List<HostelAllocationResponse> response = hostelAllocationService.getAllHostelAllocations();
-        return ResponseEntity.ok(response);
+        ApiResponse<List<HostelAllocationResponse>> apiResponse = new ApiResponse<>("All hostel allocations fetched successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<HostelAllocationResponse> getHostelAllocationById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<HostelAllocationResponse>> getHostelAllocationById(@PathVariable Long id) {
         Optional<HostelAllocationResponse> response = hostelAllocationService.getHostelAllocationById(id);
-        return response.map(ResponseEntity::ok)
+        return response.map(res -> ResponseEntity.ok(
+                        new ApiResponse<>("Hostel allocation fetched successfully", true, res)
+                ))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteHostelAllocation(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteHostelAllocation(@PathVariable Long id) {
         hostelAllocationService.deleteHostelAllocation(id);
-        return ResponseEntity.noContent().build();
+        ApiResponse<Void> apiResponse = new ApiResponse<>("Hostel allocation deleted successfully", true, null);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @PatchMapping("/{id}/update-payment-status")
-    public ResponseEntity<HostelAllocationResponse> updatePaymentStatus(
+    public ResponseEntity<ApiResponse<HostelAllocationResponse>> updatePaymentStatus(
             @PathVariable Long id,
-            @RequestParam PaymentStatus paymentStatus) {
+            @RequestParam PaymentStatus paymentStatus
+    ) {
         HostelAllocationResponse updatedAllocation = hostelAllocationService.updatePaymentStatus(id, paymentStatus);
-        return ResponseEntity.ok(updatedAllocation);
+        ApiResponse<HostelAllocationResponse> apiResponse = new ApiResponse<>("Payment status updated successfully", true, updatedAllocation);
+        return ResponseEntity.ok(apiResponse);
     }
 }

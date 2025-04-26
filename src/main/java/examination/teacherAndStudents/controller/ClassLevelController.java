@@ -7,7 +7,6 @@ import examination.teacherAndStudents.repository.ClassBlockRepository;
 import examination.teacherAndStudents.service.serviceImpl.ClassLevelServiceImpl;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +32,7 @@ public class ClassLevelController {
      * Retrieves a paginated list of class levels with optional filters.
      */
     @GetMapping
-    public ResponseEntity<Page<ClassLevel>> getAllClassLevels(
+    public ResponseEntity<ApiResponse<Page<ClassLevel>>> getAllClassLevels(
             @RequestParam(required = false) Long classLevelId,
             @RequestParam(required = false) Long academicYearId,
             @RequestParam(required = false) String className,
@@ -44,24 +43,26 @@ public class ClassLevelController {
 
         Page<ClassLevel> classLevels = classLevelService.getAllClassLevels(
                 classLevelId, academicYearId, className, page, size, sortBy, sortDirection);
-        return new ResponseEntity<>(classLevels, HttpStatus.OK);
+        ApiResponse<Page<ClassLevel>> response = new ApiResponse<>("Class levels retrieved successfully", true, classLevels);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     /**
      * Retrieves a class level by its ID.
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ClassLevel> getClassLevelById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<ClassLevel>> getClassLevelById(@PathVariable Long id) {
         ClassLevel classLevel = classLevelService.getClassLevelById(id);
-        return new ResponseEntity<>(classLevel, HttpStatus.OK); // Fixed status
+        ApiResponse<ClassLevel> response = new ApiResponse<>("Class level retrieved successfully", true, classLevel);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     /**
      * Creates a new class level with associated class blocks.
      */
     @PostMapping
-    public ResponseEntity<ClassLevelWithBlocksResponse> createClassLevel(@RequestBody @Valid ClassLevelRequest classLevel) {
-        ClassLevel createdClassLevel = classLevelService.createClassLevel(classLevel);
+    public ResponseEntity<ApiResponse<ClassLevelWithBlocksResponse>> createClassLevel(@RequestBody @Valid ClassLevelRequest classLevelRequest) {
+        ClassLevel createdClassLevel = classLevelService.createClassLevel(classLevelRequest);
         List<String> blockNames = classBlockRepository.findByClassLevelId(createdClassLevel.getId())
                 .stream()
                 .map(ClassBlock::getName)
@@ -74,48 +75,57 @@ public class ClassLevelController {
                 .classBlocks(blockNames)
                 .build();
 
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        ApiResponse<ClassLevelWithBlocksResponse> apiResponse = new ApiResponse<>("Class level created successfully", true, response);
+        return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
     /**
      * Updates the unique URL for a class block.
      */
     @PutMapping("/url/{id}")
-    public ResponseEntity<ClassLevel> updateClassLevelUrlForStudents(@PathVariable Long id, @RequestBody ClassLevelRequestUrl classLevel) {
-        ClassLevel createdClassLevel = classLevelService.updateClassBlockUrl(id, classLevel).getClassLevel();
-        return new ResponseEntity<>(createdClassLevel, HttpStatus.OK); // Fixed status
+    public ResponseEntity<ApiResponse<ClassLevel>> updateClassLevelUrlForStudents(@PathVariable Long id, @RequestBody ClassLevelRequestUrl classLevelRequest) {
+        ClassLevel updatedClassLevel = classLevelService.updateClassBlockUrl(id, classLevelRequest).getClassLevel();
+        ApiResponse<ClassLevel> response = new ApiResponse<>("Class level URL updated successfully", true, updatedClassLevel);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     /**
      * Updates an existing class level.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<ClassLevel> updateClassLevel(@PathVariable Long id, @RequestBody  @Valid ClassLevelRequest classLevelRequest) {
-        ClassLevel updated = classLevelService.updateClassLevel(id, classLevelRequest);
-        return updated != null
-                ? new ResponseEntity<>(updated, HttpStatus.OK)
-                : new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    public ResponseEntity<ApiResponse<ClassLevel>> updateClassLevel(@PathVariable Long id, @RequestBody @Valid ClassLevelRequest classLevelRequest) {
+        ClassLevel updatedClassLevel = classLevelService.updateClassLevel(id, classLevelRequest);
+        ApiResponse<ClassLevel> response = updatedClassLevel != null
+                ? new ApiResponse<>("Class level updated successfully", true, updatedClassLevel)
+                : new ApiResponse<>("Class level not found", false, null);
+
+        return updatedClassLevel != null
+                ? new ResponseEntity<>(response, HttpStatus.OK)
+                : new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
     /**
      * Deletes a class level by its ID.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteClassLevel(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteClassLevel(@PathVariable Long id) {
         classLevelService.deleteClassLevel(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        ApiResponse<Void> response = new ApiResponse<>("Class level deleted successfully", true, null);
+        return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
     }
 
     /**
      * Retrieves all subclasses (class blocks) for a given class level.
      */
     @GetMapping("/sub-class/{classLevelId}")
-    public ResponseEntity<List<ClassBlockResponse>> getSubClassesByClassLevelId(@PathVariable Long classLevelId) {
+    public ResponseEntity<ApiResponse<List<ClassBlockResponse>>> getSubClassesByClassLevelId(@PathVariable Long classLevelId) {
         List<ClassBlock> subClasses = classLevelService.getSubClassesByClassLevelId(classLevelId);
         List<ClassBlockResponse> responses = subClasses.stream()
                 .map(this::mapToClassBlockResponse)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(responses);
+
+        ApiResponse<List<ClassBlockResponse>> response = new ApiResponse<>("Class blocks retrieved successfully", true, responses);
+        return ResponseEntity.ok(response);
     }
 
     private ClassBlockResponse mapToClassBlockResponse(ClassBlock classBlock) {

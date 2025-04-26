@@ -1,48 +1,43 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.ClassSubjectRequest;
 import examination.teacherAndStudents.dto.ClassSubjectResponse;
 import examination.teacherAndStudents.dto.TeacherAssignmentRequest;
 import examination.teacherAndStudents.service.serviceImpl.ClassSubjectServiceImpl;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
-
 @RestController
 @RequestMapping("/api/v1/class-subjects")
+@RequiredArgsConstructor
 public class ClassSubjectController {
 
     private final ClassSubjectServiceImpl classSubjectService;
 
-    @Autowired
-    public ClassSubjectController(ClassSubjectServiceImpl classSubjectService) {
-        this.classSubjectService = classSubjectService;
-    }
-
     @PostMapping
-    public ResponseEntity<ClassSubjectResponse> createOrUpdateClassSubject(@Valid @RequestBody ClassSubjectRequest classSubjectRequest) {
+    public ResponseEntity<ApiResponse<ClassSubjectResponse>> createOrUpdateClassSubject(@Valid @RequestBody ClassSubjectRequest classSubjectRequest) {
         ClassSubjectResponse classSubjectResponse = classSubjectService.saveClassSubject(classSubjectRequest);
-        return new ResponseEntity<>(classSubjectResponse, HttpStatus.CREATED);
+        return ResponseEntity.status(201).body(new ApiResponse<>("Class subject created or updated successfully", true, classSubjectResponse));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ClassSubjectResponse> getClassSubjectById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<ClassSubjectResponse>> getClassSubjectById(@PathVariable Long id) {
         ClassSubjectResponse classSubjectResponse = classSubjectService.getClassSubjectById(id);
-        return new ResponseEntity<>(classSubjectResponse, HttpStatus.OK);
+        return ResponseEntity.ok(new ApiResponse<>("Class subject retrieved successfully", true, classSubjectResponse));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteClassSubject(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteClassSubject(@PathVariable Long id) {
         classSubjectService.deleteClassSubject(id);
-        return new ResponseEntity<>("ClassSubject with id " + id + " deleted successfully", HttpStatus.OK);
+        return ResponseEntity.ok(new ApiResponse<>("Class subject deleted successfully", true));
     }
 
     @GetMapping
-    public ResponseEntity<Page<ClassSubjectResponse>> getAllClassSubjects(
+    public ResponseEntity<ApiResponse<Page<ClassSubjectResponse>>> getAllClassSubjects(
             @RequestParam(required = false) Long academicYearId,
             @RequestParam(required = false) Long subjectId,
             @RequestParam(required = false) Long classSubjectId,
@@ -51,21 +46,20 @@ public class ClassSubjectController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDirection) {
-
         Page<ClassSubjectResponse> responses = classSubjectService.getAllClassSubjects(
                 academicYearId, subjectId, classSubjectId, subjectName, page, size, sortBy, sortDirection);
-        return new ResponseEntity<>(responses, HttpStatus.OK);
+        return ResponseEntity.ok(new ApiResponse<>("Class subjects retrieved successfully", true, responses));
     }
 
     @PostMapping("/assign-teacher")
-    public ResponseEntity<String> assignClassSubjectToTeacher(@Valid @RequestBody TeacherAssignmentRequest request) {
+    public ResponseEntity<ApiResponse<Void>> assignClassSubjectToTeacher(@Valid @RequestBody TeacherAssignmentRequest request) {
         classSubjectService.assignClassSubjectToTeacher(request);
-        return new ResponseEntity<>("Teachers assigned to class subjects successfully", HttpStatus.OK);
+        return ResponseEntity.ok(new ApiResponse<>("Teachers assigned to class subjects successfully", true));
     }
 
     @PutMapping("/assign-teacher")
-    public ResponseEntity<String> updateClassSubjectTeacherAssignment(@Valid @RequestBody TeacherAssignmentRequest request) {
+    public ResponseEntity<ApiResponse<Void>> updateClassSubjectTeacherAssignment(@Valid @RequestBody TeacherAssignmentRequest request) {
         classSubjectService.updateClassSubjectTeacherAssignment(request);
-        return new ResponseEntity<>("Teacher assignments updated successfully", HttpStatus.OK);
+        return ResponseEntity.ok(new ApiResponse<>("Teacher assignments updated successfully", true));
     }
 }

@@ -1,17 +1,19 @@
-
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.MaintenanceRequest;
 import examination.teacherAndStudents.dto.MaintenanceResponse;
 import examination.teacherAndStudents.service.MaintenanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/maintenance")
@@ -21,23 +23,28 @@ public class MaintenanceController {
     private final MaintenanceService maintenanceService;
 
     @PostMapping
-    public ResponseEntity<MaintenanceResponse> createMaintenance(@RequestBody MaintenanceRequest request) {
-        return ResponseEntity.ok(maintenanceService.createMaintenance(request));
+    public ResponseEntity<ApiResponse<MaintenanceResponse>> createMaintenance(@RequestBody MaintenanceRequest request) {
+        MaintenanceResponse response = maintenanceService.createMaintenance(request);
+        ApiResponse<MaintenanceResponse> apiResponse = new ApiResponse<>("Maintenance created successfully", true, response);
+        return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MaintenanceResponse> updateMaintenance(@PathVariable Long id, @RequestBody MaintenanceRequest request) {
-        return ResponseEntity.ok(maintenanceService.updateMaintenance(id, request));
+    public ResponseEntity<ApiResponse<MaintenanceResponse>> updateMaintenance(@PathVariable Long id, @RequestBody MaintenanceRequest request) {
+        MaintenanceResponse response = maintenanceService.updateMaintenance(id, request);
+        ApiResponse<MaintenanceResponse> apiResponse = new ApiResponse<>("Maintenance updated successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteMaintenance(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> deleteMaintenance(@PathVariable Long id) {
         maintenanceService.deleteMaintenance(id);
-        return ResponseEntity.noContent().build();
+        ApiResponse<String> apiResponse = new ApiResponse<>("Maintenance deleted successfully", true, null);
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
     @GetMapping
-    public ResponseEntity<Page<MaintenanceResponse>> getAllMaintenances(
+    public ResponseEntity<Page<ApiResponse<MaintenanceResponse>>> getAllMaintenances(
             @RequestParam(required = false) Long id,
             @RequestParam(required = false) Long transportId,
             @RequestParam(required = false) Long maintainedById,
@@ -48,7 +55,7 @@ public class MaintenanceController {
             @RequestParam(defaultValue = "maintenanceDate") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDirection) {
 
-        Page<MaintenanceResponse> response = maintenanceService.getAllMaintenances(
+        Page<MaintenanceResponse> responsePage = maintenanceService.getAllMaintenances(
                 id,
                 transportId,
                 maintainedById,
@@ -59,11 +66,21 @@ public class MaintenanceController {
                 sortBy,
                 sortDirection);
 
-        return ResponseEntity.ok(response);
+        Page<ApiResponse<MaintenanceResponse>> apiResponsePage = new PageImpl<>(
+                responsePage.getContent().stream()
+                        .map(maintenance -> new ApiResponse<>("Maintenance fetched successfully", true, maintenance))
+                        .collect(Collectors.toList()),
+                responsePage.getPageable(),
+                responsePage.getTotalElements()
+        );
+
+        return ResponseEntity.ok(apiResponsePage);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<MaintenanceResponse> getMaintenanceById(@PathVariable Long id) {
-        return ResponseEntity.ok(maintenanceService.getMaintenanceById(id));
+    public ResponseEntity<ApiResponse<MaintenanceResponse>> getMaintenanceById(@PathVariable Long id) {
+        MaintenanceResponse response = maintenanceService.getMaintenanceById(id);
+        ApiResponse<MaintenanceResponse> apiResponse = new ApiResponse<>("Maintenance fetched successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 }

@@ -12,10 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/attendance")
@@ -29,18 +27,18 @@ public class AttendanceController {
     }
 
     @PostMapping("/take")
-    public ResponseEntity<String> takeAttendance(@RequestBody BulkAttendanceRequest attendanceRequest) {
+    public ResponseEntity<ApiResponse<String>> takeAttendance(@RequestBody BulkAttendanceRequest attendanceRequest) {
         try {
-            // Assuming you have a method in the service to handle attendance
             attendanceService.takeBulkAttendance(attendanceRequest);
-            return ResponseEntity.ok("Attendance taken successfully");
+            return ResponseEntity.ok(new ApiResponse<>("Attendance taken successfully", true, null));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error taking attendance: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Error taking attendance: " + e.getMessage(), false, null));
         }
     }
 
     @GetMapping("/students/{studentId}")
-    public ResponseEntity<Page<AttendanceResponses>> getAttendance(
+    public ResponseEntity<ApiResponse<Page<AttendanceResponses>>> getAttendance(
             @RequestParam(required = false) Long academicYearId,
             @RequestParam(required = false) Long studentTermId,
             @RequestParam(required = false) Long classBlockId,
@@ -66,38 +64,45 @@ public class AttendanceController {
                 sortBy,
                 sortDirection);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>("Attendance retrieved successfully", true, response));
     }
 
     @GetMapping("/calculate-attendance-percentage")
-    public ResponseEntity<StudentAttendanceResponse> calculateAttendancePercentage(@RequestBody AttendancePercentageRequest attendancePercentageRequest) {
+    public ResponseEntity<ApiResponse<StudentAttendanceResponse>> calculateAttendancePercentage(@RequestBody AttendancePercentageRequest attendancePercentageRequest) {
         try {
-            StudentAttendanceResponse attendancePercentage = attendanceService.calculateAttendancePercentage(attendancePercentageRequest.getUserId(), attendancePercentageRequest.getClassLevelId(), attendancePercentageRequest.getSessionId(), attendancePercentageRequest.getStudentTermId());
-            return ResponseEntity.ok(attendancePercentage);
+            StudentAttendanceResponse attendancePercentage = attendanceService.calculateAttendancePercentage(
+                    attendancePercentageRequest.getUserId(),
+                    attendancePercentageRequest.getClassLevelId(),
+                    attendancePercentageRequest.getSessionId(),
+                    attendancePercentageRequest.getStudentTermId());
+            return ResponseEntity.ok(new ApiResponse<>("Attendance percentage calculated successfully", true, attendancePercentage));
         } catch (CustomNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse<>("Data not found", false, null));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Error calculating attendance percentage: " + e.getMessage(), false, null));
         }
     }
 
-
     @GetMapping("/students-by-class")
-    public ResponseEntity<List<Attendance>> getStudentAttendanceByClass(
+    public ResponseEntity<ApiResponse<List<Attendance>>> getStudentAttendanceByClass(
             @RequestParam Long classId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDateTime endDate) {
+
         List<Attendance> studentAttendanceList = attendanceService.getStudentAttendanceByClass(classId, startDate, endDate);
-        return ResponseEntity.ok(studentAttendanceList);
+        return ResponseEntity.ok(new ApiResponse<>("Student attendance by class retrieved successfully", true, studentAttendanceList));
     }
 
     @GetMapping("/class/{classLevelId}/session/{sessionId}/term/{studentTermId}/percentage")
-    public ResponseEntity<List<StudentAttendanceResponse>> calculateClassAttendancePercentage(
+    public ResponseEntity<ApiResponse<List<StudentAttendanceResponse>>> calculateClassAttendancePercentage(
             @PathVariable Long classLevelId,
             @PathVariable Long studentTermId,
-            @PathVariable Long  sessionId) {
+            @PathVariable Long sessionId) {
+
         List<StudentAttendanceResponse> attendancePercentages = attendanceService.calculateClassAttendancePercentage(classLevelId, sessionId, studentTermId);
-        return ResponseEntity.ok(attendancePercentages);
+        return ResponseEntity.ok(new ApiResponse<>("Class attendance percentage calculated successfully", true, attendancePercentages));
     }
 
     // Add more methods for fetching attendance, generating reports, etc.

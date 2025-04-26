@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.ComplaintDto;
 import examination.teacherAndStudents.dto.ComplaintResponse;
 import examination.teacherAndStudents.dto.ReplyComplaintDto;
@@ -24,7 +25,7 @@ public class ComplaintController {
     private final ComplaintService complaintService;
 
     @GetMapping("/users/{userId}")
-    public ResponseEntity<Page<ComplaintResponse>> getUserComplaints(
+    public ResponseEntity<ApiResponse<Page<ComplaintResponse>>> getUserComplaints(
             @PathVariable @Min(1) Long userId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) int size,
@@ -35,28 +36,28 @@ public class ComplaintController {
         Page<ComplaintResponse> complaints = complaintService.getUserComplaints(
                 userId, page, size, sortBy, sortDirection
         );
-        return ResponseEntity.ok(complaints);
+        return ResponseEntity.ok(new ApiResponse<>("User complaints retrieved successfully", true, complaints));
     }
 
     @PostMapping
-    public ResponseEntity<ComplaintResponse> submitComplaint(@Valid @RequestBody ComplaintDto complaintDto) {
+    public ResponseEntity<ApiResponse<ComplaintResponse>> submitComplaint(@Valid @RequestBody ComplaintDto complaintDto) {
         logger.debug("Request to submit complaint with feedback: {}", complaintDto.getFeedbackText());
         ComplaintResponse submittedComplaint = complaintService.submitComplaint(complaintDto);
-        return ResponseEntity.ok(submittedComplaint);
+        return ResponseEntity.status(201).body(new ApiResponse<>("Complaint submitted successfully", true, submittedComplaint));
     }
 
     @PutMapping("/{complaintId}/reply")
-    public ResponseEntity<ComplaintResponse> replyToComplaint(
+    public ResponseEntity<ApiResponse<ComplaintResponse>> replyToComplaint(
             @PathVariable @Min(1) Long complaintId,
             @Valid @RequestBody ReplyComplaintDto replyComplaintDto
     ) {
         logger.debug("Request to reply to complaint ID: {}", complaintId);
         ComplaintResponse repliedComplaint = complaintService.replyToComplaint(complaintId, replyComplaintDto);
-        return ResponseEntity.ok(repliedComplaint);
+        return ResponseEntity.ok(new ApiResponse<>("Reply to complaint submitted successfully", true, repliedComplaint));
     }
 
     @GetMapping
-    public ResponseEntity<Page<ComplaintResponse>> getAllComplaints(
+    public ResponseEntity<ApiResponse<Page<ComplaintResponse>>> getAllComplaints(
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "10") @Min(1) int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -69,6 +70,6 @@ public class ComplaintController {
         Page<ComplaintResponse> complaints = complaintService.getAllComplaint(
                 page, size, sortBy, sortDirection, userName, status
         );
-        return ResponseEntity.ok(complaints);
+        return ResponseEntity.ok(new ApiResponse<>("All complaints retrieved successfully", true, complaints));
     }
 }

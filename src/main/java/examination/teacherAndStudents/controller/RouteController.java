@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.RouteRequest;
 import examination.teacherAndStudents.dto.RouteResponse;
 import examination.teacherAndStudents.service.BusRouteService;
@@ -18,28 +19,33 @@ public class RouteController {
     private final BusRouteService routeService;
 
     @PostMapping
-    public ResponseEntity<RouteResponse> addRoute(@RequestBody RouteRequest routeRequest) {
+    public ResponseEntity<ApiResponse<RouteResponse>> addRoute(@RequestBody RouteRequest routeRequest) {
         RouteResponse routeResponse = routeService.createRoute(routeRequest);
-        return new ResponseEntity<>(routeResponse, HttpStatus.CREATED);
+        ApiResponse<RouteResponse> response = new ApiResponse<>("Route created successfully", true, routeResponse);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<RouteResponse> updateRoute(@PathVariable Long id, @RequestBody RouteRequest routeRequest) {
+    public ResponseEntity<ApiResponse<RouteResponse>> updateRoute(@PathVariable Long id, @RequestBody RouteRequest routeRequest) {
         RouteResponse routeResponse = routeService.updateRoute(id, routeRequest);
-        return new ResponseEntity<>(routeResponse, HttpStatus.OK);
+        ApiResponse<RouteResponse> response = new ApiResponse<>("Route updated successfully", true, routeResponse);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteRoute(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteRoute(@PathVariable Long id) {
         routeService.deleteRoute(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        ApiResponse<Void> response = new ApiResponse<>("Route deleted successfully", true, null);
+        return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
     }
 
     @GetMapping
-        public ResponseEntity<Page<RouteResponse>> getAllRoutes(@RequestParam(defaultValue = AccountUtils.PAGENO) Integer pageNo,
-                @RequestParam(defaultValue = AccountUtils.PAGESIZE) Integer pageSize,
-                @RequestParam(defaultValue = "id") String sortBy) {
+    public ResponseEntity<ApiResponse<Page<RouteResponse>>> getAllRoutes(
+            @RequestParam(defaultValue = AccountUtils.PAGENO) Integer pageNo,
+            @RequestParam(defaultValue = AccountUtils.PAGESIZE) Integer pageSize,
+            @RequestParam(defaultValue = "id") String sortBy) {
         Page<RouteResponse> routes = routeService.getAllRoutes(pageNo, pageSize, sortBy);
-        return new ResponseEntity<>(routes, HttpStatus.OK);
+        ApiResponse<Page<RouteResponse>> response = new ApiResponse<>("Routes fetched successfully", true, routes);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

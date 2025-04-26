@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.FeeCategoryDTO;
 import examination.teacherAndStudents.entity.FeeCategory;
 import examination.teacherAndStudents.service.FeeCategoryService;
@@ -25,53 +26,52 @@ public class FeeCategoryController {
 
     private final FeeCategoryService feeCategoryService;
 
-
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<FeeCategoryDTO> createFeeCategory(@Valid @RequestBody FeeCategoryDTO dto) {
+    public ResponseEntity<ApiResponse<FeeCategoryDTO>> createFeeCategory(@Valid @RequestBody FeeCategoryDTO dto) {
         FeeCategory category = feeCategoryService.createFeeCategory(dto.getName());
         FeeCategoryDTO responseDTO = mapToDTO(category);
         return ResponseEntity.created(URI.create("/api/v1/fee-categories/" + category.getId()))
-                .body(responseDTO);
+                .body(new ApiResponse<>("Fee category created successfully", true, responseDTO));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<FeeCategoryDTO> updateFeeCategory(
+    public ResponseEntity<ApiResponse<FeeCategoryDTO>> updateFeeCategory(
             @PathVariable Long id, @Valid @RequestBody FeeCategoryDTO dto) {
         FeeCategory category = feeCategoryService.updateFeeCategory(id, dto.getName());
-        return ResponseEntity.ok(mapToDTO(category));
+        FeeCategoryDTO responseDTO = mapToDTO(category);
+        return ResponseEntity.ok(new ApiResponse<>("Fee category updated successfully", true, responseDTO));
     }
-
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteFeeCategory(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteFeeCategory(@PathVariable Long id) {
         feeCategoryService.deleteFeeCategory(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(new ApiResponse<>("Fee category deleted successfully", true));
     }
 
-
     @GetMapping("/{id}")
-    public ResponseEntity<FeeCategoryDTO> getFeeCategoryById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<FeeCategoryDTO>> getFeeCategoryById(@PathVariable Long id) {
         FeeCategory category = feeCategoryService.getFeeCategoryById(id);
-        return ResponseEntity.ok(mapToDTO(category));
+        FeeCategoryDTO responseDTO = mapToDTO(category);
+        return ResponseEntity.ok(new ApiResponse<>("Fee category retrieved successfully", true, responseDTO));
     }
 
     @GetMapping
-    public ResponseEntity<Page<FeeCategoryDTO>> getAllFeeCategories(Pageable pageable) {
+    public ResponseEntity<ApiResponse<Page<FeeCategoryDTO>>> getAllFeeCategories(Pageable pageable) {
         Page<FeeCategory> categories = feeCategoryService.getAllFeeCategories(pageable);
         Page<FeeCategoryDTO> responsePage = categories.map(this::mapToDTO);
-        return ResponseEntity.ok(responsePage);
+        return ResponseEntity.ok(new ApiResponse<>("Fee categories retrieved successfully", true, responsePage));
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<FeeCategoryDTO>> getAllFeeCategoriesList() {
+    public ResponseEntity<ApiResponse<List<FeeCategoryDTO>>> getAllFeeCategoriesList() {
         List<FeeCategory> categories = feeCategoryService.getAllFeeCategories();
         List<FeeCategoryDTO> responseList = categories.stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(responseList);
+        return ResponseEntity.ok(new ApiResponse<>("Fee categories list retrieved successfully", true, responseList));
     }
 
     private FeeCategoryDTO mapToDTO(FeeCategory category) {

@@ -1,8 +1,8 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.BlogCommentRequest;
 import examination.teacherAndStudents.dto.BlogCommentResponse;
-import examination.teacherAndStudents.entity.BlogComment;
 import examination.teacherAndStudents.service.BlogCommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,26 +18,26 @@ public class BlogCommentController {
     private final BlogCommentService blogCommentService;
 
     @PostMapping("/{blogId}/comment")
-    public ResponseEntity<BlogCommentResponse> addComment(@PathVariable Long blogId, @RequestBody BlogCommentRequest request) {
+    public ResponseEntity<ApiResponse<BlogCommentResponse>> addComment(@PathVariable Long blogId, @RequestBody BlogCommentRequest request) {
         BlogCommentResponse comment = blogCommentService.addComment(blogId, request);
-        return ResponseEntity.ok(comment);
+        return ResponseEntity.ok(new ApiResponse<>("Comment added successfully", true, comment));
     }
 
     @PostMapping("/comments/{parentCommentId}/reply")
-    public ResponseEntity<BlogCommentResponse> replyToComment(@PathVariable Long parentCommentId, @RequestBody BlogCommentRequest request) {
+    public ResponseEntity<ApiResponse<BlogCommentResponse>> replyToComment(@PathVariable Long parentCommentId, @RequestBody BlogCommentRequest request) {
         BlogCommentResponse reply = blogCommentService.replyToComment(parentCommentId, request);
-        return ResponseEntity.ok(reply);
+        return ResponseEntity.ok(new ApiResponse<>("Reply added successfully", true, reply));
     }
 
     @GetMapping("/{blogId}/comments")
-    public ResponseEntity<List<BlogCommentResponse>> getBlogComments(@PathVariable Long blogId) {
+    public ResponseEntity<ApiResponse<List<BlogCommentResponse>>> getBlogComments(@PathVariable Long blogId) {
         List<BlogCommentResponse> comments = blogCommentService.getBlogComments(blogId);
-        return ResponseEntity.ok(comments);
+        return ResponseEntity.ok(new ApiResponse<>("Comments retrieved successfully", true, comments));
     }
 
     @GetMapping("/comments/{commentId}/replies")
-    public ResponseEntity<List<BlogCommentResponse>> getCommentReplies(@PathVariable Long commentId) {
+    public ResponseEntity<ApiResponse<List<BlogCommentResponse>>> getCommentReplies(@PathVariable Long commentId) {
         List<BlogCommentResponse> replies = blogCommentService.getCommentReplies(commentId);
-        return ResponseEntity.ok(replies);
+        return ResponseEntity.ok(new ApiResponse<>("Replies retrieved successfully", true, replies));
     }
 }

@@ -4,7 +4,6 @@ import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.entity.Blog;
 import examination.teacherAndStudents.entity.BlogLike;
 import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.BlogLikeRepository;
 import examination.teacherAndStudents.repository.BlogRepository;
@@ -22,11 +21,10 @@ import java.util.Optional;
 public class BlogLikeServiceImpl implements BlogLikeService {
     private final BlogLikeRepository blogLikeRepository;
     private final BlogRepository blogRepository;
-    private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
 
     @Override
-    public void toggleLikeBlog(Long blogId) {
+    public boolean toggleLikeBlog(Long blogId) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         Profile user = profileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("User not found"));
@@ -41,6 +39,7 @@ public class BlogLikeServiceImpl implements BlogLikeService {
             BlogLike like = new BlogLike(null, blog, user, LocalDateTime.now());
             blogLikeRepository.save(like);
         }
+        return false;
     }
 
     @Override

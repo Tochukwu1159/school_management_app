@@ -1,8 +1,8 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.StaffMovementRequest;
 import examination.teacherAndStudents.dto.StaffMovementResponse;
-import examination.teacherAndStudents.entity.StaffMovement;
 import examination.teacherAndStudents.service.StaffMovementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,42 +18,55 @@ public class StaffMovementController {
     private final StaffMovementService staffMovementService;
 
     @PostMapping
-    public ResponseEntity<StaffMovementResponse> createStaffMovement(@RequestBody StaffMovementRequest request) {
-        return ResponseEntity.ok(staffMovementService.createStaffMovement(request));
+    public ResponseEntity<ApiResponse<StaffMovementResponse>> createStaffMovement(@RequestBody StaffMovementRequest request) {
+        StaffMovementResponse response = staffMovementService.createStaffMovement(request);
+        ApiResponse<StaffMovementResponse> apiResponse = new ApiResponse<>("Staff movement created successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<StaffMovementResponse> editStaffMovement(@PathVariable Long id, @RequestBody StaffMovementRequest request) {
-        return ResponseEntity.ok(staffMovementService.editStaffMovement(id, request));
+    public ResponseEntity<ApiResponse<StaffMovementResponse>> editStaffMovement(@PathVariable Long id, @RequestBody StaffMovementRequest request) {
+        StaffMovementResponse response = staffMovementService.editStaffMovement(id, request);
+        ApiResponse<StaffMovementResponse> apiResponse = new ApiResponse<>("Staff movement updated successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStaffMovement(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteStaffMovement(@PathVariable Long id) {
         staffMovementService.deleteStaffMovement(id);
-        return ResponseEntity.noContent().build();
+        ApiResponse<Void> apiResponse = new ApiResponse<>("Staff movement deleted successfully", true, null);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping
-    public ResponseEntity<List<StaffMovementResponse>> getAllStaffMovements() {
-        return ResponseEntity.ok(staffMovementService.getAllStaffMovements());
+    public ResponseEntity<ApiResponse<List<StaffMovementResponse>>> getAllStaffMovements() {
+        List<StaffMovementResponse> movements = staffMovementService.getAllStaffMovements();
+        ApiResponse<List<StaffMovementResponse>> apiResponse = new ApiResponse<>("All staff movements fetched successfully", true, movements);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<StaffMovementResponse> getStaffMovementById(@PathVariable Long id) {
-        return ResponseEntity.ok(staffMovementService.getStaffMovementById(id));
+    public ResponseEntity<ApiResponse<StaffMovementResponse>> getStaffMovementById(@PathVariable Long id) {
+        StaffMovementResponse response = staffMovementService.getStaffMovementById(id);
+        ApiResponse<StaffMovementResponse> apiResponse = new ApiResponse<>("Staff movement fetched successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
-
     @PatchMapping("/{id}/status")
-    public ResponseEntity<StaffMovementResponse> updateStaffMovementStatus(
+    public ResponseEntity<ApiResponse<StaffMovementResponse>> updateStaffMovementStatus(
             @PathVariable Long id,
             @RequestParam String status) {
         StaffMovementResponse response = staffMovementService.updateStaffMovementStatus(id, status);
-        return ResponseEntity.ok(response);
+        ApiResponse<StaffMovementResponse> apiResponse = new ApiResponse<>("Staff movement status updated successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @PatchMapping("/update/{id}/status")
-    public ResponseEntity<StaffMovementResponse> approveOrDeclineStaffMovement(@PathVariable Long id, @RequestParam String status) {
-        return ResponseEntity.ok(staffMovementService.approveOrDeclineStaffMovement(id, status));
+    public ResponseEntity<ApiResponse<StaffMovementResponse>> approveOrDeclineStaffMovement(
+            @PathVariable Long id,
+            @RequestParam String status) {
+        StaffMovementResponse response = staffMovementService.approveOrDeclineStaffMovement(id, status);
+        ApiResponse<StaffMovementResponse> apiResponse = new ApiResponse<>("Staff movement approval status updated successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 }

@@ -1,12 +1,10 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.StoreItemRequest;
 import examination.teacherAndStudents.dto.StoreItemResponse;
-import examination.teacherAndStudents.entity.Store;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.repository.StoreRepository;
 import examination.teacherAndStudents.service.StoreItemService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,44 +13,43 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/store-item")
+@RequiredArgsConstructor
 public class StoreItemController {
 
-    @Autowired
-    private StoreItemService storeService;
-    @Autowired
-    private StoreRepository storeRepository;
+    private final StoreItemService storeService;
 
     @PostMapping("/create")
-    public ResponseEntity<StoreItemResponse> createStore(
-                                                     @RequestBody StoreItemRequest request) {
-
+    public ResponseEntity<ApiResponse<StoreItemResponse>> createStore(@RequestBody StoreItemRequest request) {
         StoreItemResponse response = storeService.createStoreItem(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        ApiResponse<StoreItemResponse> apiResponse = new ApiResponse<>("Store item created successfully", true, response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
     }
 
     @PutMapping("/{storeId}")
-    public ResponseEntity<StoreItemResponse> editStore(@PathVariable Long storeId,
-                                                       @RequestBody StoreItemRequest request) {
+    public ResponseEntity<ApiResponse<StoreItemResponse>> editStore(@PathVariable Long storeId, @RequestBody StoreItemRequest request) {
         StoreItemResponse response = storeService.editStoreItem(storeId, request);
-        return ResponseEntity.ok(response);
+        ApiResponse<StoreItemResponse> apiResponse = new ApiResponse<>("Store item updated successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @DeleteMapping("/{storeId}")
-    public ResponseEntity<Void> deleteStore(@PathVariable Long storeId) {
+    public ResponseEntity<ApiResponse<Void>> deleteStore(@PathVariable Long storeId) {
         storeService.deleteStoreItem(storeId);
-        return ResponseEntity.noContent().build();
+        ApiResponse<Void> apiResponse = new ApiResponse<>("Store item deleted successfully", true, null);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/{storeId}")
-    public ResponseEntity<StoreItemResponse> getStoreById(@PathVariable Long storeId) {
+    public ResponseEntity<ApiResponse<StoreItemResponse>> getStoreById(@PathVariable Long storeId) {
         StoreItemResponse response = storeService.getStoreItemById(storeId);
-        return ResponseEntity.ok(response);
+        ApiResponse<StoreItemResponse> apiResponse = new ApiResponse<>("Store item fetched successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/school")
-    public ResponseEntity<List<StoreItemResponse>> getAllStoresForSchool() {
+    public ResponseEntity<ApiResponse<List<StoreItemResponse>>> getAllStoresForSchool() {
         List<StoreItemResponse> responses = storeService.getAllStoreItemsForSchool();
-        return ResponseEntity.ok(responses);
+        ApiResponse<List<StoreItemResponse>> apiResponse = new ApiResponse<>("Store items fetched successfully", true, responses);
+        return ResponseEntity.ok(apiResponse);
     }
 }
-

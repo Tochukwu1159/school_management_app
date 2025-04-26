@@ -1,6 +1,6 @@
 package examination.teacherAndStudents.controller;
+
 import examination.teacherAndStudents.dto.*;
-import examination.teacherAndStudents.entity.StudentTransportAllocation;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.service.TransportService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,72 +15,59 @@ import java.util.List;
 @RequestMapping("/api/v1/transports")
 public class TransportController {
 
+    private final TransportService transportService;
+
     @Autowired
-    private TransportService transportService;
+    public TransportController(TransportService transportService) {
+        this.transportService = transportService;
+    }
 
     @PostMapping("/add")
-    public ResponseEntity<TransportResponse> addTransport(@RequestBody TransportRequest transportRequest) {
-        try {
-            TransportResponse createdTransport = transportService.createTransport(transportRequest);
-            return new ResponseEntity<>(createdTransport, HttpStatus.CREATED);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public ResponseEntity<ApiResponse<TransportResponse>> addTransport(@RequestBody TransportRequest transportRequest) {
+        TransportResponse createdTransport = transportService.createTransport(transportRequest);
+        ApiResponse<TransportResponse> response = new ApiResponse<>("Transport created successfully", true, createdTransport);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
+
     @PostMapping("/pay")
-    public ResponseEntity<TransportAllocationResponse> payforTransport(@RequestBody TransportPaymentRequest transportPaymentRequest) {
+    public ResponseEntity<ApiResponse<TransportAllocationResponse>> payForTransport(@RequestBody TransportPaymentRequest transportPaymentRequest) {
         TransportAllocationResponse response = transportService.payForTransport(transportPaymentRequest);
-        return ResponseEntity.ok(response);
+        ApiResponse<TransportAllocationResponse> apiResponse = new ApiResponse<>("Payment successful", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @PostMapping("/add-student-to-transport")
-    public ResponseEntity<TransportAllocationResponse> addStudentToTransport(@RequestBody AddStudentToTransportRequest request) {
-        try {
-            TransportAllocationResponse createdTransport = transportService.assignTransportToStudent(request
-
-            );
-            return new ResponseEntity<>(createdTransport, HttpStatus.CREATED);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public ResponseEntity<ApiResponse<TransportAllocationResponse>> addStudentToTransport(@RequestBody AddStudentToTransportRequest request) {
+        TransportAllocationResponse createdTransport = transportService.assignTransportToStudent(request);
+        ApiResponse<TransportAllocationResponse> response = new ApiResponse<>("Student added to transport successfully", true, createdTransport);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
-
 
     @PostMapping("/{transportId}/students")
-        public ResponseEntity<TransportResponse> addStudentsToTransport(@PathVariable Long transportId,
-                @RequestBody List<Long> studentIds) {
-        try {
-            TransportResponse createdTransport = transportService.addStudentsToTransport(transportId, studentIds);
-            return new ResponseEntity<>(createdTransport, HttpStatus.CREATED);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public ResponseEntity<ApiResponse<TransportResponse>> addStudentsToTransport(@PathVariable Long transportId,
+                                                                                 @RequestBody List<Long> studentIds) {
+        TransportResponse createdTransport = transportService.addStudentsToTransport(transportId, studentIds);
+        ApiResponse<TransportResponse> response = new ApiResponse<>("Students added to transport successfully", true, createdTransport);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-            @PutMapping("/edit/{transportId}")
-    public ResponseEntity<TransportResponse> editTransport(
-            @PathVariable Long transportId,
-            @RequestBody TransportRequest updatedTransport) {
-        try {
-            TransportResponse updatedTransportation = transportService.updateTransport(transportId, updatedTransport);
-            return new ResponseEntity<>(updatedTransportation, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    @PutMapping("/edit/{transportId}")
+    public ResponseEntity<ApiResponse<TransportResponse>> editTransport(@PathVariable Long transportId,
+                                                                        @RequestBody TransportRequest updatedTransport) {
+        TransportResponse updatedTransportation = transportService.updateTransport(transportId, updatedTransport);
+        ApiResponse<TransportResponse> response = new ApiResponse<>("Transport updated successfully", true, updatedTransportation);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @DeleteMapping("/delete/{transportId}")
-    public ResponseEntity<String> deleteTransport(@PathVariable Long transportId) {
-        try {
-            transportService.deleteTransport(transportId);
-            return new ResponseEntity<>("Transport deleted successfully", HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public ResponseEntity<ApiResponse<Void>> deleteTransport(@PathVariable Long transportId) {
+        transportService.deleteTransport(transportId);
+        ApiResponse<Void> response = new ApiResponse<>("Transport deleted successfully", true);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/all")
-    public ResponseEntity<Page<TransportResponse>> getAllTransports(
+    public ResponseEntity<ApiResponse<Page<TransportResponse>>> getAllTransports(
             @RequestParam(required = false) Long id,
             @RequestParam(required = false) String vehicleNumber,
             @RequestParam(required = false) String licenceNumber,
@@ -91,33 +78,25 @@ public class TransportController {
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDirection) {
 
-        try {
-            Page<TransportResponse> transportsPage = transportService.getAllTransports(
-                    id,
-                    vehicleNumber,
-                    licenceNumber,
-                    driverId,
-                    available,
-                    page,
-                    size,
-                    sortBy,
-                    sortDirection);
+        Page<TransportResponse> transportsPage = transportService.getAllTransports(
+                id,
+                vehicleNumber,
+                licenceNumber,
+                driverId,
+                available,
+                page,
+                size,
+                sortBy,
+                sortDirection);
 
-            return new ResponseEntity<>(transportsPage, HttpStatus.OK);
-        } catch (CustomNotFoundException e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        ApiResponse<Page<TransportResponse>> response = new ApiResponse<>("Transports fetched successfully", true, transportsPage);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/{transportId}")
-    public ResponseEntity<TransportResponse> getTransportById(@PathVariable Long transportId) {
-        try {
-            TransportResponse transport = transportService.getTransportById(transportId);
-            return new ResponseEntity<>(transport, HttpStatus.OK);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public ResponseEntity<ApiResponse<TransportResponse>> getTransportById(@PathVariable Long transportId) {
+        TransportResponse transport = transportService.getTransportById(transportId);
+        ApiResponse<TransportResponse> response = new ApiResponse<>("Transport fetched successfully", true, transport);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

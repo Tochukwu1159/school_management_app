@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.SessionAverageResponse;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
@@ -36,31 +37,36 @@ public class ResultController {
     private ProfileRepository profileRepository;
 
     @GetMapping("/calculate/{classLevelId}/{studentId}/{term}/{subjectName}")
-    public ResponseEntity<Result> calculateResult(@PathVariable Long classLevelId,@PathVariable Long studentId, @PathVariable String subjectName,@PathVariable Long sessionId,  @PathVariable Long term) {
+    public ResponseEntity<ApiResponse<Result>> calculateResult(@PathVariable Long classLevelId,@PathVariable Long studentId, @PathVariable String subjectName,@PathVariable Long sessionId,  @PathVariable Long term) {
         try {
             // Assuming you have a method in the service to calculate the result
             Result result = resultService.calculateResult(classLevelId, studentId, subjectName,sessionId, term);
-            return ResponseEntity.ok(result);
+            return ResponseEntity.ok(new ApiResponse<>("Result calculated successfully", true, result));
         } catch (Exception e) {
            throw new RuntimeException("Error calculating result: " + e.getMessage());
         }
     }
+
     @PostMapping("/update-average/{sessionId}/{classLevelId}/{termId}")
-    public ResponseEntity<String> calculateAverageResult(@PathVariable Long sessionId,
-                                                         @PathVariable Long classLevelId,
-                                                         @PathVariable Long termId) {
+    public ResponseEntity<ApiResponse<String>> calculateAverageResult(
+            @PathVariable Long sessionId,
+            @PathVariable Long classLevelId,
+            @PathVariable Long termId) {
         try {
             resultService.calculateAverageResult(sessionId, classLevelId, termId);
-            return ResponseEntity.ok("Average scores updated successfully.");
+            ApiResponse<String> response = new ApiResponse<>("Average scores updated successfully.", true);
+            return ResponseEntity.ok(response);
         } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Data not found: " + e.getMessage());
+            ApiResponse<String> response = new ApiResponse<>("Data not found: " + e.getMessage(), false);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating average scores.");
+            ApiResponse<String> response = new ApiResponse<>("Error updating average scores.", false);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
     @PostMapping("/promote")
-    public ResponseEntity<String> promoteStudents(
+    public ResponseEntity<ApiResponse<String>> promoteStudents(
             @RequestParam Long sessionId,
             @RequestParam Long presentClassId,
             @RequestParam Long futureSessionId,
@@ -69,37 +75,39 @@ public class ResultController {
             @RequestParam int cutOff) {
         try {
             resultService.promoteStudents(sessionId, presentClassId, futureSessionId, futurePClassId, futureFClassId, cutOff);
-            return ResponseEntity.ok("Students promoted successfully");
+            return ResponseEntity.ok(new ApiResponse<>("Students promoted successfully", true, null));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error occurred: " + e.getMessage());
+            return ResponseEntity.badRequest().body(new ApiResponse<>("Error occurred: " + e.getMessage(), false, null));
         }
     }
 
-        @PostMapping("/session-average/update")
-        public ResponseEntity<String> updateSessionAverage(@RequestParam Long classBlockId,
-                                                           @RequestParam Long academicYearId) {
-            // Fetch the class block and academic year
-            ClassBlock classBlock = classBlockRepository.findById(classBlockId)
-                    .orElseThrow(() -> new NotFoundException("Class block not found"));
 
-            AcademicSession academicYear = academicSessionRepository.findById(academicYearId)
-                    .orElseThrow(() -> new NotFoundException("Academic year not found"));
+    @PostMapping("/session-average/update")
+    public ResponseEntity<ApiResponse<String>> updateSessionAverage(@RequestParam Long classBlockId,
+                                                                    @RequestParam Long academicYearId) {
+        // Fetch the class block and academic year
+        ClassBlock classBlock = classBlockRepository.findById(classBlockId)
+                .orElseThrow(() -> new NotFoundException("Class block not found"));
 
-            // Fetch all student profiles in the class block
-            List<Profile> studentProfiles = profileRepository.findAllByClassBlock(classBlock);
+        AcademicSession academicYear = academicSessionRepository.findById(academicYearId)
+                .orElseThrow(() -> new NotFoundException("Academic year not found"));
 
-            if (studentProfiles.isEmpty()) {
-                throw new NotFoundException("No students found in the specified class block");
-            }
+        // Fetch all student profiles in the class block
+        List<Profile> studentProfiles = profileRepository.findAllByClassBlock(classBlock);
 
-            // Update session averages
-            resultService.updateSessionAverage(studentProfiles, classBlock, academicYear);
-
-            return ResponseEntity.ok("Session averages updated successfully");
+        if (studentProfiles.isEmpty()) {
+            throw new NotFoundException("No students found in the specified class block");
         }
 
+        // Update session averages
+        resultService.updateSessionAverage(studentProfiles, classBlock, academicYear);
+
+        return ResponseEntity.ok(new ApiResponse<>("Session averages updated successfully", true, null));
+    }
+
+
     @GetMapping("/top5/{classBlockId}/{academicSessionId}")
-    public ResponseEntity<List<SessionAverageResponse>> getTop5StudentsPerClass(
+    public ResponseEntity<ApiResponse<List<SessionAverageResponse>>> getTop5StudentsPerClass(
             @PathVariable Long classBlockId, @PathVariable Long academicSessionId) {
 
         ClassBlock classBlock = classBlockRepository.findById(classBlockId)
@@ -114,12 +122,13 @@ public class ResultController {
                 .map(SessionAverageResponse::fromEntity)
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>("Top 5 students retrieved successfully", true, response));
     }
 
 
+
     @GetMapping("/top5/{academicSessionId}")
-    public ResponseEntity<Map<String, List<SessionAverageResponse>>> getTop5StudentsForAllClasses(
+    public ResponseEntity<ApiResponse<Map<String, List<SessionAverageResponse>>>> getTop5StudentsForAllClasses(
             @PathVariable Long academicSessionId) {
 
         AcademicSession academicSession = academicSessionRepository.findById(academicSessionId)
@@ -136,8 +145,9 @@ public class ResultController {
                                 .collect(Collectors.toList())
                 ));
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>("Top 5 students for all classes retrieved successfully", true, response));
     }
+
 
 
 

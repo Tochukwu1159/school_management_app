@@ -1,15 +1,12 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.ScoreRequest;
-import examination.teacherAndStudents.entity.Result;
 import examination.teacherAndStudents.entity.Score;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
-import examination.teacherAndStudents.service.ResultService;
 import examination.teacherAndStudents.service.ScoreService;
-import examination.teacherAndStudents.utils.ScoreType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,41 +21,56 @@ public class ScoreController {
 
     private final ScoreService scoreService;
 
+    /**
+     * Add a score for a student
+     */
     @PostMapping("/add")
-    public ResponseEntity<String> addScore(@RequestBody @Valid ScoreRequest scoreRequest) {
+    public ResponseEntity<ApiResponse<String>> addScore(@RequestBody @Valid ScoreRequest scoreRequest) {
         try {
             scoreService.addScore(scoreRequest);
-            return ResponseEntity.ok("Score added successfully");
+            ApiResponse<String> response = new ApiResponse<>("Score added successfully", true, null);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error adding score: " + e.getMessage());
+            ApiResponse<String> response = new ApiResponse<>("Error adding score: " + e.getMessage(), false, null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
+    /**
+     * Upload scores from a CSV file
+     */
     @PostMapping("/upload")
-    public ResponseEntity<String> uploadScoresFromCsv( @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ApiResponse<String>> uploadScoresFromCsv(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File is empty. Please upload a valid CSV file.");
+            ApiResponse<String> response = new ApiResponse<>("File is empty. Please upload a valid CSV file.", false, null);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         try {
             scoreService.addScoresFromCsv(file);
-            return ResponseEntity.status(HttpStatus.OK).body("Scores uploaded and processed successfully.");
+            ApiResponse<String> response = new ApiResponse<>("Scores uploaded and processed successfully.", true, null);
+            return ResponseEntity.status(HttpStatus.OK).body(response);
         } catch (CustomInternalServerException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing file: " + e.getMessage());
+            ApiResponse<String> response = new ApiResponse<>("Error processing file: " + e.getMessage(), false, null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unexpected error: " + e.getMessage());
+            ApiResponse<String> response = new ApiResponse<>("Unexpected error: " + e.getMessage(), false, null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
-
-
-@GetMapping("/getByStudent/{studentId}")
-    public ResponseEntity<List<Score>> getScoresByStudent(@PathVariable Long studentId) {
+    /**
+     * Get scores of a student by student ID
+     */
+    @GetMapping("/getByStudent/{studentId}")
+    public ResponseEntity<ApiResponse<List<Score>>> getScoresByStudent(@PathVariable Long studentId) {
         try {
             List<Score> scores = scoreService.getScoresByStudent(studentId);
-            return ResponseEntity.ok(scores);
+            ApiResponse<List<Score>> response = new ApiResponse<>("Scores fetched successfully", true, scores);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
-        throw  new RuntimeException("Error fetching scores: " + e.getMessage());
+            ApiResponse<String> response = new ApiResponse<>("Error fetching scores: " + e.getMessage(), false, null);
+            return null;
         }
     }
 

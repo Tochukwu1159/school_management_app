@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.SickLeaveCancelRequest;
 import examination.teacherAndStudents.dto.SickLeaveRequest;
 import examination.teacherAndStudents.dto.SickLeaveRequestDto;
@@ -19,30 +20,28 @@ public class SickLeaveController {
 
     private final SickLeaveService sickLeaveService;
 
-
     @PostMapping("/apply")
-    public ResponseEntity<String> applyForSickLeave(@RequestBody SickLeaveRequest sickLeaveRequest) {
-      String response =  sickLeaveService.applyForSickLeave(sickLeaveRequest);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<ApiResponse<String>> applyForSickLeave(@RequestBody SickLeaveRequest sickLeaveRequest) {
+        String response = sickLeaveService.applyForSickLeave(sickLeaveRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>("Sick leave applied successfully", true, response));
     }
 
-
     @PutMapping("/approve-reject/{sickLeaveId}")
-    public ResponseEntity<String> updateSickLeave(@PathVariable Long sickLeaveId,
-                                                  @RequestBody SickLeaveRequestDto updatedSickLeave) {
+    public ResponseEntity<ApiResponse<String>> updateSickLeave(@PathVariable Long sickLeaveId,
+                                                               @RequestBody SickLeaveRequestDto updatedSickLeave) {
         String responseMessage = sickLeaveService.processSickLeaveRequest(sickLeaveId, updatedSickLeave);
-        return ResponseEntity.ok(responseMessage);
+        return ResponseEntity.ok(new ApiResponse<>("Sick leave status updated", true, responseMessage));
     }
 
     @PostMapping("/cancel")
-    public ResponseEntity<String> cancelSickLeave(@RequestBody SickLeaveCancelRequest cancelRequest) {
+    public ResponseEntity<ApiResponse<String>> cancelSickLeave(@RequestBody SickLeaveCancelRequest cancelRequest) {
         String result = sickLeaveService.cancelSickLeave(cancelRequest);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(new ApiResponse<>("Sick leave cancelled successfully", true, result));
     }
 
-    @GetMapping("all")
-    public ResponseEntity<List<Leave>> getAllSickLeave() {
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponse<List<Leave>>> getAllSickLeave() {
         List<Leave> sickLeaveList = sickLeaveService.getAllSickLeaves();
-        return ResponseEntity.ok(sickLeaveList);
+        return ResponseEntity.ok(new ApiResponse<>("List of all sick leaves", true, sickLeaveList));
     }
 }

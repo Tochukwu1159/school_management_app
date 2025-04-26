@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.RedeemPointsRequestDto;
 import examination.teacherAndStudents.dto.RedeemResponse;
 import examination.teacherAndStudents.dto.UserPointsResponse;
@@ -15,14 +16,18 @@ public class ReferralController {
     private final ReferralService referralService;
 
     @GetMapping("/points")
-    public ResponseEntity<UserPointsResponse> getUserPoints(@RequestParam Long userId) {
-        return ResponseEntity.ok(referralService.getUserPoints(userId));
+    public ResponseEntity<ApiResponse<UserPointsResponse>> getUserPoints(@RequestParam Long userId) {
+        UserPointsResponse pointsResponse = referralService.getUserPoints(userId);
+        ApiResponse<UserPointsResponse> response = new ApiResponse<>("User points fetched successfully", true, pointsResponse);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/redeem")
-    public ResponseEntity<RedeemResponse> redeemPoints(
+    public ResponseEntity<ApiResponse<RedeemResponse>> redeemPoints(
             @RequestParam Long userId,
             @RequestBody RedeemPointsRequestDto request) {
-        return ResponseEntity.ok(referralService.redeemPoints(userId, request));
+        RedeemResponse redeemResponse = referralService.redeemPoints(userId, request);
+        ApiResponse<RedeemResponse> response = new ApiResponse<>("Points redeemed successfully", true, redeemResponse);
+        return ResponseEntity.ok(response);
     }
 }

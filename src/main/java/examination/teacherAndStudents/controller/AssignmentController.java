@@ -1,9 +1,11 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.AssignmentFilter;
 import examination.teacherAndStudents.dto.AssignmentRequest;
 import examination.teacherAndStudents.dto.AssignmentResponse;
 import examination.teacherAndStudents.service.AssignmentService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,9 +14,11 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.time.ZonedDateTime;
 
 @RestController
 @RequestMapping("/api/v1/assignments")
@@ -24,25 +28,32 @@ public class AssignmentController {
     private final AssignmentService assignmentService;
 
     @PostMapping
-    public ResponseEntity<AssignmentResponse> createAssignment(@RequestBody AssignmentRequest request) {
+    public ResponseEntity<ApiResponse<AssignmentResponse>> createAssignment(@Valid @RequestBody AssignmentRequest request) {
         AssignmentResponse response = assignmentService.saveAssignment(request);
-        return ResponseEntity.ok(response);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(response.getId())
+                .toUri();
+        ApiResponse<AssignmentResponse> apiResponse = new ApiResponse<>("Assignment created successfully", true, response);
+        return ResponseEntity.created(location).body(apiResponse);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AssignmentResponse> updateAssignment(@PathVariable Long id, @RequestBody AssignmentRequest request) {
+    public ResponseEntity<ApiResponse<AssignmentResponse>> updateAssignment(@PathVariable Long id, @Valid @RequestBody AssignmentRequest request) {
         AssignmentResponse response = assignmentService.updateAssignment(id, request);
-        return ResponseEntity.ok(response);
+        ApiResponse<AssignmentResponse> apiResponse = new ApiResponse<>("Assignment updated successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AssignmentResponse> getAssignment(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<AssignmentResponse>> getAssignment(@PathVariable Long id) {
         AssignmentResponse response = assignmentService.getAssignmentById(id);
-        return ResponseEntity.ok(response);
+        ApiResponse<AssignmentResponse> apiResponse = new ApiResponse<>("Assignment retrieved successfully", true, response);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping
-    public ResponseEntity<Page<AssignmentResponse>> getAllAssignments(
+    public ResponseEntity<ApiResponse<Page<AssignmentResponse>>> getAllAssignments(
             @RequestParam(required = false) Long teacherId,
             @RequestParam(required = false) Long subjectId,
             @RequestParam(required = false) String title,
@@ -64,12 +75,14 @@ public class AssignmentController {
         filter.setClassBlockId(classBlockId);
 
         Page<AssignmentResponse> responses = assignmentService.getAllAssignments(filter, pageable);
-        return ResponseEntity.ok(responses);
+        ApiResponse<Page<AssignmentResponse>> apiResponse = new ApiResponse<>("Assignments retrieved successfully", true, responses);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAssignment(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteAssignment(@PathVariable Long id) {
         assignmentService.deleteAssignment(id);
-        return ResponseEntity.noContent().build();
+        ApiResponse<Void> apiResponse = new ApiResponse<>("Assignment deleted successfully", true);
+        return ResponseEntity.ok(apiResponse);
     }
 }

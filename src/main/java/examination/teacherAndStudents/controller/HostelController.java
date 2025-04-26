@@ -1,31 +1,25 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.HostelRequest;
 import examination.teacherAndStudents.dto.HostelResponse;
-import examination.teacherAndStudents.entity.Hostel;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.error_handler.InsufficientBalanceException;
-import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.service.HostelService;
 import examination.teacherAndStudents.utils.AvailabilityStatus;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Optional;
-
 @RestController
 @RequestMapping("/api/v1/hostels")
+@RequiredArgsConstructor
 public class HostelController {
 
-    @Autowired
-    private HostelService hostelService;
+    private final HostelService hostelService;
 
     @GetMapping
-    public ResponseEntity<Page<HostelResponse>> getAllHostels(
+    public ResponseEntity<ApiResponse<Page<HostelResponse>>> getAllHostels(
             @RequestParam(required = false) String hostelName,
             @RequestParam(required = false) AvailabilityStatus availabilityStatus,
             @RequestParam(required = false) Long id,
@@ -43,31 +37,37 @@ public class HostelController {
                 sortBy,
                 sortDirection);
 
-        return ResponseEntity.ok(hostelsPage);
+        ApiResponse<Page<HostelResponse>> apiResponse = new ApiResponse<>("Hostels fetched successfully", true, hostelsPage);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<HostelResponse> getHostelById(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<HostelResponse>> getHostelById(@PathVariable Long id) {
         HostelResponse hostel = hostelService.getHostelById(id);
-        return ResponseEntity.ok(hostel);
+        ApiResponse<HostelResponse> apiResponse = new ApiResponse<>("Hostel fetched successfully", true, hostel);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @PostMapping("/add")
-    public ResponseEntity<HostelResponse> createHostel(@RequestBody HostelRequest hostel) {
-        HostelResponse createdHostel = hostelService.createHostel(hostel);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdHostel);
+    public ResponseEntity<ApiResponse<HostelResponse>> createHostel(@RequestBody HostelRequest hostelRequest) {
+        HostelResponse createdHostel = hostelService.createHostel(hostelRequest);
+        ApiResponse<HostelResponse> apiResponse = new ApiResponse<>("Hostel created successfully", true, createdHostel);
+        return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<HostelResponse> updateHostel(@PathVariable Long id, @RequestBody HostelRequest updatedHostel) {
+    public ResponseEntity<ApiResponse<HostelResponse>> updateHostel(
+            @PathVariable Long id,
+            @RequestBody HostelRequest updatedHostel) {
         HostelResponse hostel = hostelService.updateHostel(id, updatedHostel);
-        return ResponseEntity.ok(hostel);
+        ApiResponse<HostelResponse> apiResponse = new ApiResponse<>("Hostel updated successfully", true, hostel);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteHostel(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteHostel(@PathVariable Long id) {
         hostelService.deleteHostel(id);
-        return ResponseEntity.ok("Hostel deleted successfully");
+        ApiResponse<Void> apiResponse = new ApiResponse<>("Hostel deleted successfully", true, null);
+        return ResponseEntity.ok(apiResponse);
     }
-
 }

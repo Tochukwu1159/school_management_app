@@ -1,13 +1,12 @@
 package examination.teacherAndStudents.controller;
+
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.BookRequest;
 import examination.teacherAndStudents.dto.BookResponse;
-import examination.teacherAndStudents.entity.Book;
-import examination.teacherAndStudents.entity.BookBorrowing;
+import examination.teacherAndStudents.dto.BookBorrowingResponse;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.service.LibraryService;
-import examination.teacherAndStudents.utils.AccountUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -15,7 +14,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,37 +23,40 @@ public class LibraryController {
     private final LibraryService libraryService;
 
     @PostMapping("/addBook")
-    public ResponseEntity<Book> addBook(@RequestBody BookRequest book) {
+    public ResponseEntity<ApiResponse<BookResponse>> addBook(@RequestBody BookRequest book) {
         try {
-            Book addedBook = libraryService.addBook(book);
-            return ResponseEntity.ok(addedBook);
+            BookResponse addedBook = libraryService.addBook(book);
+            return ResponseEntity.ok(new ApiResponse<>("Book added successfully", true, addedBook));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Error adding book: " + e.getMessage(), false));
         }
     }
 
     @PutMapping("/editBook/{bookId}")
-    public ResponseEntity<Book> editBook(@PathVariable Long bookId, @RequestBody BookRequest updatedBook) {
+    public ResponseEntity<ApiResponse<BookResponse>> editBook(@PathVariable Long bookId, @RequestBody BookRequest updatedBook) {
         try {
-            Book editedBook = libraryService.editBook(bookId, updatedBook);
-            return ResponseEntity.ok(editedBook);
+            BookResponse editedBook = libraryService.editBook(bookId, updatedBook);
+            return ResponseEntity.ok(new ApiResponse<>("Book updated successfully", true, editedBook));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Error updating book: " + e.getMessage(), false));
         }
     }
 
     @DeleteMapping("/deleteBook/{bookId}")
-    public ResponseEntity<String> deleteBook(@PathVariable Long bookId) {
+    public ResponseEntity<ApiResponse<String>> deleteBook(@PathVariable Long bookId) {
         try {
             libraryService.deleteBook(bookId);
-            return ResponseEntity.ok("Book deleted successfully");
+            return ResponseEntity.ok(new ApiResponse<>("Book deleted successfully", true, "Book ID: " + bookId));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting book: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Error deleting book: " + e.getMessage(), false));
         }
     }
 
     @GetMapping("/all_books")
-    public ResponseEntity<Page<BookResponse>> getAllBooks(
+    public ResponseEntity<ApiResponse<Page<BookResponse>>> getAllBooks(
             @RequestParam(required = false) Long id,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) String author,
@@ -77,44 +78,48 @@ public class LibraryController {
                     pageSize,
                     sortBy,
                     sortDirection);
-
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(new ApiResponse<>("Books retrieved successfully", true, response));
         } catch (CustomNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponse<>("Unauthorized: " + e.getMessage(), false));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Error retrieving books: " + e.getMessage(), false));
         }
     }
+
     @PostMapping("/borrow_book")
-    public ResponseEntity<BookBorrowing> borrowBook( @RequestParam Long bookId, @RequestParam LocalDateTime dueDate) {
+    public ResponseEntity<ApiResponse<BookBorrowingResponse>> borrowBook(@RequestParam Long bookId, @RequestParam LocalDateTime dueDate) {
         try {
-            BookBorrowing borrowing = libraryService.borrowBook(bookId, dueDate);
-            return ResponseEntity.ok(borrowing);
+            BookBorrowingResponse borrowing = libraryService.borrowBook(bookId, dueDate);
+            return ResponseEntity.ok(new ApiResponse<>("Book borrowed successfully", true, borrowing));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Error borrowing book: " + e.getMessage(), false));
         }
     }
 
     @PostMapping("/returnBook/{borrowingId}")
-    public ResponseEntity<BookBorrowing> returnBook(@PathVariable Long borrowingId) {
+    public ResponseEntity<ApiResponse<BookBorrowingResponse>> returnBook(@PathVariable Long borrowingId) {
         try {
-            BookBorrowing returnedBook = libraryService.returnBook(borrowingId);
-            return ResponseEntity.ok(returnedBook);
+            BookBorrowingResponse returnedBook = libraryService.returnBook(borrowingId);
+            return ResponseEntity.ok(new ApiResponse<>("Book returned successfully", true, returnedBook));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Error returning book: " + e.getMessage(), false));
         }
     }
 
     @PutMapping("/updateBookQuantity/{bookId}")
-    public ResponseEntity<Book> updateBookQuantity(
+    public ResponseEntity<ApiResponse<BookResponse>> updateBookQuantity(
             @PathVariable Long bookId,
             @RequestParam int quantityToAdd) {
         try {
-            Book updatedBook = libraryService.updateBookQuantity(bookId, quantityToAdd);
-            return ResponseEntity.ok(updatedBook);
+            BookResponse updatedBook = libraryService.updateBookQuantity(bookId, quantityToAdd);
+            return ResponseEntity.ok(new ApiResponse<>("Book quantity updated successfully", true, updatedBook));
         } catch (Exception e) {
-            throw new RuntimeException("Error updating book quantity: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("Error updating book quantity: " + e.getMessage(), false));
         }
     }
 }
-

@@ -1,42 +1,43 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.MedicalRecordRequest;
 import examination.teacherAndStudents.dto.MedicationDto;
 import examination.teacherAndStudents.service.MedicalRecordService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/medical-records")
+@RequiredArgsConstructor
 public class MedicalRecordController {
 
     private final MedicalRecordService medicalRecordService;
 
-    @Autowired
-    public MedicalRecordController(MedicalRecordService medicalRecordService) {
-        this.medicalRecordService = medicalRecordService;
+    @PostMapping("/create/{studentId}")
+    public ResponseEntity<ApiResponse<MedicationDto>> createMedicalRecord(@PathVariable Long studentId, @RequestBody MedicalRecordRequest medicalRecordRequest) {
+        MedicationDto createdRecord = medicalRecordService.addMedicalRecord(studentId, medicalRecordRequest);
+        ApiResponse<MedicationDto> apiResponse = new ApiResponse<>("Medical record created successfully", true, createdRecord);
+        return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
-    @PostMapping("/create/{studentId}")
-    public ResponseEntity<MedicationDto> createMedicalRecord(@PathVariable Long studentId, @RequestBody MedicalRecordRequest medicalRecordRequest) {
-        MedicationDto createdRecord = medicalRecordService.addMedicalRecord(studentId,medicalRecordRequest);
-        return new ResponseEntity<>(createdRecord, HttpStatus.CREATED);
-    }
     @PutMapping("/update/{studentId}")
-    public ResponseEntity<MedicationDto> updateMedicalRecord(@PathVariable Long studentId, @RequestBody MedicalRecordRequest medicalRecordRequest) {
-        MedicationDto updatedRecord = medicalRecordService.updateMedicalRecord(studentId,medicalRecordRequest);
-        return new ResponseEntity<>(updatedRecord, HttpStatus.OK);
+    public ResponseEntity<ApiResponse<MedicationDto>> updateMedicalRecord(@PathVariable Long studentId, @RequestBody MedicalRecordRequest medicalRecordRequest) {
+        MedicationDto updatedRecord = medicalRecordService.updateMedicalRecord(studentId, medicalRecordRequest);
+        ApiResponse<MedicationDto> apiResponse = new ApiResponse<>("Medical record updated successfully", true, updatedRecord);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/all")
-    public ResponseEntity<Page<MedicationDto>> getAllMedicalRecords(
+    public ResponseEntity<Page<ApiResponse<MedicationDto>>> getAllMedicalRecords(
             @RequestParam(required = false) Long patientId,
             @RequestParam(required = false) Long attendantId,
             @RequestParam(required = false) Long id,
@@ -56,9 +57,16 @@ public class MedicalRecordController {
                 sortBy,
                 sortDirection);
 
-        return new ResponseEntity<>(records, HttpStatus.OK);
+        Page<ApiResponse<MedicationDto>> apiResponsePage = new PageImpl<>(
+                records.getContent().stream()
+                        .map(record -> new ApiResponse<>("Medical record fetched successfully", true, record))
+                        .collect(Collectors.toList()),
+                records.getPageable(),
+                records.getTotalElements()
+        );
+
+        return ResponseEntity.ok(apiResponsePage);
     }
 
-
-    // Other methods for updating, retrieving, or deleting medical records can be added here
+    // Other methods for retrieving or deleting medical records can be added here
 }

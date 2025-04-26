@@ -1,9 +1,6 @@
 package examination.teacherAndStudents.controller;
 
-import examination.teacherAndStudents.dto.ApplicationReviewDto;
-import examination.teacherAndStudents.dto.PaymentProviderRequest;
-import examination.teacherAndStudents.dto.PaymentResponse;
-import examination.teacherAndStudents.dto.UserResponse;
+import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.error_handler.BadRequestException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.PaymentProcessingException;
@@ -26,39 +23,22 @@ public class ApplicationController {
      * Endpoint to initiate payment for an application fee.
      */
     @PostMapping("/applications/{applicationId}/pay")
-    public ResponseEntity<PaymentResponse> payApplicationFee(
+    public ResponseEntity<ApiResponse<PaymentResponse>> payApplicationFee(
             @PathVariable Long applicationId,
             @Valid @RequestBody PaymentProviderRequest paymentRequest) {
         try {
             PaymentResponse response = applicationService.payApplicationFee(applicationId, paymentRequest);
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            ApiResponse<PaymentResponse> apiResponse = new ApiResponse<>("Payment initiated successfully", true, response);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
         } catch (CustomNotFoundException e) {
-            return new ResponseEntity<>(
-                    PaymentResponse.builder()
-                            .reference(null)
-                            .authorizationUrl(null)
-                            .amount(null)
-                            .build(), // Minimal response for error
-                    HttpStatus.NOT_FOUND
-            );
+            ApiResponse<PaymentResponse> apiResponse = new ApiResponse<>("Application not found", false, null);
+            return new ResponseEntity<>(apiResponse, HttpStatus.NOT_FOUND);
         } catch (IllegalStateException | PaymentProcessingException e) {
-            return new ResponseEntity<>(
-                    PaymentResponse.builder()
-                            .reference(null)
-                            .authorizationUrl(null)
-                            .amount(null)
-                            .build(),
-                    HttpStatus.BAD_REQUEST
-            );
+            ApiResponse<PaymentResponse> apiResponse = new ApiResponse<>("Payment processing failed", false, null);
+            return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
         } catch (RuntimeException e) {
-            return new ResponseEntity<>(
-                    PaymentResponse.builder()
-                            .reference(null)
-                            .authorizationUrl(null)
-                            .amount(null)
-                            .build(),
-                    HttpStatus.FORBIDDEN
-            );
+            ApiResponse<PaymentResponse> apiResponse = new ApiResponse<>("Unexpected error occurred", false, null);
+            return new ResponseEntity<>(apiResponse, HttpStatus.FORBIDDEN);
         }
     }
 
@@ -66,37 +46,32 @@ public class ApplicationController {
      * Endpoint to review an admission application.
      */
     @PutMapping("/applications/{applicationId}/review")
-//    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponse> reviewApplication(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserResponse>> reviewApplication(
             @PathVariable Long applicationId,
             @Valid @RequestBody ApplicationReviewDto review) {
         try {
             UserResponse response = applicationService.reviewApplication(applicationId, review);
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Application reviewed successfully", true, response);
+            return new ResponseEntity<>(apiResponse, HttpStatus.OK);
         } catch (CustomNotFoundException e) {
-            return new ResponseEntity<>(
-                    UserResponse.builder()
-                            .responseCode("404")
-                            .responseMessage(e.getMessage())
-                            .build(),
-                    HttpStatus.NOT_FOUND
-            );
+            ApiResponse<UserResponse> apiResponse = new ApiResponse<>(e.getMessage(), false, UserResponse.builder()
+                    .responseCode("404")
+                    .responseMessage(e.getMessage())
+                    .build());
+            return new ResponseEntity<>(apiResponse, HttpStatus.NOT_FOUND);
         } catch (BadRequestException e) {
-            return new ResponseEntity<>(
-                    UserResponse.builder()
-                            .responseCode("400")
-                            .responseMessage(e.getMessage())
-                            .build(),
-                    HttpStatus.BAD_REQUEST
-            );
+            ApiResponse<UserResponse> apiResponse = new ApiResponse<>(e.getMessage(), false, UserResponse.builder()
+                    .responseCode("400")
+                    .responseMessage(e.getMessage())
+                    .build());
+            return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
         } catch (RuntimeException e) {
-            return new ResponseEntity<>(
-                    UserResponse.builder()
-                            .responseCode("403")
-                            .responseMessage(e.getMessage())
-                            .build(),
-                    HttpStatus.FORBIDDEN
-            );
+            ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Unexpected error occurred", false, UserResponse.builder()
+                    .responseCode("403")
+                    .responseMessage(e.getMessage())
+                    .build());
+            return new ResponseEntity<>(apiResponse, HttpStatus.FORBIDDEN);
         }
     }
 }

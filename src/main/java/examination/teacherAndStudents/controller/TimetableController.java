@@ -1,11 +1,11 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.TimetableCreationRequest;
 import examination.teacherAndStudents.entity.SubjectSchedule;
 import examination.teacherAndStudents.entity.Timetable;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.TimetableRepository;
-import examination.teacherAndStudents.service.SubjectService;
 import examination.teacherAndStudents.service.TimetableService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -13,19 +13,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/timetable")
 public class TimetableController {
+
+    private final TimetableService timetableService;
+    private final TimetableRepository timetableRepository;
+
     @Autowired
-    private TimetableService timetableService;
-    @Autowired
-    private TimetableRepository timetableRepository;
+    public TimetableController(TimetableService timetableService, TimetableRepository timetableRepository) {
+        this.timetableService = timetableService;
+        this.timetableRepository = timetableRepository;
+    }
 
     @PostMapping("/create")
-    public ResponseEntity<String> createTimetable(@RequestBody TimetableCreationRequest request) {
+    public ResponseEntity<ApiResponse<String>> createTimetable(@RequestBody TimetableCreationRequest request) {
         Timetable timetable = timetableService.createTimetable(
                 request.getDayOfWeek(),
                 request.getSubjectSchedules(),
@@ -35,11 +37,12 @@ public class TimetableController {
                 request.getClassBlockId()
         );
 
-        return ResponseEntity.ok("Timetable created with ID: " + timetable.getId());
+        ApiResponse<String> response = new ApiResponse<>("Timetable created successfully", true, "Timetable created with ID: " + timetable.getId());
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/update/{timetableId}")
-    public ResponseEntity<String> updateTimetable(@PathVariable Long timetableId, @RequestBody TimetableCreationRequest request) {
+    public ResponseEntity<ApiResponse<String>> updateTimetable(@PathVariable Long timetableId, @RequestBody TimetableCreationRequest request) {
         Timetable updatedTimetable = timetableService.updateTimetable(
                 timetableId,
                 request.getDayOfWeek(),
@@ -47,44 +50,53 @@ public class TimetableController {
                 request.getTerm(),
                 request.getYearId()
         );
-        return ResponseEntity.ok("Timetable created with ID: " + timetableId);
 
+        ApiResponse<String> response = new ApiResponse<>("Timetable updated successfully", true, "Timetable updated with ID: " + updatedTimetable.getId());
+        return ResponseEntity.ok(response);
     }
+
     @GetMapping("/{timetableId}")
-    public ResponseEntity<Timetable> getTimetableById(@PathVariable Long timetableId){
-        Timetable timeTable =   timetableService.getTimetableById(timetableId);
-        return new ResponseEntity<>(timeTable, HttpStatus.OK);
+    public ResponseEntity<ApiResponse<Timetable>> getTimetableById(@PathVariable Long timetableId) {
+        Timetable timetable = timetableService.getTimetableById(timetableId);
+
+        ApiResponse<Timetable> response = new ApiResponse<>("Timetable fetched successfully", true, timetable);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/all")
-    public ResponseEntity<Page<Timetable>> getAllTimetables(
+    public ResponseEntity<ApiResponse<Page<Timetable>>> getAllTimetables(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDirection) {
 
         Page<Timetable> timetables = timetableService.getAllTimetables(page, size, sortBy, sortDirection);
-        return new ResponseEntity<>(timetables, HttpStatus.OK);
+
+        ApiResponse<Page<Timetable>> response = new ApiResponse<>("Timetables fetched successfully", true, timetables);
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping
-    public ResponseEntity<Page<SubjectSchedule>> getSubjectSchedules(
+    @GetMapping("/subjects")
+    public ResponseEntity<ApiResponse<Page<SubjectSchedule>>> getSubjectSchedules(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDirection) {
 
         Page<SubjectSchedule> subjectSchedules = timetableService.getAllSubjectSchedules(page, size, sortBy, sortDirection);
-        return new ResponseEntity<>(subjectSchedules, HttpStatus.OK);
+
+        ApiResponse<Page<SubjectSchedule>> response = new ApiResponse<>("Subject schedules fetched successfully", true, subjectSchedules);
+        return ResponseEntity.ok(response);
     }
 
-
-
-    public void deleteTimetable(Long timetableId) {
+    @DeleteMapping("/{timetableId}")
+    public ResponseEntity<ApiResponse<Void>> deleteTimetable(@PathVariable Long timetableId) {
         if (!timetableRepository.existsById(timetableId)) {
             throw new CustomNotFoundException("Timetable not found with ID: " + timetableId);
         }
 
         timetableService.deleteTimetable(timetableId);
+        ApiResponse<Void> response = new ApiResponse<>("Timetable deleted successfully", true, null);
+        return ResponseEntity.ok(response);
     }
 }
