@@ -86,7 +86,7 @@ public class AccountUtils {
         do {
             StringBuilder randomNumbers = new StringBuilder();
             // Generate 4 random numbers
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 8; i++) {
                 int randomNumber = random.nextInt(10);
                 randomNumbers.append(randomNumber);
             }

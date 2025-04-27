@@ -11,61 +11,66 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
         }
 
         .container {
-            background-color: #fff;
+            background-color: #ffffff;
             max-width: 600px;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
             text-align: center;
         }
 
         h1 {
             color: #80B918;
-            font-size: 24px;
-            margin: 0;
+            font-size: 28px;
+            margin-bottom: 20px;
         }
 
         p {
             font-size: 16px;
-            line-height: 1.5;
-            color: #0b0c0c;
+            line-height: 1.6;
+            color: #333333;
             margin: 20px 0;
         }
 
         blockquote {
             border-left: 5px solid #b1b4b6;
-            padding: 10px 0 0.1px 15px;
+            padding-left: 15px;
+            margin: 20px 0;
+            font-style: italic;
+            color: #555555;
         }
 
-        a {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #80B918;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
-            transition: background-color 0.3s;
+        h2, h3 {
+            margin: 10px 0;
+            color: #444444;
         }
 
-        a:hover {
-            background-color: #68A216;
+        h2 {
+            font-size: 22px;
+            margin-top: 30px;
+        }
+
+        h3 {
+            font-size: 18px;
+            font-weight: normal;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1 th:text="'Welcome, ' + ${name}"></h1>
-    <p>Thank you for successfully completing the registration process, you are an Admin. As an admin, the progress of this school should be your top priority.</p>
-    <h2>Below is your login credentials</h2>
-    <h3 th:text=" 'User Name : ' + ${username}"></h5>
-    <h3 th:text=" 'Password : ' + ${password}"></h3>
+    <h1 th:text="'Welcome, ' + ${name}">Welcome, Admin</h1>
+    <p>Thank you for successfully completing the registration process. You are now an Admin. As an admin, the progress of this school should be your top priority.</p>
+
+    <h2>Your Login Credentials</h2>
+    <h3 th:text="'Username: ' + ${username}">Username: example</h3>
+    <h3 th:text="'Password: ' + ${password}">Password: example</h3>
+
     <blockquote>
-        <p>Let's work together to build future leaders</p>
+        <p>Let's work together to build future leaders.</p>
     </blockquote>
 </div>
 </body>
