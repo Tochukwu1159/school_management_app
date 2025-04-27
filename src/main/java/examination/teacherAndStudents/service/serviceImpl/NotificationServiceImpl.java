@@ -137,7 +137,7 @@ public class NotificationServiceImpl implements NotificationService {
         Objects.requireNonNull(message, "Message cannot be null");
 
         // Find user profile
-        Profile userProfile = profileRepository.findById(userId)
+        Profile userProfile = profileRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User profile not found with ID: " + userId));
 
         // Resolve transaction if provided
