@@ -128,6 +128,10 @@ public class School {
     @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<User> users;
 
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "payment_account_id")
+    private PaymentAccount paymentAccount;
+
     @Column(nullable = false)
     private Integer numberOfStudents = 0;
 
