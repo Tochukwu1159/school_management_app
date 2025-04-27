@@ -48,11 +48,13 @@ public class AccountUtils {
 
     // Constructor-based injection
     @Autowired
-    public AccountUtils(UserRepository userRepository, ProfileRepository profileRepository, LibraryMemberRepository libraryMemberRepository, WalletRepository walletRepository) {
+    public AccountUtils(UserRepository userRepository, ProfileRepository profileRepository, LibraryMemberRepository libraryMemberRepository, WalletRepository walletRepository, SchoolRepository schoolRepository
+    ) {
         AccountUtils.userRepository = userRepository;
         AccountUtils.profileRepository = profileRepository;
         AccountUtils.libraryMemberRepository = libraryMemberRepository;
         AccountUtils.walletRepository = walletRepository;
+        AccountUtils.schoolRepository = schoolRepository;
     }
 
 
