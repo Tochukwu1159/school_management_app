@@ -347,7 +347,7 @@ public class UserServiceImpl implements UserService {
                 .contractType(userRequest.getContractType())
                 .academicQualification(userRequest.getAcademicQualification())
                 .admissionDate(userRequest.getAdmissionDate())
-                .uniqueRegistrationNumber(AccountUtils.generateStaffId(savedUser.getSchool().getSchoolCode()))
+                .uniqueRegistrationNumber(AccountUtils.generateAdminId())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .user(savedUser)
                 //                .profilePicture(imageUrl)

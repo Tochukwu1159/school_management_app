@@ -76,7 +76,7 @@ public class AccountUtils {
         return studentId;
     }
 
-    public static final String generateAdminId(String schoolCode) {
+    public static final String generateAdminId() {
         int currentYear = Calendar.getInstance().get(Calendar.YEAR);
         String yearString = String.valueOf(currentYear);
 
@@ -92,7 +92,7 @@ public class AccountUtils {
             }
 
             // Combine current year + schoolCode + 4 random numbers
-            adminId = yearString + schoolCode + randomNumbers;
+            adminId = yearString  + randomNumbers;
         } while (profileRepository.existsByUniqueRegistrationNumber(adminId));
 
         return adminId;
