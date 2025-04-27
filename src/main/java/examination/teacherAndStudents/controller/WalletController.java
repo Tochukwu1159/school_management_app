@@ -14,11 +14,11 @@ import java.math.BigDecimal;
 public class WalletController {
 
     private final WalletService walletService;
-    @PostMapping("/fund")
-    public ResponseEntity<ApiResponse<PaymentResponse>> fundWallet(@RequestBody FundWalletRequest fundWalletRequest) throws Exception {
-       PaymentResponse paymentResponse = walletService.fundWallet(fundWalletRequest);
-        return new ResponseEntity<>(new ApiResponse<>("success",true,paymentResponse), HttpStatus.OK);
-    }
+//    @PostMapping("/fund")
+//    public ResponseEntity<ApiResponse<PaymentResponse>> fundWallet(@RequestBody FundWalletRequest fundWalletRequest) throws Exception {
+//       PaymentResponse paymentResponse = walletService.fundWallet(fundWalletRequest);
+//        return new ResponseEntity<>(new ApiResponse<>("success",true,paymentResponse), HttpStatus.OK);
+//    }
 
     @GetMapping("student/balance")
     public ResponseEntity<ApiResponse<WalletResponse>> getProfileWalletBalance() {
