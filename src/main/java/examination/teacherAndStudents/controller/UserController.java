@@ -34,27 +34,83 @@ public class UserController {
     private final ProfileRepository profileRepository;
 
     @PostMapping("/create")
-    public UserResponse createStudent(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
-        return userService.createStudent(userRequest);
+    public ResponseEntity<ApiResponse<UserResponse>> createStudent(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
+        UserResponse userResponse = userService.createStudent(userRequest); // Your actual logic here
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Student created successfully", true, userResponse);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @PostMapping("/self-onboarding")
-    public UserResponse selfRegisterStudent(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
-        return userService.selfRegisterStudent(userRequest);
+    public ResponseEntity<ApiResponse<UserResponse>> selfRegisterStudent(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
+        UserResponse userResponse = userService.selfRegisterStudent(userRequest); // Your actual logic here
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Self-registration successful", true, userResponse);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @PostMapping("/admin/create")
-    public UserResponse createAdmin(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
-        return userService.createAdmin(userRequest);
+    public ResponseEntity<ApiResponse<UserResponse>> createAdmin(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
+        UserResponse userResponse = userService.createAdmin(userRequest); // Your actual logic here
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Admin created successfully", true, userResponse);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @PostMapping("/teacher/create")
-    public UserResponse createStaff(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
-        return userService.createStaff(userRequest);
+    public ResponseEntity<ApiResponse<UserResponse>> createStaff(@RequestBody @Valid UserRequestDto userRequest) throws MessagingException {
+        UserResponse userResponse = userService.createStaff(userRequest); // Your actual logic here
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Staff created successfully", true, userResponse);
+        return ResponseEntity.ok(apiResponse);
+    }
+
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>>  loginUser(@RequestBody @Valid LoginRequest loginRequest) {
+        LoginResponse loginResponse =userService.loginUser(loginRequest); // Your actual logic here
+        ApiResponse<LoginResponse> apiResponse = new ApiResponse<>("Login successful", true, loginResponse);
+        return ResponseEntity.ok(apiResponse);
+
+    }
+
+
+    @PostMapping("/admin/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> loginAmin(@RequestBody @Valid LoginRequest loginRequest) {
+        LoginResponse loginResponse = userService.loginAdmin(loginRequest); // Your actual logic here
+        ApiResponse<LoginResponse> apiResponse = new ApiResponse<>("Admin login successful", true, loginResponse);
+        return ResponseEntity.ok(apiResponse);
+
+    }
+
+    @PostMapping("/edit")
+    public ResponseEntity<ApiResponse<UserResponse>> editUserDetails(@RequestBody @Valid EditUserRequest editUserDto) {
+        UserResponse userResponse = userService.editUserDetails(editUserDto); // Your actual logic here
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>("User details updated successfully", true, userResponse);
+        return ResponseEntity.ok(apiResponse);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<UserResponse>> forgotPassword(@RequestBody @Valid ForgotPasswordRequest forgotPasswordRequest) {
+        UserResponse userResponse = userService.forgotPassword(forgotPasswordRequest); // Your actual logic here
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Password reset link sent", true, userResponse);
+        return ResponseEntity.ok(apiResponse);
+    }
+
+    @GetMapping("/resetPassword")
+    public ResponseEntity<ApiResponse<UserResponse>> resetPassword(@RequestBody @Valid PasswordResetRequest passwordResetRequest, @RequestParam("token") String token) {
+        UserResponse userResponse = userService.resetPassword(passwordResetRequest,token); // Your actual logic here
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Password reset successfully", true, userResponse);
+        return ResponseEntity.ok(apiResponse);
+    }
+
+
+
+    @PostMapping("/update")
+    public ResponseEntity<ApiResponse<UserResponse>> updatePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest) {
+        UserResponse userResponse = new UserResponse(); // Your actual logic here
+        ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Password updated successfully", true, userResponse);
+        return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/findAll")
-    public ResponseEntity<Page<UserResponse>> findAllStudentsFilteredAndPaginated(
+    public ResponseEntity<ApiResponse<Page<UserResponse>>> findAllStudentsFilteredAndPaginated(
             @RequestParam(required = false) Long classId,
             @RequestParam(required = false) Long subClassId,
             @RequestParam(required = false) Long academicYearId,
@@ -66,113 +122,74 @@ public class UserController {
             @RequestParam(defaultValue = "id") String sortBy) {
 
         Page<UserResponse> allStudents = userService.getAllStudentsFilteredAndPaginated(
-                classId,
-                subClassId,
-                academicYearId,
-                uniqueRegistrationNumber,
-                firstName,
-                lastName,
-                pageNo,
-                pageSize,
-                sortBy);
+                classId, subClassId, academicYearId,
+                uniqueRegistrationNumber, firstName, lastName,
+                pageNo, pageSize, sortBy
+        );
 
-        return new ResponseEntity<>(allStudents, HttpStatus.OK);
+        ApiResponse<Page<UserResponse>> response = new ApiResponse<>("Students retrieved successfully", true, allStudents);
+        return ResponseEntity.ok(response);
     }
 
 
-    @PostMapping("/login")
-    public LoginResponse loginUser(@RequestBody @Valid LoginRequest loginRequest) {
-        return userService.loginUser(loginRequest);
-
-    }
-
-
-    @PostMapping("/admin/login")
-    public LoginResponse loginAmin(@RequestBody @Valid LoginRequest loginRequest) {
-        return userService.loginAdmin(loginRequest);
-
-    }
-
-    @PostMapping("/edit")
-    public UserResponse editUserDetails(@RequestBody @Valid EditUserRequest editUserDto) {
-        return userService.editUserDetails(editUserDto);
-    }
-
-    @PostMapping("/forgot-password")
-    public UserResponse forgotPassword(@RequestBody @Valid ForgotPasswordRequest forgotPasswordRequest) {
-        return userService.forgotPassword(forgotPasswordRequest);
-    }
-
-    @GetMapping("/resetPassword")
-    public UserResponse resetPassword(@RequestBody @Valid PasswordResetRequest passwordResetRequest, @RequestParam("token") String token) {
-        return userService.resetPassword(passwordResetRequest, token);
-    }
-
-
-
-    @PostMapping("/update")
-    public UserResponse updatePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest) {
-        return userService.updatePassword(changePasswordRequest);
-    }
 
     @DeleteMapping("/delete/{userId}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<String>> deleteUser(@PathVariable Long userId) {
         boolean deleted = userService.deleteUser(userId).hasBody();
         if (deleted) {
-            return ResponseEntity.noContent().build();
+            return ResponseEntity.ok(new ApiResponse<>("User deleted successfully", true));
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse<>("User not found", false));
         }
     }
 
     @GetMapping("/card/{uniqueRegistrationNumber}")
-    public ResponseEntity<UserResponse> generateIdCard(@PathVariable String uniqueRegistrationNumber) {
+    public ResponseEntity<ApiResponse<UserResponse>> generateIdCard(@PathVariable String uniqueRegistrationNumber) {
         UserResponse userResponse = userService.generateIdCard(uniqueRegistrationNumber);
-        return new ResponseEntity<>(userResponse, HttpStatus.OK);
-
+        ApiResponse<UserResponse> response = new ApiResponse<>("ID Card generated successfully", true, userResponse);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/active-users")
-    public ResponseEntity<SchoolActiveUsersResponse> getActiveUsersStatistics() {
-        return ResponseEntity.ok(userService.getActiveUsersStatistics());
+    public ResponseEntity<ApiResponse<SchoolActiveUsersResponse>> getActiveUsersStatistics() {
+        ApiResponse<SchoolActiveUsersResponse> response = new ApiResponse<>("Active users statistics fetched successfully", true, userService.getActiveUsersStatistics());
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{studentId}/updateClassLevel")
-    public ResponseEntity<UserResponse> updateStudentClassLevel(
+    public ResponseEntity<ApiResponse<UserResponse>> updateStudentClassLevel(
             @PathVariable Long studentId,
             @RequestParam Long newSubClassLevelId) {
         try {
-//            UserResponse response = userService.updateStudentClassLevel(studentId, newSubClassLevelId);
-//            return ResponseEntity.ok(response);
+//            UserResponse updatedStudent = userService.updateStudentClassLevel(studentId, newSubClassLevelId);
+//            ApiResponse<UserResponse> response = new ApiResponse<>("Class level updated successfully", true, updatedStudent);
+            ApiResponse<UserResponse> response  = null;
+            return ResponseEntity.ok(response);
         } catch (CustomNotFoundException e) {
-            throw new ResourceNotFoundException("User not found " + e);
+            throw new ResourceNotFoundException("User not found: " + e.getMessage());
         } catch (BadRequestException e) {
-            throw new ResourceNotFoundException("Update failed " + e);
+            throw new ResourceNotFoundException("Update failed: " + e.getMessage());
         }
-        return null;
     }
-
 
     @PatchMapping("/{userId}/status")
-    public ResponseEntity<String> updateUserStatus(@PathVariable Long userId,
-                                                   @RequestBody UserStatusUpdateRequest statusUpdateRequest) {
+    public ResponseEntity<ApiResponse<String>> updateUserStatus(@PathVariable Long userId,
+                                                                @RequestBody UserStatusUpdateRequest statusUpdateRequest) {
         try {
-            // Convert action to ProfileStatus and update user status
             ProfileStatus newStatus = ProfileStatus.valueOf(statusUpdateRequest.getAction().toUpperCase());
-            String responseMessage = userService.updateUserStatus(userId, newStatus, statusUpdateRequest.getSuspensionEndDate()); // No need for suspensionEndDate here
-            return ResponseEntity.ok(responseMessage);
+            String responseMessage = userService.updateUserStatus(userId, newStatus, statusUpdateRequest.getSuspensionEndDate());
+            return ResponseEntity.ok(new ApiResponse<>("Status updated successfully", true, responseMessage));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid status action.");
+            return ResponseEntity.badRequest().body(new ApiResponse<>("Invalid status action", false));
         } catch (NotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse<>(e.getMessage(), false));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating user status: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>("Error updating user status: " + e.getMessage(), false));
         }
     }
 //
-//
 @GetMapping("/profiles")
-public ResponseEntity<Page<UserProfileResponse>> getProfiles(
+public ResponseEntity<ApiResponse<Page<UserProfileResponse>>> getProfiles(
         @RequestParam("role") String role,
         @RequestParam("status") String status,
         @RequestParam(value = "page", defaultValue = "0") int page,
@@ -182,7 +199,8 @@ public ResponseEntity<Page<UserProfileResponse>> getProfiles(
     status = status.toUpperCase();
     Page<UserProfileResponse> profiles = userService.getProfilesByRoleAndStatus(role, status, page, size);
 
-    return ResponseEntity.ok(profiles);
+    ApiResponse<Page<UserProfileResponse>> response = new ApiResponse<>("Profiles retrieved successfully", true, profiles);
+    return ResponseEntity.ok(response);
+}
 }
 
-}

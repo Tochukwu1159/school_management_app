@@ -1,21 +1,18 @@
+// SchoolController.java
 package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.School;
 import examination.teacherAndStudents.entity.ServiceOffered;
 import examination.teacherAndStudents.service.SchoolService;
-import examination.teacherAndStudents.utils.ServiceType;
 import examination.teacherAndStudents.utils.SubscriptionType;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/schools")
@@ -25,61 +22,74 @@ public class SchoolController {
     private SchoolService schoolService;
 
     @PostMapping("/onboard")
-    public ResponseEntity<SchoolResponse> onboardSchool(@RequestBody SchoolRequest school) {
-        SchoolResponse onboardedSchool = schoolService.onboardSchool(school );
-        return new ResponseEntity<>(onboardedSchool, HttpStatus.CREATED);
+    public ResponseEntity<ApiResponse<SchoolResponse>> onboardSchool(@Valid @RequestBody SchoolRequest schoolRequest) {
+        SchoolResponse onboardedSchool = schoolService.onboardSchool(schoolRequest);
+        ApiResponse<SchoolResponse> response = new ApiResponse<>("School onboarded successfully", true, onboardedSchool);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}/services")
-    public ResponseEntity<List<ServiceOffered>> getSelectedServices(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<List<ServiceOffered>>> getSelectedServices(@PathVariable Long id) {
         List<ServiceOffered> selectedServices = schoolService.getSelectedServices(id);
-        return ResponseEntity.ok(selectedServices);
+        ApiResponse<List<ServiceOffered>> response = new ApiResponse<>("Selected services retrieved successfully", true, selectedServices);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/subscribe")
-    public ResponseEntity<School> subscribeSchool(
-            @RequestBody SubscriptionRequest subscriptionRequest) throws Exception {
-        return ResponseEntity.ok(schoolService.subscribeSchool(subscriptionRequest));
+    public ResponseEntity<ApiResponse<School>> subscribeSchool(
+            @Valid @RequestBody SubscriptionRequest subscriptionRequest) throws Exception {
+        School school = schoolService.subscribeSchool(subscriptionRequest);
+        ApiResponse<School> response = new ApiResponse<>("School subscribed successfully", true, school);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/renew-subscribe")
-    public ResponseEntity<School> renewSubscribeSchool(
-            @RequestBody SubscriptionType subscriptionRequest) throws Exception {
-        return ResponseEntity.ok(schoolService.renewSubscription(subscriptionRequest));
+    public ResponseEntity<ApiResponse<School>> renewSubscribeSchool(
+            @Valid @RequestBody SubscriptionType subscriptionType) throws Exception {
+        School school = schoolService.renewSubscription(subscriptionType);
+        ApiResponse<School> response = new ApiResponse<>("Subscription renewed successfully", true, school);
+        return ResponseEntity.ok(response);
     }
 
-
     @GetMapping("/{id}/validate-subscription")
-    public ResponseEntity<Boolean> validateSubscription(@PathVariable Long id) {
-        return ResponseEntity.ok(schoolService.isValidSubscriptionKey(id));
+    public ResponseEntity<ApiResponse<Boolean>> validateSubscription(@PathVariable Long id) {
+        boolean isValid = schoolService.isValidSubscriptionKey(id);
+        ApiResponse<Boolean> response = new ApiResponse<>("Subscription validation result", true, isValid);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/deactivate-expired")
-    public ResponseEntity<String> deactivateExpiredSubscriptions() {
+    public ResponseEntity<ApiResponse<String>> deactivateExpiredSubscriptions() {
         schoolService.deactivateExpiredSubscriptions();
-        return ResponseEntity.ok("Expired subscriptions deactivated successfully.");
+        ApiResponse<String> response = new ApiResponse<>("Expired subscriptions deactivated successfully", true, "Success");
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<School>> getAllSchools() {
-        return ResponseEntity.ok(schoolService.getAllSchools());
+    public ResponseEntity<ApiResponse<List<School>>> getAllSchools() {
+        List<School> schools = schoolService.getAllSchools();
+        ApiResponse<List<School>> response = new ApiResponse<>("Schools retrieved successfully", true, schools);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<School> getSchoolById(@PathVariable Long id) {
-        return ResponseEntity.ok(schoolService.getSchoolById(id));
+    public ResponseEntity<ApiResponse<School>> getSchoolById(@PathVariable Long id) {
+        School school = schoolService.getSchoolById(id);
+        ApiResponse<School> response = new ApiResponse<>("School retrieved successfully", true, school);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<School> updateSchool(@PathVariable Long id, @Valid @RequestBody SchoolRequest request) {
-        return ResponseEntity.ok(schoolService.updateSchool(id, request));
+    public ResponseEntity<ApiResponse<School>> updateSchool(@PathVariable Long id, @Valid @RequestBody SchoolRequest request) {
+        School updatedSchool = schoolService.updateSchool(id, request);
+        ApiResponse<School> response = new ApiResponse<>("School updated successfully", true, updatedSchool);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSchool(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> deleteSchool(@PathVariable Long id) {
         schoolService.deleteSchool(id);
-        return ResponseEntity.noContent().build();
+        ApiResponse<String> response = new ApiResponse<>("School deleted successfully", true, "Deleted");
+        return ResponseEntity.ok(response);
     }
-
-    // Other endpoints for managing schools
 }

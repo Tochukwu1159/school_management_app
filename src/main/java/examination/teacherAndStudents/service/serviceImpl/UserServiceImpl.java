@@ -166,10 +166,8 @@ public class UserServiceImpl implements UserService {
 
         sendRegistrationEmail(generatedPassword, savedUser, userProfile.getUniqueRegistrationNumber());
 
-        AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
 
-
-        return new UserResponse("200", "Student Successfully Created", accountInfo);
+        return buildUserResponse(savedUser, userProfile);
     }
 
 
@@ -300,8 +298,7 @@ public class UserServiceImpl implements UserService {
         emailService.sendApplicationConfirmation(savedUser, generatedPassword, userProfile.getUniqueRegistrationNumber(),
                 application.getApplicationNumber(), school);
 
-        return UserResponse.builder().responseCode("200").responseMessage("Application submitted successfully. Awaiting review.").build();
-
+        return buildUserResponse(savedUser, userProfile);
     }
 
     @Override
@@ -360,9 +357,7 @@ public class UserServiceImpl implements UserService {
 //        createWallet(saveUserProfile);
         sendAdminCreationEmail(savedUser, generatedPassword, userProfile.getUniqueRegistrationNumber());
 
-        AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
-
-        return new  UserResponse("200", "Admin Successfully Created", accountInfo);
+        return buildUserResponse(savedUser, userProfile);
     }
 
 
@@ -425,10 +420,7 @@ public class UserServiceImpl implements UserService {
         }
 
         // Return the response
-        AccountInfo accountInfo = buildAccountInfo(savedUser, userProfile);
-
-
-        return new UserResponse("200", "Staff Successfully Created", accountInfo);
+        return buildUserResponse(savedUser, userProfile);
     }
 
 
@@ -472,11 +464,24 @@ public class UserServiceImpl implements UserService {
                     .build();
           String  token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), schoolAuthDto);
 
+
+
             // Create a UserDto object containing user details
-            UserDto userDto = new UserDto();
-            userDto.setFirstName(userDetails.get().getFirstName());
-            userDto.setLastName(userDetails.get().getLastName());
-            userDto.setEmail(userDetails.get().getEmail());
+            UserDto userDto = UserDto.builder()
+                    .firstName(userDetails.get().getFirstName())
+                    .lastName(userDetails.get().getLastName())
+                    .email(userDetails.get().getEmail())
+                    .phoneNumber(user.getPhoneNumber())
+                    .classAssigned(user.getClassBlock().getName())
+                    .studentGuardianName(user.getStudentGuardianName())
+                    .studentGuardianPhoneNumber(user.getStudentGuardianPhoneNumber())
+                    .uniqueRegistrationNumber(user.getUniqueRegistrationNumber())
+                    .gender(user.getGender())
+                    .isVerified(user.getIsVerified())
+                    .address(user.getAddresses().isEmpty() ? null :
+                            user.getAddresses().iterator().next().getStreet())
+                    .academicQualification(user.getAcademicQualification())
+                    .build();
 
             return new LoginResponse(token, userDto);
         } catch (BadCredentialsException e) {
@@ -529,10 +534,18 @@ public class UserServiceImpl implements UserService {
         String    token = "Bearer " + jwtUtil.generateToken(user.getUser().getEmail(), schoolAuthDto);
 
             // Create a UserDto object containing user details
-            UserDto userDto = new UserDto();
-            userDto.setFirstName(userDetails.get().getFirstName());
-            userDto.setLastName(userDetails.get().getLastName());
-            userDto.setEmail(userDetails.get().getEmail());
+            UserDto userDto = UserDto.builder()
+                    .firstName(userDetails.get().getFirstName())
+                    .lastName(userDetails.get().getLastName())
+                    .email(userDetails.get().getEmail())
+                    .phoneNumber(user.getPhoneNumber())
+                    .uniqueRegistrationNumber(user.getUniqueRegistrationNumber())
+                    .gender(user.getGender())
+                    .isVerified(user.getIsVerified())
+                    .address(user.getAddresses().isEmpty() ? null :
+                            user.getAddresses().iterator().next().getStreet())
+                    .academicQualification(user.getAcademicQualification())
+                    .build();
             return new LoginResponse(token, userDto);
         } catch (BadCredentialsException e) {
             // Handle the "Bad credentials" error here
@@ -588,10 +601,18 @@ public class UserServiceImpl implements UserService {
 
             SecurityContextHolder.getContext().setAuthentication(authenticate);
             // Create a UserDto object containing user details
-            UserDto userDto = new UserDto();
-            userDto.setFirstName(userDetails.get().getFirstName());
-            userDto.setLastName(userDetails.get().getLastName());
-            userDto.setEmail(userDetails.get().getEmail());
+            UserDto userDto = UserDto.builder()
+                    .firstName(userDetails.get().getFirstName())
+                    .lastName(userDetails.get().getLastName())
+                    .email(userDetails.get().getEmail())
+                    .phoneNumber(user.getPhoneNumber())
+                    .uniqueRegistrationNumber(user.getUniqueRegistrationNumber())
+                    .gender(user.getGender())
+                    .isVerified(user.getIsVerified())
+                    .address(user.getAddresses().isEmpty() ? null :
+                            user.getAddresses().iterator().next().getStreet())
+                    .academicQualification(user.getAcademicQualification())
+                    .build();
             return new LoginResponse(token, userDto);
         } catch (BadCredentialsException e) {
             throw new AuthenticationFailedException("Wrong email or password");
@@ -1156,14 +1177,21 @@ public class UserServiceImpl implements UserService {
 
     }
 
-    private AccountInfo buildAccountInfo(User savedUser, Profile userProfile) {
-        return AccountInfo.builder()
+    private UserResponse buildUserResponse(User savedUser, Profile savedUserProfile) {
+        return UserResponse.builder()
                 .firstName(savedUser.getFirstName())
                 .lastName(savedUser.getLastName())
                 .email(savedUser.getEmail())
-                .gender(userProfile.getGender())
+                .phoneNumber(savedUserProfile.getPhoneNumber())
+                .gender(savedUserProfile.getGender())
+                .admissionDate(savedUserProfile.getAdmissionDate())
+                .uniqueRegistrationNumber(savedUserProfile.getUniqueRegistrationNumber())
+                .academicQualification(savedUserProfile.getAcademicQualification())
+                .address(savedUserProfile.getAddresses().isEmpty() ? null
+                        : savedUserProfile.getAddresses().iterator().next().getStreet()) // handle address properly
                 .build();
     }
+
 
 
     private String generateReferralCode(String firstName, String lastName) {

@@ -47,31 +47,16 @@ public class ApplicationController {
      */
     @PutMapping("/applications/{applicationId}/review")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<UserResponse>> reviewApplication(
+    public ResponseEntity<ApiResponse<ApplicationResponse>> reviewApplication(
             @PathVariable Long applicationId,
             @Valid @RequestBody ApplicationReviewDto review) {
         try {
-            UserResponse response = applicationService.reviewApplication(applicationId, review);
-            ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Application reviewed successfully", true, response);
+            ApplicationResponse response = applicationService.reviewApplication(applicationId, review);
+            ApiResponse<ApplicationResponse> apiResponse = new ApiResponse<>("Application reviewed successfully", true, response);
             return new ResponseEntity<>(apiResponse, HttpStatus.OK);
-        } catch (CustomNotFoundException e) {
-            ApiResponse<UserResponse> apiResponse = new ApiResponse<>(e.getMessage(), false, UserResponse.builder()
-                    .responseCode("404")
-                    .responseMessage(e.getMessage())
-                    .build());
+        } catch (Exception e) {
+            ApiResponse<ApplicationResponse> apiResponse = new ApiResponse<>(e.getMessage(), false, null);
             return new ResponseEntity<>(apiResponse, HttpStatus.NOT_FOUND);
-        } catch (BadRequestException e) {
-            ApiResponse<UserResponse> apiResponse = new ApiResponse<>(e.getMessage(), false, UserResponse.builder()
-                    .responseCode("400")
-                    .responseMessage(e.getMessage())
-                    .build());
-            return new ResponseEntity<>(apiResponse, HttpStatus.BAD_REQUEST);
-        } catch (RuntimeException e) {
-            ApiResponse<UserResponse> apiResponse = new ApiResponse<>("Unexpected error occurred", false, UserResponse.builder()
-                    .responseCode("403")
-                    .responseMessage(e.getMessage())
-                    .build());
-            return new ResponseEntity<>(apiResponse, HttpStatus.FORBIDDEN);
         }
     }
 }

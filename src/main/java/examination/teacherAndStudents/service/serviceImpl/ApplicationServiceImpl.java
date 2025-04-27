@@ -112,7 +112,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Transactional
     @Override
-    public UserResponse reviewApplication(Long applicationId, ApplicationReviewDto review) {
+    public ApplicationResponse reviewApplication(Long applicationId, ApplicationReviewDto review) {
         // 1. Fetch application and validate
         AdmissionApplication application = admissionApplicationRepository.findById(applicationId)
                 .orElseThrow(() -> new CustomNotFoundException("Application not found"));
@@ -175,10 +175,8 @@ public class ApplicationServiceImpl implements ApplicationService {
         // 7. Save changes
         admissionApplicationRepository.save(application);
         userRepository.save(applicant);
-        return UserResponse.builder()
-                .responseCode("200")
-                .responseMessage("Application review completed")
-                .build();
+
+       return ApplicationResponse.builder().reviewMessage("Application review completed").build();
     }
 
     private void handleApprovedApplication(AdmissionApplication application, User applicant) {
