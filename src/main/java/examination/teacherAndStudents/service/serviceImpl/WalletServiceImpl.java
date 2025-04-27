@@ -71,38 +71,53 @@ public class WalletServiceImpl implements WalletService {
 
 
     @Transactional
-    public PaymentResponse fundWallet(FundWalletRequest fundWalletRequest) {
-        validateFundRequest(fundWalletRequest);
+    public String fundWallet1(BigDecimal amount, Profile profile) {
 
-        String email = fundWalletRequest.getEmail() != null ?
-                fundWalletRequest.getEmail() :
-                SecurityConfig.getAuthenticatedUserEmail();
+        Wallet studentWallet = walletRepository.findWalletByUserProfile(profile)
+                .orElseThrow(() -> new NotFoundException("Wallet not found"));
 
-        Optional<Profile> profile = profileRepository.findByUserEmail(email);
-        if (profile.isEmpty()) {
-            throw new CustomNotFoundException("Student with Id " + profile.get().getUniqueRegistrationNumber() + " is not valid");
-        }
+        studentWallet.setBalance(studentWallet.getBalance().add(amount));
+        walletRepository.save(studentWallet);
 
-        // Get the appropriate payment provider
-        PaymentProvider paymentProvider = paymentProviderFactory.getProvider(fundWalletRequest.getProvider());
+        return "balance updated successfully";
 
-        PaymentRequestDto paymentRequest = new PaymentRequestDto(
-                email,
-                fundWalletRequest.getAmountAsBigDecimal(),
-                fundWalletRequest.getCallbackUrl(),
-                fundWalletRequest.getMetadata() != null ?
-                        fundWalletRequest.getMetadata() :
-                        createDefaultMetadata()
-        );
-
-        PaymentInitResponse paymentResponse = paymentProvider.initiatePayment(paymentRequest);
-
-        if (!paymentResponse.isStatus()) {
-            throw new PaymentProcessingException("Payment initialization failed: " + paymentResponse.getMessage());
-        }
-
-        return PaymentResponse.builder().authorizationUrl(paymentResponse.getAuthorizationUrl()).build();
     }
+
+
+
+//    @Transactional
+//    public PaymentResponse fundWallet(FundWalletRequest fundWalletRequest) {
+//        validateFundRequest(fundWalletRequest);
+//
+//        String email = fundWalletRequest.getEmail() != null ?
+//                fundWalletRequest.getEmail() :
+//                SecurityConfig.getAuthenticatedUserEmail();
+//
+//        Optional<Profile> profile = profileRepository.findByUserEmail(email);
+//        if (profile.isEmpty()) {
+//            throw new CustomNotFoundException("Student with Id " + profile.get().getUniqueRegistrationNumber() + " is not valid");
+//        }
+//
+//        // Get the appropriate payment provider
+//        PaymentProvider paymentProvider = paymentProviderFactory.getProvider(fundWalletRequest.getProvider());
+//
+//        PaymentRequestDto paymentRequest = new PaymentRequestDto(
+//                email,
+//                fundWalletRequest.getAmountAsBigDecimal(),
+//                fundWalletRequest.getCallbackUrl(),
+//                fundWalletRequest.getMetadata() != null ?
+//                        fundWalletRequest.getMetadata() :
+//                        createDefaultMetadata()
+//        );
+//
+//        PaymentInitResponse paymentResponse = paymentProvider.initiatePayment(paymentRequest);
+//
+//        if (!paymentResponse.isStatus()) {
+//            throw new PaymentProcessingException("Payment initialization failed: " + paymentResponse.getMessage());
+//        }
+//
+//        return PaymentResponse.builder().authorizationUrl(paymentResponse.getAuthorizationUrl()).build();
+//    }
 
 
     @Transactional
