@@ -20,6 +20,7 @@ public enum Purpose {
     MEDICAL("Medical"),
     ACTIVITY("Activity"),
     LATE("Late Payment"),
+    LATE_BOOK_RETURN("Late Book Return Charge"),
     STORE_PURCHASE("Store Purchase"),
     OTHER("Other");
 

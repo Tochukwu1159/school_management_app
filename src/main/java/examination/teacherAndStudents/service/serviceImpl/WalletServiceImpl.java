@@ -78,7 +78,7 @@ public class WalletServiceImpl implements WalletService {
         School studentSchool = studentWallet.getSchool();
 
         studentWallet.setBalance(studentWallet.getBalance().add(amount));
-        studentSchool.getWallet().setBalance(amount);
+//        studentSchool.getWallet().setBalance(amount);
         walletRepository.save(studentWallet);
 
         return "balance updated successfully";

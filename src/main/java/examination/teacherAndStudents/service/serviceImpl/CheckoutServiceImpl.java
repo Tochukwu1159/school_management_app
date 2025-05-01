@@ -1,6 +1,7 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.dto.CheckoutResponse;
+import examination.teacherAndStudents.dto.PaymentWithoutFeeIdRequest;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.entity.StudentTerm;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
@@ -8,6 +9,8 @@ import examination.teacherAndStudents.error_handler.InsufficientBalanceException
 import examination.teacherAndStudents.error_handler.UnauthorizedException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.CheckoutService;
+import examination.teacherAndStudents.service.FeePaymentService;
+import examination.teacherAndStudents.service.PaymentService;
 import examination.teacherAndStudents.utils.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +39,7 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final StoreItemRepository storeItemRepository;
+    private final FeePaymentService paymentService;
 
     @Override
     @Transactional
@@ -111,37 +115,15 @@ public class CheckoutServiceImpl implements CheckoutService {
         wallet.debit(totalAmount);
         walletRepository.save(wallet);
 
-        // Create payment
-        Payment payment = Payment.builder()
+
+        PaymentWithoutFeeIdRequest paymentWithoutFeeIdRequest = PaymentWithoutFeeIdRequest.builder()
                 .amount(totalAmount)
-                .paymentDate(LocalDate.now())
                 .method(PaymentMethod.BALANCE)
-                .referenceNumber(ReferenceGenerator.generateShortReference())
-                .transactionId(ReferenceGenerator.generateTransactionId("BAL"))
-                .profile(profile)
-                .academicSession(getCurrentAcademicSession(wallet))
-                .studentTerm(getCurrentStudentTerm())
-                .status(examination.teacherAndStudents.utils.FeeStatus.PAID)
-                .purpose(Purpose.STORE_PURCHASE)
-                .paid(true)
-                .fullyPaid(true)
-                .build();
-
-        paymentRepository.save(payment);
-
-        // Create transaction
-        Transaction transaction = Transaction.builder()
-                .transactionType(TransactionType.DEBIT)
-                .user(profile)
-                .amount(totalAmount)
-                .status(TransacStatus.SUCCESS)
-                .session(getCurrentAcademicSession(wallet))
-                .classBlock(profile.getClassBlock())
+                .purpose(Purpose.LATE_BOOK_RETURN)
                 .description("Store purchase for order ID: " + order.getId())
-                .studentTerm(getCurrentStudentTerm())
                 .build();
 
-        transactionRepository.save(transaction);
+        paymentService.processPaymentWithoutFeeId(paymentWithoutFeeIdRequest);
 
         // Update cart items
         cartItems.forEach(cart -> cart.setCheckedOut(true));
@@ -157,7 +139,6 @@ public class CheckoutServiceImpl implements CheckoutService {
                 order.getId(),
                 profile.getId(),
                 totalAmount,
-                payment.getTransactionId(),
                 OrderStatus.COMPLETED.name()
         );
     }

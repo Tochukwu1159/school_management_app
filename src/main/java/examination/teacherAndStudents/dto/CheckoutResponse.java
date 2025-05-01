@@ -15,6 +15,5 @@ public class CheckoutResponse {
     private Long id;
     private Long profileId;
     private BigDecimal totalAmount;
-    private String transactionId;
     private String orderStatus;
 }

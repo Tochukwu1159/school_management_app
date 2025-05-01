@@ -78,7 +78,7 @@ public class Payment {
     private Purpose purpose;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "fee_category_id", nullable = false)
+    @JoinColumn(name = "fee_category_id")
     private FeeCategory feeCategory;
 
     @CreationTimestamp

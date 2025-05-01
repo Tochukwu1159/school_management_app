@@ -4,14 +4,14 @@ import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.BookRequest;
 import examination.teacherAndStudents.dto.BookResponse;
 import examination.teacherAndStudents.dto.BookBorrowingResponse;
+import examination.teacherAndStudents.dto.PaymentWithoutFeeIdRequest;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
+import examination.teacherAndStudents.service.FeePaymentService;
 import examination.teacherAndStudents.service.LibraryService;
-import examination.teacherAndStudents.utils.BorrowingStatus;
-import examination.teacherAndStudents.utils.MembershipStatus;
-import examination.teacherAndStudents.utils.ReservationStatus;
-import examination.teacherAndStudents.utils.Roles;
+import examination.teacherAndStudents.service.PaymentService;
+import examination.teacherAndStudents.utils.*;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +42,7 @@ public class LibraryServiceImpl implements LibraryService {
     private final AuditLogRepository auditLogRepository;
     private final BookReservationRepository bookReservationRepository;
     private final LibraryMemberRepository libraryMemberRepository;
+    private final FeePaymentService paymentService;
 
     @Override
     @Transactional
@@ -288,7 +289,7 @@ public class LibraryServiceImpl implements LibraryService {
                 .orElseThrow(() -> new CustomNotFoundException("Borrowing record not found"));
 
         if (borrowing.getStatus() != BorrowingStatus.BORROWED) {
-            throw new BadRequestException("Book is not currently borrowed");
+            throw new BadRequestException("Book is not currently borrowed or has been returned");
         }
 
         Book book = borrowing.getBook();
@@ -299,6 +300,7 @@ public class LibraryServiceImpl implements LibraryService {
         borrowing.setActualReturnDate(returnDate);
         borrowing.setStatus(BorrowingStatus.RETURNED);
 
+            BigDecimal fee = null;
         if (returnDate.isAfter(borrowing.getDueDate())) {
             borrowing.setLate(true);
             long daysLate = ChronoUnit.DAYS.between(borrowing.getDueDate(), returnDate);
@@ -306,12 +308,22 @@ public class LibraryServiceImpl implements LibraryService {
             BigDecimal lateFee = profile.getUser().getSchool().getLibraryBookLateReturnFee();
 
             if (lateFee != null) {
-                BigDecimal fee = BigDecimal.valueOf(daysLate).multiply(lateFee);
+                 fee = BigDecimal.valueOf(daysLate).multiply(lateFee);
                 borrowing.setFineAmount(fee);
             } else {
                 borrowing.setFineAmount(BigDecimal.ZERO);
             }
         }
+
+
+        PaymentWithoutFeeIdRequest paymentWithoutFeeIdRequest = PaymentWithoutFeeIdRequest.builder()
+                .amount(fee)
+                .method(PaymentMethod.BALANCE)
+                .purpose(Purpose.LATE_BOOK_RETURN)
+                .description("Penalty for late book return")
+                .build();
+
+       paymentService.processPaymentWithoutFeeId(paymentWithoutFeeIdRequest);
 
         BookBorrowing savedBorrowing = bookBorrowingRepository.save(borrowing);
         logger.info("Returning book for borrowing ID {}", borrowingId);
