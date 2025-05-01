@@ -30,8 +30,20 @@ public class BusRoute {
     @Column(nullable = false)
     private String startPoint;
 
+    @Column
+    private Double startLatitude;
+
+    @Column
+    private Double startLongitude;
+
     @Column(nullable = false)
     private String endPoint;
+
+    @Column
+    private Double endLatitude;
+
+    @Column
+    private Double endLongitude;
 
     @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -3,14 +3,22 @@ package examination.teacherAndStudents.utils;
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
+import jakarta.annotation.PostConstruct;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.jetbrains.annotations.Contract;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,6 +31,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 @Component
 public class AccountUtils {
+    private static String apiKey;
+
+    @Value("${google.maps.api.key}")
+    private String apiKeyInstance;
+
+    private static final RestTemplate restTemplate = new RestTemplate();
     public static final String PAGENO = "0";
     public static final String PAGESIZE = "10";
 
@@ -46,6 +60,8 @@ public class AccountUtils {
     private static LibraryMemberRepository libraryMemberRepository;
     private static SchoolRepository schoolRepository;
 
+
+
     // Constructor-based injection
     @Autowired
     public AccountUtils(UserRepository userRepository, ProfileRepository profileRepository, LibraryMemberRepository libraryMemberRepository, WalletRepository walletRepository, SchoolRepository schoolRepository
@@ -57,6 +73,10 @@ public class AccountUtils {
         AccountUtils.schoolRepository = schoolRepository;
     }
 
+    @PostConstruct
+    public void init() {
+        AccountUtils.apiKey = apiKeyInstance; // Initialize static field
+    }
 
 
 
@@ -68,7 +88,7 @@ public class AccountUtils {
         String studentId;
         do {
             StringBuilder randomNumbers = new StringBuilder();
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 3; i++) {
                 int randomNumber = random.nextInt(10);
                 randomNumbers.append(randomNumber);
             }
@@ -110,7 +130,7 @@ public class AccountUtils {
         do {
             StringBuilder randomNumbers = new StringBuilder();
             // Generate 4 random numbers
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 3; i++) {
                 int randomNumber = random.nextInt(10);
                 randomNumbers.append(randomNumber);
             }
@@ -241,7 +261,74 @@ public class AccountUtils {
         return RandomStringUtils.randomAlphanumeric(16);
     }
 
+    public static GeocodingResult getCoordinatesFromAddress(String address) {
+        if (apiKey == null) {
+            throw new CustomInternalServerException("Google Maps API key is not initialized");
+        }
 
+        String url = String.format(
+                "https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s",
+                URLEncoder.encode(address, StandardCharsets.UTF_8), apiKey
+        );
 
+        try {
+            GeocodingResponse response = restTemplate.getForObject(url, GeocodingResponse.class);
+            if (response == null || !"OK".equals(response.getStatus()) || response.getResults().isEmpty()) {
+                throw new BadRequestException("Failed to geocode address: " + address);
+            }
 
+            GeocodingResult result = response.getResults().get(0);
+            return new GeocodingResult(
+                    result.getGeometry().getLocation().getLat(),
+                    result.getGeometry().getLocation().getLng()
+            );
+        } catch (Exception e) {
+            throw new BadRequestException("Geocoding error for address " + address + ": " + e.getMessage());
+        }
+    }
+
+    // Inner classes for JSON parsing
+    @Getter
+    @Setter
+    public static class GeocodingResponse {
+        private String status;
+        private List<GeocodingResult> results;
+    }
+
+    @Getter
+    @Setter
+    public static class GeocodingResult {
+        private Geometry geometry;
+        private Double lat;  // Removed final
+        private Double lng;  // Removed final
+
+        // Default constructor for JSON deserialization
+        public GeocodingResult() {
+        }
+
+        // Constructor for creating new instances
+        public GeocodingResult(Double lat, Double lng) {
+            this.lat = lat;
+            this.lng = lng;
+            this.geometry = new Geometry();
+            this.geometry.location = new Location();
+            this.geometry.location.lat = lat;
+            this.geometry.location.lng = lng;
+        }
+    }
+
+    @Getter
+    @Setter
+    public static class Geometry {
+        private Location location;
+    }
+
+    @Getter
+    @Setter
+    public static class Location {
+        private Double lat;
+        private Double lng;
+    }
 }
+
+

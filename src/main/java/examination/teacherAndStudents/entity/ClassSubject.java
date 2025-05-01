@@ -36,6 +36,10 @@ public class ClassSubject {
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

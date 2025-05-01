@@ -28,7 +28,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             "AND p.academicSession = :academicSession " +
             "AND p.profile = :profile " +
             "AND (p.studentTerm IS NULL OR p.studentTerm = :term)")
-    Payment findPaymentsForSessionAndTerm(
+    Optional<Payment> findPaymentsForSessionAndTerm(
             @Param("feeId") Long feeId,
             @Param("academicSession") AcademicSession academicSession,
             @Param("profile") Profile profile,
@@ -36,7 +36,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     boolean existsByStudentFeeAndProfileAndAcademicSessionAndStudentTerm(Fee fee, Profile profile, AcademicSession academicSession, StudentTerm term);
 
-    Optional<Payment> findByStudentFeeAndProfileAndAcademicSessionAndStudentTerm(Fee fee, Profile profile, AcademicSession academicSession, StudentTerm term);
 
     Optional<Payment> findByStudentFeeAndProfileAndAcademicSession(Fee fee, Profile profile, AcademicSession academicSession);
 }

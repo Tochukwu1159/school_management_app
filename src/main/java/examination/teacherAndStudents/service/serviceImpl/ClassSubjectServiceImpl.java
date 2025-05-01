@@ -40,16 +40,31 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     @Override
     @Transactional
     public ClassSubjectResponse saveClassSubject(ClassSubjectRequest request) {
-        validateAdminUser();
+        User validUser = validateAdminUser();
+        School userSchool = validUser.getSchool();
+
+        // Validate Subject
         Subject subject = subjectRepository.findById(request.getSubjectId())
                 .orElseThrow(() -> new NotFoundException("Subject with id " + request.getSubjectId() + " not found"));
+        if (!subject.getSchool().getId().equals(userSchool.getId())) {
+            throw new IllegalArgumentException("Subject does not belong to the user's school");
+        }
 
+        // Validate ClassBlock
         ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
                 .orElseThrow(() -> new NotFoundException("ClassBlock with id " + request.getClassBlockId() + " not found"));
+        if (!classBlock.getSchool().getId().equals(userSchool.getId())) {
+            throw new IllegalArgumentException("ClassBlock does not belong to the user's school");
+        }
 
+        // Validate AcademicSession
         AcademicSession academicSession = academicSessionRepository.findById(request.getAcademicYearId())
                 .orElseThrow(() -> new NotFoundException("AcademicSession with id " + request.getAcademicYearId() + " not found"));
+        if (!academicSession.getSchool().getId().equals(userSchool.getId())) {
+            throw new IllegalArgumentException("AcademicSession does not belong to the user's school");
+        }
 
+        // Check for existing ClassSubject
         boolean exists = classSubjectRepository.existsBySubjectAndClassBlockAndAcademicYear(
                 subject, classBlock, academicSession
         );
@@ -57,18 +72,20 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
             throw new EntityAlreadyExistException("Subject already added for this class and academic year");
         }
 
-        ClassSubject classSubject = new ClassSubject();
-        classSubject.setSubject(subject);
-        classSubject.setClassBlock(classBlock);
-        classSubject.setAcademicYear(academicSession);
-        classSubject.setCreatedAt(LocalDateTime.now());
-        classSubject.setUpdatedAt(LocalDateTime.now());
+        // Create and save ClassSubject
+        ClassSubject classSubject = ClassSubject.builder()
+                .subject(subject)
+                .classBlock(classBlock)
+                .school(userSchool)
+                .academicYear(academicSession)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
 
         classSubject = classSubjectRepository.save(classSubject);
 
         return toResponse(classSubject);
     }
-
     @Override
     @Transactional(readOnly = true)
     public ClassSubjectResponse getClassSubjectById(Long id) {

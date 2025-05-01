@@ -11,7 +11,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -34,15 +33,13 @@ public interface AcademicSessionRepository extends JpaRepository<AcademicSession
             @Param("id") Long id,
             Pageable pageable);
 
-    @Query("SELECT s FROM AcademicSession s " +
-            "WHERE s.school.id = :schoolId " +
-            "AND s.status = 'ACTIVE' " +
-            "AND CURRENT_DATE BETWEEN s.startDate AND s.endDate")
-    Optional<AcademicSession> findCurrentSession(@Param("schoolId") Long schoolId);
 
-    @Query("SELECT s FROM AcademicSession s WHERE s.status = 'ACTIVE' " +
-            "OR (s.startDate <= :currentDate AND s.endDate >= :currentDate)")
-    Optional<AcademicSession> findCurrentSession1(LocalDate currentDate);
+        @Query("SELECT s FROM AcademicSession s " +
+                "JOIN s.studentTerms t " +
+                "WHERE s.school.id = :schoolId " +
+                "AND s.status = 'ACTIVE' " +
+                "AND CURRENT_DATE BETWEEN t.startDate AND t.endDate")
+        Optional<AcademicSession> findCurrentSession(@Param("schoolId") Long schoolId);
 
 //    AcademicSession findByResultReadyDateBeforeOrEqualAndStatus(LocalDate now, SessionStatus sessionStatus);
 }

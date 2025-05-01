@@ -17,4 +17,6 @@ public class StopResponse {
     private String address;
     private int sequenceOrder;
     private LocalTime arrivalTime;
+    private Double latitude;
+    private Double longitude;
 }

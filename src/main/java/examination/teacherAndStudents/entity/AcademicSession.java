@@ -9,6 +9,8 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -50,6 +52,9 @@ public class AcademicSession {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)
     private School school;
+
+    @OneToMany(mappedBy = "academicSession", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<StudentTerm> studentTerms = new ArrayList<>();
 
 
     // Method to validate and update status

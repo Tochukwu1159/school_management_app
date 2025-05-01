@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Entrance Exam Schedule</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f8;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 30px;
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      text-align: center;
+      padding-bottom: 20px;
+    }
+    .details {
+      line-height: 1.6;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #777;
+      text-align: center;
+    }
+    .highlight {
+      color: #2c7be5;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h2 th:text="'Entrance Examination - ' + ${schoolName}">Entrance Examination</h2>
+  </div>
+
+  <div class="details">
+    <p>Dear <span th:text="${studentName}">Student</span>,</p>
+
+    <p>We are pleased to inform you that your entrance examination has been scheduled as follows:</p>
+
+    <ul>
+      <li><strong>Date & Time:</strong> <span class="highlight" th:text="${examDateTime}">July 15, 2025 10:00 AM</span></li>
+      <li><strong>Venue:</strong> <span th:text="${venue}">School Address</span></li>
+    </ul>
+
+    <p>Please arrive at least 30 minutes early and bring all required documents.</p>
+
+    <p>If you have any questions or need further assistance, feel free to contact us:</p>
+
+    <ul>
+      <li><strong>Email:</strong> <span th:text="${contactEmail}">contact@school.com</span></li>
+      <li><strong>Phone:</strong> <span th:text="${contactPhone}">+1-234-567-8900</span></li>
+    </ul>
+
+    <p>We look forward to welcoming you!</p>
+
+    <p>Best regards,<br/>
+      <strong th:text="${schoolName}">School Name</strong></p>
+  </div>
+
+  <div class="footer">
+    &copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">School Name</span>. All rights reserved.
+  </div>
+</div>
+</body>
+</html>

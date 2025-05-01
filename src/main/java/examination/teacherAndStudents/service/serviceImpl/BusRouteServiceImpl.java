@@ -9,6 +9,7 @@ import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.BusRouteRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.BusRouteService;
+import examination.teacherAndStudents.utils.AccountUtils;
 import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -48,19 +49,30 @@ public class BusRouteServiceImpl implements BusRouteService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
+        AccountUtils.GeocodingResult startCoords = AccountUtils.getCoordinatesFromAddress(routeRequest.getStartPoint());
+        AccountUtils.GeocodingResult endCoords = AccountUtils.getCoordinatesFromAddress(routeRequest.getEndPoint());
+
         BusRoute newRoute = BusRoute.builder()
                 .routeName(routeRequest.getRouteName())
                 .school(admin.getSchool())
                 .startPoint(routeRequest.getStartPoint())
+                .startLatitude(startCoords.getLat())
+                .startLongitude(startCoords.getLng())
                 .endPoint(routeRequest.getEndPoint())
+                .endLatitude(endCoords.getLat())
+                .endLongitude(endCoords.getLng())
                 .build();
 
         // Add stops to the route
         if (routeRequest.getStops() != null) {
             routeRequest.getStops().forEach(stopRequest -> {
+
+                AccountUtils.GeocodingResult stopCoords = AccountUtils.getCoordinatesFromAddress(stopRequest.getAddress());
                 Stop stop = Stop.builder()
                         .stopName(stopRequest.getStopName())
                         .address(stopRequest.getAddress())
+                        .latitude(stopCoords.getLat())
+                        .longitude(stopCoords.getLng())
                         .sequenceOrder(stopRequest.getSequenceOrder())
                         .arrivalTime(stopRequest.getArrivalTime())
                         .build();
@@ -78,19 +90,30 @@ public class BusRouteServiceImpl implements BusRouteService {
         BusRoute existingRoute = busRouteRepository.findByIdWithStops(id)
                 .orElseThrow(() -> new CustomNotFoundException("Route not found for id: " + id));
 
+        AccountUtils.GeocodingResult startCoords = AccountUtils.getCoordinatesFromAddress(routeRequest.getStartPoint());
+        AccountUtils.GeocodingResult endCoords = AccountUtils.getCoordinatesFromAddress(routeRequest.getEndPoint());
+
         existingRoute.setRouteName(routeRequest.getRouteName());
         existingRoute.setStartPoint(routeRequest.getStartPoint());
         existingRoute.setEndPoint(routeRequest.getEndPoint());
+        existingRoute.setStartLatitude(startCoords.getLat());
+        existingRoute.setStartLongitude(startCoords.getLng());
+        existingRoute.setEndLatitude(endCoords.getLat());
+        existingRoute.setEndLongitude(endCoords.getLng());
 
         // Update stops
         existingRoute.getStops().clear();
         if (routeRequest.getStops() != null) {
             routeRequest.getStops().forEach(stopRequest -> {
+                AccountUtils.GeocodingResult stopCoords = AccountUtils.getCoordinatesFromAddress(stopRequest.getAddress());
+
                 Stop stop = Stop.builder()
                         .stopName(stopRequest.getStopName())
                         .address(stopRequest.getAddress())
                         .sequenceOrder(stopRequest.getSequenceOrder())
                         .arrivalTime(stopRequest.getArrivalTime())
+                        .latitude(stopCoords.getLat())
+                        .longitude(stopCoords.getLng())
                         .build();
                 existingRoute.addStop(stop);
             });
@@ -132,6 +155,8 @@ public class BusRouteServiceImpl implements BusRouteService {
                 .stopId(stop.getStopId())
                 .stopName(stop.getStopName())
                 .address(stop.getAddress())
+                .latitude(stop.getLatitude())
+                .longitude(stop.getLongitude())
                 .sequenceOrder(stop.getSequenceOrder())
                 .arrivalTime(stop.getArrivalTime())
                 .build();

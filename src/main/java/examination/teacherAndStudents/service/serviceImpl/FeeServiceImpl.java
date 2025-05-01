@@ -117,17 +117,21 @@ public class FeeServiceImpl implements FeeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Fee> getApplicableFeesForStudent(Long studentId) {
+    public List<StudentFeeResponse> getApplicableFeesForStudent(Long studentId) {
+        // Fetch student profile
         Profile student = profileRepository.findById(studentId)
                 .orElseThrow(() -> new CustomNotFoundException("Student profile not found with ID: " + studentId));
 
+        // Retrieve student's class and session details
         ClassBlock classBlock = student.getClassBlock();
         ClassLevel classLevel = classBlock != null ? classBlock.getClassLevel() : null;
         AcademicSession academicSession = classLevel != null ? classLevel.getAcademicYear() : null;
         School school = academicSession != null ? academicSession.getSchool() : null;
 
+        // Get current term for the student
         StudentTerm currentTerm = getCurrentTerm(student);
 
+        // Fetch applicable fees
         List<Fee> applicableFees = feeRepository.findApplicableFees(
                 school != null ? school.getId() : null,
                 academicSession != null ? academicSession.getId() : null,
@@ -136,8 +140,32 @@ public class FeeServiceImpl implements FeeService {
                 currentTerm != null ? currentTerm.getId() : null
         );
 
-        logger.info("Retrieved {} applicable fees for student ID {}", applicableFees.size(), studentId);
-        return applicableFees;
+        // Transform Fee entities to StudentFeeResponse DTOs
+        return applicableFees.stream()
+                .map(fee -> {
+                    // Assume a method or repository to fetch payment details for this fee and student
+                    // For example: StudentFee studentFee = studentFeeRepository.findByStudentIdAndFeeId(studentId, fee.getId());
+                    BigDecimal amountPaid = BigDecimal.ZERO; // Placeholder: Fetch from payment records
+                    BigDecimal balance = fee.getAmount(); // Placeholder: Calculate as amount - amountPaid
+                    boolean isPaid = amountPaid.compareTo(fee.getAmount()) >= 0;
+                    FeeStatus feeStatus = isPaid ? FeeStatus.PAID : FeeStatus.UNPAID;
+
+                    return StudentFeeResponse.builder()
+                            .id(fee.getId()) // Set if there's a specific ID for the student-fee relation
+                            .studentId(studentId)
+                            .feeId(fee.getId())
+//                            .dueDate(LocalDate.now().plusDays(30)) // Placeholder: Set based on term or fee policy
+                            .status(feeStatus)
+                            .totalAmount(fee.getAmount())
+                            .amountPaid(amountPaid)
+                            .balance(balance)
+                            .feeName(fee.getDescription())
+                            .amount(fee.getAmount())
+                            .compulsory(fee.isCompulsory())
+                            .paid(isPaid)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     @Override

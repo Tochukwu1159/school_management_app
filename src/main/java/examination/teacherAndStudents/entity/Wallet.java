@@ -43,9 +43,9 @@ public class Wallet {
 
     private LocalDateTime lastTransactionTime;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
-    @JoinColumn(name = "school_id", nullable = false)
-    private School school;
+    @OneToOne
+    @JoinColumn(name = "school_id")
+    private School school;;
 
 
     @OneToOne

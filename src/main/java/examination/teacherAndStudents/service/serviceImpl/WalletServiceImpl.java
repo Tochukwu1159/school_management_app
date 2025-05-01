@@ -75,8 +75,10 @@ public class WalletServiceImpl implements WalletService {
 
         Wallet studentWallet = walletRepository.findWalletByUserProfile(profile)
                 .orElseThrow(() -> new NotFoundException("Wallet not found"));
+        School studentSchool = studentWallet.getSchool();
 
         studentWallet.setBalance(studentWallet.getBalance().add(amount));
+        studentSchool.getWallet().setBalance(amount);
         walletRepository.save(studentWallet);
 
         return "balance updated successfully";

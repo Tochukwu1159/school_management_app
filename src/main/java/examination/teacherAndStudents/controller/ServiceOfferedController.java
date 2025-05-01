@@ -27,7 +27,7 @@ public class ServiceOfferedController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ServiceOfferedDTO>> createServiceOffered(@Valid @RequestBody ServiceOfferedDTO dto) {
-        ServiceOffered service = serviceOfferedService.createServiceOffered(dto.getName(), dto.isDefault());
+        ServiceOffered service = serviceOfferedService.createServiceOffered(dto.getName(), dto.getIsDefault());
         ServiceOfferedDTO responseDTO = mapToDTO(service);
         return ResponseEntity.status(201).body(new ApiResponse<>("Service created successfully", true, responseDTO));
     }
@@ -36,7 +36,7 @@ public class ServiceOfferedController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ServiceOfferedDTO>> updateServiceOffered(
             @PathVariable Long id, @Valid @RequestBody ServiceOfferedDTO dto) {
-        ServiceOffered service = serviceOfferedService.updateServiceOffered(id, dto.getName(), dto.isDefault());
+        ServiceOffered service = serviceOfferedService.updateServiceOffered(id, dto.getName(), dto.getIsDefault());
         return ResponseEntity.ok(new ApiResponse<>("Service updated successfully", true, mapToDTO(service)));
     }
 

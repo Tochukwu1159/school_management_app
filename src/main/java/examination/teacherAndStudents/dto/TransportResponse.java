@@ -17,7 +17,6 @@ public class TransportResponse {
     private String vehicleNumber;
     private String vehicleName;
     private String licenceNumber;
-    private String phoneNumber;
     private Long busRouteId;
 
     // Getters and Setters

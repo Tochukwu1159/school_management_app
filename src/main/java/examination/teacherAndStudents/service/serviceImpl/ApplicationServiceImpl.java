@@ -124,6 +124,7 @@ public class ApplicationServiceImpl implements ApplicationService {
 
         // 3. Validate application state
         if (application.getStatus() != ApplicationStatus.PENDING_REVIEW &&
+                application.getStatus() != ApplicationStatus.DOCUMENTS_REQUIRED &&
                 application.getStatus() != ApplicationStatus.PRE_APPROVED &&
                 application.getStatus() != ApplicationStatus.EXAM_COMPLETED) {
             throw new BadRequestException("Application is not in reviewable state");

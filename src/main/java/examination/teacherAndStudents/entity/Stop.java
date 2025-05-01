@@ -31,4 +31,11 @@ public class Stop {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "route_id", nullable = false)
     private BusRoute route;
+
+    // Add geolocation fields
+    @Column(nullable = false)
+    private Double latitude;
+
+    @Column(nullable = false)
+    private Double longitude;
 }

@@ -109,6 +109,7 @@ public class ClassLevelServiceImpl implements ClassLevelService {
                 ClassBlock classBlock = ClassBlock.builder()
                         .classLevel(savedClassLevel)
                         .name(savedClassLevel.getClassName() + "-" + block)
+                        .school(savedClassLevel.getSchool())
                         .numberOfStudents(0)
                         .build();
                 classBlockRepository.save(classBlock);

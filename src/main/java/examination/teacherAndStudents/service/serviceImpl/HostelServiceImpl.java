@@ -134,7 +134,7 @@ public class HostelServiceImpl implements HostelService {
 
         // Update availability status based on bed tracker (if exists)
         Optional<HostelBedTracker> tracker = hostelBedTrackerRepository.findByHostelAndAcademicYear(
-                hostel, academicSessionRepository.findCurrentSession1(LocalDate.now()).orElse(null));
+                hostel, academicSessionRepository.findCurrentSession(user.getSchool().getId()).orElseThrow(() -> new CustomNotFoundException("Academic Year not found")));
         if (tracker.isPresent() && tracker.get().getNumberOfBedLeft() == 0) {
             hostel.setAvailabilityStatus(AvailabilityStatus.UNAVAILABLE);
         } else {

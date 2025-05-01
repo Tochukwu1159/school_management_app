@@ -7,6 +7,7 @@ import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.entity.EmergencyContact;
+import examination.teacherAndStudents.entity.StudentTerm;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;

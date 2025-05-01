@@ -38,6 +38,11 @@ public class ClassBlock {
     private ClassLevel classLevel;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "school_id", nullable = false)
+    @ToString.Exclude
+    private School school;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")
     @ToString.Exclude
     private Profile formTeacher;

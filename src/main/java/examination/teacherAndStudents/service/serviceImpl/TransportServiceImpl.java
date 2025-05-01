@@ -81,7 +81,7 @@ public class TransportServiceImpl implements TransportService {
                 .bus(transport)
                 .busRoute(busRoute)
                 .remainingCapacity(transport.getCapacity())
-                .session(academicSessionRepository.findCurrentSession1(LocalDate.now())
+                .session(academicSessionRepository.findCurrentSession(transport.getSchool().getId())
                         .orElseThrow(() -> new CustomNotFoundException("No active academic session")))
                 .term(studentTermRepository.findCurrentTerm(LocalDate.now())
                         .orElseThrow(() -> new CustomNotFoundException("No active term")))
@@ -127,7 +127,7 @@ public class TransportServiceImpl implements TransportService {
         if (updatedTransport.getCapacity() > 0) {
             TransportTracker tracker = transportTrackerRepository.findByBusAndSessionAndTerm(
                             transport,
-                            academicSessionRepository.findCurrentSession1(LocalDate.now())
+                            academicSessionRepository.findCurrentSession(admin.getSchool().getId())
                                     .orElseThrow(() -> new CustomNotFoundException("No active academic session")),
                             studentTermRepository.findCurrentTerm(LocalDate.now())
                                     .orElseThrow(() -> new CustomNotFoundException("No active term")))
@@ -259,9 +259,9 @@ public class TransportServiceImpl implements TransportService {
                 .amount(fee.getAmount())
                 .build();
 
-        paymentService.processPayment(paymentRequest);
+            paymentService.processPayment(paymentRequest);
 
-        Payment payment = paymentRepository.findByStudentFeeAndProfileAndAcademicSessionAndStudentTerm(fee, profile, academicSession, term)
+        Payment payment = paymentRepository.findPaymentsForSessionAndTerm(fee.getId(), academicSession,profile, term)
                 .orElseThrow(() -> new CustomInternalServerException("Payment record not created"));
 
         StudentTransportAllocation allocation = StudentTransportAllocation.builder()
@@ -341,7 +341,7 @@ public class TransportServiceImpl implements TransportService {
 
         TransportTracker tracker = transportTrackerRepository.findByBusAndSessionAndTerm(
                         transport,
-                        academicSessionRepository.findCurrentSession1(LocalDate.now())
+                        academicSessionRepository.findCurrentSession(admin.getSchool().getId())
                                 .orElseThrow(() -> new CustomNotFoundException("No active academic session")),
                         studentTermRepository.findCurrentTerm(LocalDate.now())
                                 .orElseThrow(() -> new CustomNotFoundException("No active term")))
@@ -378,7 +378,7 @@ public class TransportServiceImpl implements TransportService {
                             .orElseThrow(() -> new CustomNotFoundException("No payment found for student")))
                     .paymentStatus(PaymentStatus.SUCCESS)
                     .status(AllocationStatus.SUCCESS)
-                    .academicSession(academicSessionRepository.findCurrentSession1(LocalDate.now())
+                    .academicSession(academicSessionRepository.findCurrentSession(admin.getSchool().getId())
                             .orElseThrow(() -> new CustomNotFoundException("No active academic session")))
                     .term(studentTermRepository.findCurrentTerm(LocalDate.now())
                             .orElseThrow(() -> new CustomNotFoundException("No active term")))
@@ -474,7 +474,7 @@ public class TransportServiceImpl implements TransportService {
         bus = transportRepository.save(bus);
 
         // Initialize TransportTracker for the bus
-        AcademicSession currentSession = academicSessionRepository.findCurrentSession1(LocalDate.now())
+        AcademicSession currentSession = academicSessionRepository.findCurrentSession(bus.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("No active academic session"));
         StudentTerm currentTerm = studentTermRepository.findCurrentTerm(LocalDate.now())
                 .orElseThrow(() -> new CustomNotFoundException("No active term"));
@@ -511,6 +511,7 @@ public class TransportServiceImpl implements TransportService {
     private TransportResponse mapToTransportResponse(Bus transport) {
         return TransportResponse.builder()
                 .id(transport.getBusId())
+                .routeName(transport.getBusRoute().getRouteName())
                 .vehicleName(transport.getVehicleName())
                 .vehicleNumber(transport.getVehicleNumber())
                 .licenceNumber(transport.getLicenceNumber())

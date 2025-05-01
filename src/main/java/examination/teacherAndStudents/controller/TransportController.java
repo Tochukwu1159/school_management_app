@@ -1,7 +1,9 @@
 package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.*;
+import examination.teacherAndStudents.entity.BusLocation;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.service.BusLocationService;
 import examination.teacherAndStudents.service.TransportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -16,10 +18,12 @@ import java.util.List;
 public class TransportController {
 
     private final TransportService transportService;
+    private final BusLocationService busLocationService;
 
     @Autowired
-    public TransportController(TransportService transportService) {
+    public TransportController(TransportService transportService, BusLocationService busLocationService) {
         this.transportService = transportService;
+        this.busLocationService = busLocationService;
     }
 
     @PostMapping("/add")
@@ -98,5 +102,20 @@ public class TransportController {
         TransportResponse transport = transportService.getTransportById(transportId);
         ApiResponse<TransportResponse> response = new ApiResponse<>("Transport fetched successfully", true, transport);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/location/update")
+//    @PreAuthorize("hasRole('ADMIN') or hasRole('DRIVER')")
+    public ResponseEntity<ApiResponse<String>> updateBusLocation(@RequestBody BusLocationRequest request) {
+    String response =    busLocationService.updateBusLocation(request);
+    ApiResponse<String> apiResponse = new ApiResponse<>("Bus location updated successfully", true, response);
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
+    }
+
+    @GetMapping("/location/{busId}")
+//    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BusLocation> getBusLocation(@PathVariable Long busId) {
+        BusLocation location = busLocationService.getBusLocation(busId);
+        return ResponseEntity.ok(location);
     }
 }

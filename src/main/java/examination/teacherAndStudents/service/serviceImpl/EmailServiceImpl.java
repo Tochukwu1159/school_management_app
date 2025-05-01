@@ -344,7 +344,7 @@ public class EmailServiceImpl implements EmailService {
             model.put("contactPhone", school.getPhoneNumber());
 
             emailDetails.setModel(model);
-            emailDetails.setTemplateName("1");
+            emailDetails.setTemplateName("admission-examination");
 
             sendEmailWithThymeleaf(emailDetails);
             logger.info("Exam schedule notification email sent to {}", recipientEmail);

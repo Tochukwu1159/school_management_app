@@ -119,7 +119,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .referenceNumber(ReferenceGenerator.generateShortReference())
                 .transactionId(ReferenceGenerator.generateTransactionId("BAL"))
                 .profile(profile)
-                .academicSession(getCurrentAcademicSession())
+                .academicSession(getCurrentAcademicSession(wallet))
                 .studentTerm(getCurrentStudentTerm())
                 .status(examination.teacherAndStudents.utils.FeeStatus.PAID)
                 .purpose(Purpose.STORE_PURCHASE)
@@ -135,7 +135,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .user(profile)
                 .amount(totalAmount)
                 .status(TransacStatus.SUCCESS)
-                .session(getCurrentAcademicSession())
+                .session(getCurrentAcademicSession(wallet))
                 .classBlock(profile.getClassBlock())
                 .description("Store purchase for order ID: " + order.getId())
                 .studentTerm(getCurrentStudentTerm())
@@ -190,8 +190,8 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .orElseThrow(() -> new CustomNotFoundException("Wallet not found for profile ID: " + profile.getId()));
     }
 
-    private AcademicSession getCurrentAcademicSession() {
-        return academicSessionRepository.findCurrentSession1(LocalDate.now())
+    private AcademicSession getCurrentAcademicSession(Wallet wallet) {
+        return academicSessionRepository.findCurrentSession(wallet.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("No active academic session found"));
     }
 

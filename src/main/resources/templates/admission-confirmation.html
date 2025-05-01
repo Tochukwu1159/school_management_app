@@ -60,12 +60,7 @@
     <div class="content">
         <p>Dear <span th:text="${studentName}">Student</span>,</p>
         <p>Congratulations! We are delighted to confirm your admission to <span th:text="${schoolName}">Our School</span>. We look forward to welcoming you to our community.</p>
-        <h3>Your Admission Details</h3>
-        <ul>
-            <li><strong>Registration Number:</strong> <span th:text="${registrationNumber}">12345</span></li>
-            <li th:if="${password} != null"><strong>Initial Password:</strong> <span th:text="${password}">********</span></li>
 
-        </ul>
         <p>Please log in to the student portal to complete your enrollment, update your profile, and access important resources. If you received an initial password, we recommend changing it after your first login for security.</p>
         <h3>Orientation Details</h3>
         <p>We have scheduled an orientation session to help you get started:</p>

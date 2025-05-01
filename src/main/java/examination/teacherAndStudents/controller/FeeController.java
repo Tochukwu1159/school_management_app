@@ -38,9 +38,9 @@ public class FeeController {
     }
 
     @GetMapping("/applicable/{studentId}")
-    public ResponseEntity<ApiResponse<List<Fee>>> getApplicableFees(@PathVariable Long studentId) {
+    public ResponseEntity<ApiResponse<List<StudentFeeResponse>>> getApplicableFees(@PathVariable Long studentId) {
         try {
-            List<Fee> fees = feeService.getApplicableFeesForStudent(studentId);
+            List<StudentFeeResponse> fees = feeService.getApplicableFeesForStudent(studentId);
             return ResponseEntity.ok(new ApiResponse<>(
                     "Applicable fees retrieved successfully",
                     true,

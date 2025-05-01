@@ -20,7 +20,7 @@ public class CheckoutController {
     @PostMapping()
     public ResponseEntity<ApiResponse<CheckoutResponse>> addToCart() {
         CheckoutResponse response = checkoutService.checkout();
-        return ResponseEntity.ok(new ApiResponse<>("Item added to cart successfully", true, response));
+        return ResponseEntity.ok(new ApiResponse<>("Item purchased successfully", true, response));
     }
 
 }

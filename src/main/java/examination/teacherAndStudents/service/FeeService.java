@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface FeeService {
     FeeResponseDto createFee(FeeDTO feeDTO);
-    List<Fee> getApplicableFeesForStudent(Long studentId);
+    List<StudentFeeResponse> getApplicableFeesForStudent(Long studentId);
     List<StudentFeeResponse> getApplicableUnpaidFeesForStudent(Long studentId);
     BigDecimal getApplicationFee(Long schoolId, Long classLevelId, Long subClassId);
 }

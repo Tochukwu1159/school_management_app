@@ -19,5 +19,5 @@ public class ServiceOfferedDTO {
     @Size(max = 100, message = "Service name cannot exceed 100 characters")
     private String name;
 
-    private boolean isDefault;
+    private Boolean isDefault;
 }
