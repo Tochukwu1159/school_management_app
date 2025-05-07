@@ -5,8 +5,10 @@ import examination.teacherAndStudents.dto.ClassSubjectResponse;
 import examination.teacherAndStudents.dto.TeacherAssignmentRequest;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
+
 public interface ClassSubjectService {
-    ClassSubjectResponse saveClassSubject(ClassSubjectRequest request);
+    List<ClassSubjectResponse> saveClassSubject(ClassSubjectRequest request);
     ClassSubjectResponse getClassSubjectById(Long id);
     Page<ClassSubjectResponse> getAllClassSubjects(
             Long academicYearId, Long subjectId, Long classSubjectId, String subjectName,

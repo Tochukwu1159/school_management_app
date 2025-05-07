@@ -79,12 +79,10 @@ public class ClassLevelServiceImpl implements ClassLevelService {
 
     @Transactional
     @Override
-    public ClassLevel createClassLevel(ClassLevelRequest classLevelRequest) { // Removed @Valid
+    public ClassLevel createClassLevel(ClassLevelRequest classLevelRequest) {
         User admin = verifyAdminAccess();
-        logger.info("Admin {} creating class level: {} with blocks: {}", admin.getEmail(),
+        logger.info("Admin {} creating class level: {} with block range: {}", admin.getEmail(),
                 classLevelRequest.getClassName(), classLevelRequest.getClassBlocks());
-
-//        validateSubscription(admin.getSchool());
 
         AcademicSession academicSession = academicSessionRepository.findById(classLevelRequest.getAcademicSessionId())
                 .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + classLevelRequest.getAcademicSessionId()));
@@ -104,8 +102,17 @@ public class ClassLevelServiceImpl implements ClassLevelService {
         ClassLevel savedClassLevel = classLevelRepository.save(classLevel);
         logger.debug("Created class level ID: {}", savedClassLevel.getId());
 
-        if (classLevelRequest.getClassBlocks() != null && !classLevelRequest.getClassBlocks().isEmpty()) {
-            for (String block : classLevelRequest.getClassBlocks()) {
+        if (classLevelRequest.getClassBlocks() != null && classLevelRequest.getClassBlocks().size() == 2) {
+            String startBlock = classLevelRequest.getClassBlocks().get(0);
+            String endBlock = classLevelRequest.getClassBlocks().get(1);
+
+            // Validate that inputs are single letters and startBlock comes before endBlock
+            if (!startBlock.matches("[A-Z]") || !endBlock.matches("[A-Z]") || startBlock.compareTo(endBlock) >= 0) {
+                throw new IllegalArgumentException("Class blocks must be a valid range of single letters (e.g., ['A','E'])");
+            }
+
+            // Generate blocks from start to end (inclusive)
+            for (char block = startBlock.charAt(0); block <= endBlock.charAt(0); block++) {
                 ClassBlock classBlock = ClassBlock.builder()
                         .classLevel(savedClassLevel)
                         .name(savedClassLevel.getClassName() + "-" + block)
@@ -115,6 +122,8 @@ public class ClassLevelServiceImpl implements ClassLevelService {
                 classBlockRepository.save(classBlock);
                 logger.debug("Created class block: {} for class level ID: {}", classBlock.getName(), savedClassLevel.getId());
             }
+        } else if (classLevelRequest.getClassBlocks() != null && !classLevelRequest.getClassBlocks().isEmpty()) {
+            throw new IllegalArgumentException("Class blocks must be a range specified as exactly two letters (e.g., ['A','E'])");
         }
 
         return savedClassLevel;

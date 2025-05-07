@@ -1,6 +1,8 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.dto.GradeRatingPair;
+import examination.teacherAndStudents.dto.StatisticsReport;
+import examination.teacherAndStudents.dto.TermStatisticsReport;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.NotFoundException;
@@ -544,6 +546,157 @@ public class ResultServiceImpl implements ResultService {
                     }
                 }
             }
+        }
+    }
+
+
+
+    @Transactional(readOnly = true)
+    public StatisticsReport calculateSessionStatistics(Long sessionId, Long classLevelId) {
+        // Fetch session and class block to validate
+        AcademicSession academicSession = academicSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Academic session not found"));
+        ClassBlock classBlock = classBlockRepository.findById(classLevelId)
+                .orElseThrow(() -> new NotFoundException("Class level not found"));
+
+        // Fetch all session averages for the given session and class
+        List<SessionAverage> sessionAverages = sessionAverageRepository.findAllByAcademicYearAndClassBlock(academicSession, classBlock);
+
+        if (sessionAverages.isEmpty()) {
+            throw new NotFoundException("No average scores found for the specified session and class");
+        }
+
+        // Extract average scores
+        List<Double> averageScores = sessionAverages.stream()
+                .map(SessionAverage::getAverageScore)
+                .collect(Collectors.toList());
+
+        // Define updated score ranges
+        StatisticsReport.ScoreRange[] ranges = {
+                new StatisticsReport.ScoreRange(90, 101, "90-100"), // 101 to include 100
+                new StatisticsReport.ScoreRange(80, 90, "80-89"),
+                new StatisticsReport.ScoreRange(70, 80, "70-79"),
+                new StatisticsReport.ScoreRange(60, 70, "60-69"),
+                new StatisticsReport.ScoreRange(50, 60, "50-59"),
+                new StatisticsReport.ScoreRange(40, 50, "40-49"),
+                new StatisticsReport.ScoreRange(30, 40, "30-39")
+        };
+
+        // Calculate distribution of scores
+        Map<String, Long> scoreDistribution = Arrays.stream(ranges)
+                .collect(Collectors.toMap(
+                        StatisticsReport.ScoreRange::getLabel,
+                        range -> averageScores.stream()
+                                .filter(score -> score >= range.getMin() && score < range.getMax())
+                                .count()
+                ));
+
+        // Calculate statistical metrics
+        double meanScore = averageScores.stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
+
+        double medianScore = calculateMedian(averageScores);
+
+        double standardDeviation = Math.sqrt(
+                averageScores.stream()
+                        .mapToDouble(score -> Math.pow(score - meanScore, 2))
+                        .average()
+                        .orElse(0.0)
+        );
+
+        // Build and return the statistics report
+        return new StatisticsReport(
+                academicSession.getName(),
+                classBlock.getName(),
+                scoreDistribution,
+                meanScore,
+                medianScore,
+                standardDeviation,
+                averageScores.size()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public TermStatisticsReport calculateTermStatistics(Long sessionId, Long classLevelId, Long termId) {
+        // Fetch session, class block, and term to validate
+        AcademicSession academicSession = academicSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Academic session not found"));
+        ClassBlock classBlock = classBlockRepository.findById(classLevelId)
+                .orElseThrow(() -> new NotFoundException("Class level not found"));
+        StudentTerm studentTerm = studentTermRepository.findById(termId)
+                .orElseThrow(() -> new NotFoundException("Term not found"));
+
+        // Fetch all positions for the given session, class, and term
+        Collection<Position> positions = positionRepository.findByClassBlockAndAcademicYearAndStudentTerm(classBlock, academicSession, studentTerm);
+
+        if (positions.isEmpty()) {
+            throw new NotFoundException("No average scores found for the specified term, session, and class");
+        }
+
+        // Extract average scores
+        List<Double> averageScores = positions.stream()
+                .map(Position::getAverageScore)
+                .collect(Collectors.toList());
+
+        // Define score ranges
+        StatisticsReport.ScoreRange[] ranges = {
+                new StatisticsReport.ScoreRange(90, 101, "90-100"), // 101 to include 100
+                new StatisticsReport.ScoreRange(80, 90, "80-89"),
+                new StatisticsReport.ScoreRange(70, 80, "70-79"),
+                new StatisticsReport.ScoreRange(60, 70, "60-69"),
+                new StatisticsReport.ScoreRange(50, 60, "50-59"),
+                new StatisticsReport.ScoreRange(40, 50, "40-49"),
+                new StatisticsReport.ScoreRange(30, 40, "30-39")
+        };
+
+        // Calculate distribution of scores
+        Map<String, Long> scoreDistribution = Arrays.stream(ranges)
+                .collect(Collectors.toMap(
+                        StatisticsReport.ScoreRange::getLabel,
+                        range -> averageScores.stream()
+                                .filter(score -> score >= range.getMin() && score < range.getMax())
+                                .count()
+                ));
+
+        // Calculate statistical metrics
+        double meanScore = averageScores.stream()
+                .mapToDouble(Double::doubleValue)
+                .average()
+                .orElse(0.0);
+
+        double medianScore = calculateMedian(averageScores);
+
+        double standardDeviation = Math.sqrt(
+                averageScores.stream()
+                        .mapToDouble(score -> Math.pow(score - meanScore, 2))
+                        .average()
+                        .orElse(0.0)
+        );
+
+        // Build and return the statistics report
+        return new TermStatisticsReport(
+                academicSession.getName(),
+                classBlock.getName(),
+                studentTerm.getName(),
+                scoreDistribution,
+                meanScore,
+                medianScore,
+                standardDeviation,
+                averageScores.size()
+        );
+    }
+
+
+    private double calculateMedian(List<Double> scores) {
+        if (scores.isEmpty()) return 0.0;
+        List<Double> sortedScores = scores.stream().sorted().toList();
+        int size = sortedScores.size();
+        if (size % 2 == 0) {
+            return (sortedScores.get(size / 2 - 1) + sortedScores.get(size / 2)) / 2.0;
+        } else {
+            return sortedScores.get(size / 2);
         }
     }
 

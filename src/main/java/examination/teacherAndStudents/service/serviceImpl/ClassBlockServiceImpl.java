@@ -1,20 +1,30 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.ClassBlockRequest;
 import examination.teacherAndStudents.dto.ClassBlockResponse;
+import examination.teacherAndStudents.dto.FormTeacherAssignmentRequest;
 import examination.teacherAndStudents.dto.UpdateFormTeacherRequest;
 import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.EntityAlreadyExistException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
+import examination.teacherAndStudents.error_handler.UnauthorizedException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.ClassBlockService;
+import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ClassBlockServiceImpl implements ClassBlockService {
 
     private final ClassBlockRepository classBlockRepository;
@@ -163,6 +173,58 @@ public class ClassBlockServiceImpl implements ClassBlockService {
         }
     }
 
+    @Override
+    @Transactional
+    public void assignFormTeachersToClassBlocks(FormTeacherAssignmentRequest request) {
+        verifyAdminAccess();
+
+        // Validate AcademicSession
+        AcademicSession session = academicSessionRepository.findById(request.getSessionId())
+                .orElseThrow(() -> new CustomNotFoundException("Academic Session not found with ID: " + request.getSessionId()));
+
+        // Validate ClassLevel
+        ClassLevel classLevel = classLevelRepository.findByIdAndAcademicYearId(request.getClassLevelId(), request.getSessionId())
+                .orElseThrow(() -> new CustomNotFoundException("Class Level not found with ID: " + request.getClassLevelId() + " for session ID: " + request.getSessionId()));
+
+        // Validate assignments list
+        if (request.getAssignments() == null || request.getAssignments().isEmpty()) {
+            throw new IllegalArgumentException("Assignments list cannot be empty");
+        }
+
+        for (FormTeacherAssignmentRequest.Assignment assignment : request.getAssignments()) {
+            // Validate ClassBlock
+            ClassBlock classBlock = classBlockRepository.findById(assignment.getClassBlockId())
+                    .orElseThrow(() -> new CustomNotFoundException("Class Block not found with ID: " + assignment.getClassBlockId()));
+
+            // Validate that ClassBlock belongs to the specified ClassLevel
+            if (!classBlock.getClassLevel().getId().equals(request.getClassLevelId())) {
+                throw new IllegalArgumentException("Class Block with ID: " + assignment.getClassBlockId() + " does not belong to the specified Class Level");
+            }
+
+            // Validate Teacher
+            User teacher = userRepository.findById(assignment.getTeacherId())
+                    .orElseThrow(() -> new CustomNotFoundException("Teacher with ID: " + assignment.getTeacherId() + " not found"));
+
+            Profile teacherProfile = profileRepository.findByUser(teacher)
+                    .orElseThrow(() -> new CustomNotFoundException("Teacher profile with ID: " + assignment.getTeacherId() + " not found"));
+
+            if (!teacher.getRoles().contains(Roles.TEACHER)) {
+                throw new IllegalArgumentException("User with ID: " + assignment.getTeacherId() + " is not a teacher");
+            }
+
+            // Check if the ClassBlock already has a form teacher assigned
+            if (classBlock.getFormTeacher() != null) {
+                throw new EntityAlreadyExistException("Class Block with ID: " + assignment.getClassBlockId() + " already has a form teacher assigned");
+            }
+
+            // Assign form teacher
+            classBlock.setFormTeacher(teacherProfile);
+            classBlock.setUpdatedAt(LocalDateTime.now());
+            classBlockRepository.save(classBlock);
+            log.info("Assigned form teacher [teacherId={}] to ClassBlock [classBlockId={}]", teacher.getId(), classBlock.getId());
+        }
+    }
+
 
     public ClassBlockResponse changeStudentClass(Long studentId, ClassBlockRequest request) {
         try {
@@ -218,5 +280,21 @@ public class ClassBlockServiceImpl implements ClassBlockService {
                 .classUniqueUrl(classBlock.getClassUniqueUrl())
                 .numberOfStudents(classBlock.getNumberOfStudents())
                 .build();
+    }
+
+
+    private User verifyAdminAccess() {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("User not found with email: " + email));
+        if (!user.getRoles().contains(Roles.ADMIN)) {
+            log.warn("Unauthorized access attempt by user: {}", email);
+            throw new UnauthorizedException("Access restricted to ADMIN role");
+        }
+        if (user.getSchool() == null) {
+            log.warn("User {} not associated with a school", email);
+            throw new CustomNotFoundException("User not associated with a school");
+        }
+        return user;
     }
 }

@@ -73,4 +73,12 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             Profile userProfile,
             AttendanceStatus status,
             LocalDateTime startDate,
-            LocalDateTime endDate);}
+            LocalDateTime endDate);
+
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE a.userProfile.id = :userProfileId AND a.studentTerm = :studentTerm AND a.date BETWEEN :startDate AND :endDate")
+    long countByUserProfileIdAndStudentTermAndDateRange(Long userProfileId, StudentTerm studentTerm, LocalDateTime startDate, LocalDateTime endDate);
+
+    @Query("SELECT COUNT(a) FROM Attendance a WHERE a.userProfile.id = :userProfileId AND a.studentTerm = :studentTerm AND a.status = :status AND a.date BETWEEN :startDate AND :endDate")
+    long countByUserProfileIdAndStudentTermAndStatusAndDateRange(Long userProfileId, StudentTerm studentTerm, AttendanceStatus status, LocalDateTime startDate, LocalDateTime endDate);
+
+}

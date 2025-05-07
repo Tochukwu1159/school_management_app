@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -39,16 +40,9 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
 
     @Override
     @Transactional
-    public ClassSubjectResponse saveClassSubject(ClassSubjectRequest request) {
+    public List<ClassSubjectResponse> saveClassSubject( ClassSubjectRequest request) {
         User validUser = validateAdminUser();
         School userSchool = validUser.getSchool();
-
-        // Validate Subject
-        Subject subject = subjectRepository.findById(request.getSubjectId())
-                .orElseThrow(() -> new NotFoundException("Subject with id " + request.getSubjectId() + " not found"));
-        if (!subject.getSchool().getId().equals(userSchool.getId())) {
-            throw new IllegalArgumentException("Subject does not belong to the user's school");
-        }
 
         // Validate ClassBlock
         ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
@@ -64,27 +58,48 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
             throw new IllegalArgumentException("AcademicSession does not belong to the user's school");
         }
 
-        // Check for existing ClassSubject
-        boolean exists = classSubjectRepository.existsBySubjectAndClassBlockAndAcademicYear(
-                subject, classBlock, academicSession
-        );
-        if (exists) {
-            throw new EntityAlreadyExistException("Subject already added for this class and academic year");
+        List<ClassSubject> classSubjectsToSave = new ArrayList<>();
+        List<ClassSubjectResponse> responses = new ArrayList<>();
+
+        // Process each subjectId
+        for (Long subjectId : request.getSubjectIds()) {
+            // Validate Subject
+            Subject subject = subjectRepository.findById(subjectId)
+                    .orElseThrow(() -> new NotFoundException("Subject with id " + subjectId + " not found"));
+            if (!subject.getSchool().getId().equals(userSchool.getId())) {
+                throw new IllegalArgumentException("Subject with id " + subjectId + " does not belong to the user's school");
+            }
+
+            // Check for existing ClassSubject
+            boolean exists = classSubjectRepository.existsBySubjectAndClassBlockAndAcademicYear(
+                    subject, classBlock, academicSession
+            );
+            if (exists) {
+                continue; // Skip if already exists to avoid duplicate entries
+            }
+
+            // Create ClassSubject
+            ClassSubject classSubject = ClassSubject.builder()
+                    .subject(subject)
+                    .classBlock(classBlock)
+                    .school(userSchool)
+                    .academicYear(academicSession)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+
+            classSubjectsToSave.add(classSubject);
         }
 
-        // Create and save ClassSubject
-        ClassSubject classSubject = ClassSubject.builder()
-                .subject(subject)
-                .classBlock(classBlock)
-                .school(userSchool)
-                .academicYear(academicSession)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
+        // Batch save all new ClassSubjects
+        if (!classSubjectsToSave.isEmpty()) {
+            List<ClassSubject> savedClassSubjects = classSubjectRepository.saveAll(classSubjectsToSave);
+            responses = savedClassSubjects.stream()
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
+        }
 
-        classSubject = classSubjectRepository.save(classSubject);
-
-        return toResponse(classSubject);
+        return responses;
     }
     @Override
     @Transactional(readOnly = true)
@@ -144,7 +159,7 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
             User teacher = userRepository.findById(assignment.getTeacherId())
                     .orElseThrow(() -> new NotFoundException("Teacher with id " + assignment.getTeacherId() + " not found"));
 
-            Profile teacherProfile = profileRepository.findByUser(teacher)
+            Profile teacherProfile = profileRepository.findById(assignment.getTeacherId())
                     .orElseThrow(() -> new NotFoundException("Teacher with id " + assignment.getTeacherId() + " not found"));
 
             if (!teacher.getRoles().contains(Roles.TEACHER)) {

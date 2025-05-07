@@ -11,6 +11,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/class-subjects")
 @RequiredArgsConstructor
@@ -19,9 +21,13 @@ public class ClassSubjectController {
     private final ClassSubjectServiceImpl classSubjectService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ClassSubjectResponse>> createOrUpdateClassSubject(@Valid @RequestBody ClassSubjectRequest classSubjectRequest) {
-        ClassSubjectResponse classSubjectResponse = classSubjectService.saveClassSubject(classSubjectRequest);
-        return ResponseEntity.status(201).body(new ApiResponse<>("Class subject created or updated successfully", true, classSubjectResponse));
+    public ResponseEntity<ApiResponse<List<ClassSubjectResponse>>> createOrUpdateClassSubject(@Valid @RequestBody ClassSubjectRequest classSubjectRequest) {
+        List<ClassSubjectResponse> classSubjectResponses = classSubjectService.saveClassSubject(classSubjectRequest);
+        return ResponseEntity.status(201).body(new ApiResponse<>(
+                "Class subjects created successfully",
+                true,
+                classSubjectResponses
+        ));
     }
 
     @GetMapping("/{id}")

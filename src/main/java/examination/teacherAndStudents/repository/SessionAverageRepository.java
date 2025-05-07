@@ -22,4 +22,6 @@ public interface SessionAverageRepository extends JpaRepository<SessionAverage, 
     @Query("SELECT sa FROM SessionAverage sa WHERE sa.academicYear = :academicYear " +
             "ORDER BY sa.classBlock.id, sa.averageScore DESC")
     List<SessionAverage> findTop5ByAcademicYear(@Param("academicYear") AcademicSession academicYear);
+
+    List<SessionAverage> findAllByAcademicYearAndClassBlock(AcademicSession academicSession, ClassBlock classBlock);
 }

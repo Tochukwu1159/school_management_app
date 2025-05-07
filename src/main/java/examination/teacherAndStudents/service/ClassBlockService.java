@@ -2,6 +2,7 @@ package examination.teacherAndStudents.service;
 
 import examination.teacherAndStudents.dto.ClassBlockRequest;
 import examination.teacherAndStudents.dto.ClassBlockResponse;
+import examination.teacherAndStudents.dto.FormTeacherAssignmentRequest;
 import examination.teacherAndStudents.dto.UpdateFormTeacherRequest;
 
 import java.util.List;
@@ -17,4 +18,5 @@ public interface ClassBlockService {
     void deleteClassBlock(Long id);
     ClassBlockResponse updateFormTeacher(UpdateFormTeacherRequest request);
     ClassBlockResponse changeStudentClass(Long studentId, ClassBlockRequest request);
+    void assignFormTeachersToClassBlocks(FormTeacherAssignmentRequest request);
 }

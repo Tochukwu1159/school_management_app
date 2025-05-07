@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -259,13 +260,15 @@ public class AttendanceServiceImpl implements AttendanceService {
     public StudentAttendanceResponse calculateAttendancePercentage(Long userId, Long classLevelId, Long sessionId, Long studentTermId) {
         try {
             Optional<User> optionalStudent = userRepository.findById(userId);
-
             if (optionalStudent.isEmpty()) {
                 throw new CustomNotFoundException("Student not found with ID: " + userId);
             }
 
             User student = optionalStudent.get();
             Optional<Profile> studentProfile = profileRepository.findByUser(student);
+            if (studentProfile.isEmpty()) {
+                throw new CustomNotFoundException("Profile not found for student with ID: " + userId);
+            }
 
             AcademicSession session = academicSessionRepository.findById(sessionId)
                     .orElseThrow(() -> new CustomNotFoundException("Session not found with ID: " + sessionId));
@@ -273,34 +276,48 @@ public class AttendanceServiceImpl implements AttendanceService {
             ClassBlock classLevel = classBlockRepository.findById(classLevelId)
                     .orElseThrow(() -> new CustomNotFoundException("Class Level not found with ID: " + classLevelId));
 
-            ClassLevel generalClass = classLevelRepository.findById(classLevelId)
-                    .orElseThrow(() -> new CustomNotFoundException("Class with ID: " + classLevelId + " not found in class level"));
-
             Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(studentTermId);
+            if (studentTerm.isEmpty()) {
+                throw new CustomNotFoundException("Student term not found with ID: " + studentTermId);
+            }
+
+            // Get term start and end dates
+            LocalDate startDate = studentTerm.get().getStartDate();
+            LocalDate endDate = studentTerm.get().getEndDate();
+            if (startDate == null || endDate == null || startDate.isAfter(endDate)) {
+                throw new CustomInternalServerException("Invalid term start or end date");
+            }
+
+            LocalDateTime startDateTime = startDate.atStartOfDay(); // Start of the day
+            LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX); // End of the day (23:59:59.999)
 
             // Check if the attendance percentage already exists
             Optional<AttendancePercent> existingAttendancePercent = attendancePercentRepository.findByUserAndStudentTerm(studentProfile.get(), studentTerm.get());
 
-            // Get the total number of attendance records for the user
-            long totalAttendanceRecords = attendanceRepository.countByUserProfileIdAndStudentTerm(studentProfile.get().getId(), studentTerm.get());
+            // Get the total number of attendance records for the user within the term's date range
+            long totalAttendanceRecords = attendanceRepository.countByUserProfileIdAndStudentTermAndDateRange(
+                    studentProfile.get().getId(), studentTerm.get(), startDateTime, endDateTime);
 
-            // Get the number of days the student attended
-            long daysAttended = attendanceRepository.countByUserProfileIdAndStudentTermAndStatus(studentProfile.get().getId(), studentTerm.get(), AttendanceStatus.PRESENT);
+            // Get the number of days the student attended within the term's date range
+            long daysPresent = attendanceRepository.countByUserProfileIdAndStudentTermAndStatusAndDateRange(
+                    studentProfile.get().getId(), studentTerm.get(), AttendanceStatus.PRESENT, startDateTime, endDateTime);
+
+            // Calculate days absent
+            long daysAbsent = totalAttendanceRecords - daysPresent;
 
             // Check if totalAttendanceRecords is zero to avoid division by zero
             if (totalAttendanceRecords == 0) {
-                throw new CustomInternalServerException("Total attendance records are zero. Cannot calculate percentage.");
+                throw new CustomInternalServerException("No attendance records found for the term. Cannot calculate percentage.");
             }
 
             // Calculate the attendance percentage
-            double attendancePercentage = (double) daysAttended / totalAttendanceRecords * 100;
+            double attendancePercentage = (double) daysPresent / totalAttendanceRecords * 100;
 
             // Round the attendance percentage to the nearest whole number
             double roundedPercentage = (double) Math.round(attendancePercentage);
 
             // Save or update the attendance percentage in the AttendancePercent entity
             AttendancePercent attendancePercent = existingAttendancePercent.orElse(new AttendancePercent());
-
             attendancePercent.setAttendancePercentage(roundedPercentage);
             attendancePercent.setStudentTerm(studentTerm.get());
             attendancePercent.setUser(studentProfile.get());
@@ -316,8 +333,8 @@ public class AttendanceServiceImpl implements AttendanceService {
                     studentProfile.get().getPhoneNumber()
             );
 
-            // Return StudentAttendanceResponse with student profile and calculated percentage
-            return new StudentAttendanceResponse(profileData, roundedPercentage);
+            // Return StudentAttendanceResponse with student profile, calculated percentage, and attendance details
+            return new StudentAttendanceResponse(profileData, roundedPercentage, daysPresent, daysAbsent, totalAttendanceRecords);
 
         } catch (CustomNotFoundException e) {
             throw new CustomNotFoundException("An error occurred: " + e.getMessage());
@@ -325,7 +342,6 @@ public class AttendanceServiceImpl implements AttendanceService {
             throw new CustomInternalServerException("An error occurred while calculating attendance percentage: " + e.getMessage());
         }
     }
-
 
     public List<StudentAttendanceResponse> calculateClassAttendancePercentage(Long classLevelId, Long sessionId, Long termId) {
         List<StudentAttendanceResponse> attendanceResponses = new ArrayList<>();
@@ -337,17 +353,35 @@ public class AttendanceServiceImpl implements AttendanceService {
             ClassBlock classLevel = classBlockRepository.findById(classLevelId)
                     .orElseThrow(() -> new CustomNotFoundException("Class Level not found with ID: " + classLevelId));
 
-            List<Profile> students = profileRepository.findByClassBlock(classLevel);
             examination.teacherAndStudents.entity.StudentTerm studentTerm = studentTermRepository.findById(termId)
                     .orElseThrow(() -> new CustomNotFoundException("Student Term not found with ID: " + termId));
 
+            // Validate term start and end dates
+            LocalDate startDate = studentTerm.getStartDate();
+            LocalDate endDate = studentTerm.getEndDate();
+            if (startDate == null || endDate == null || startDate.isAfter(endDate)) {
+                throw new CustomInternalServerException("Invalid term start or end date");
+            }
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
+            List<Profile> students = profileRepository.findByClassBlock(classLevel);
+
             for (Profile studentProfile : students) {
-                long totalAttendanceRecords = attendanceRepository.countByUserProfileIdAndStudentTerm(studentProfile.getId(), studentTerm);
-                long daysAttended = attendanceRepository.countByUserProfileIdAndStudentTermAndStatus(studentProfile.getId(), studentTerm, AttendanceStatus.PRESENT);
+                // Get total attendance records within the term's date range
+                long totalAttendanceRecords = attendanceRepository.countByUserProfileIdAndStudentTermAndDateRange(
+                        studentProfile.getId(), studentTerm, startDateTime, endDateTime);
+
+                // Get days attended within the term's date range
+                long daysPresent = attendanceRepository.countByUserProfileIdAndStudentTermAndStatusAndDateRange(
+                        studentProfile.getId(), studentTerm, AttendanceStatus.PRESENT, startDateTime, endDateTime);
+
+                // Calculate days absent
+                long daysAbsent = totalAttendanceRecords - daysPresent;
 
                 double attendancePercentage = 0.0;
                 if (totalAttendanceRecords != 0) {
-                    attendancePercentage = (double) daysAttended / totalAttendanceRecords * 100;
+                    attendancePercentage = (double) daysPresent / totalAttendanceRecords * 100;
                 }
 
                 double roundedPercentage = Math.round(attendancePercentage);
@@ -369,8 +403,14 @@ public class AttendanceServiceImpl implements AttendanceService {
                         studentProfile.getPhoneNumber()
                 );
 
-                // Add the StudentAttendanceResponse to the list
-                attendanceResponses.add(new StudentAttendanceResponse(profileData, roundedPercentage));
+                // Add the StudentAttendanceResponse to the list with new fields
+                attendanceResponses.add(new StudentAttendanceResponse(
+                        profileData,
+                        roundedPercentage,
+                        daysPresent,
+                        daysAbsent,
+                        totalAttendanceRecords
+                ));
             }
         } catch (CustomNotFoundException e) {
             throw new CustomNotFoundException("An error occurred: " + e.getMessage());
@@ -380,7 +420,6 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         return attendanceResponses;
     }
-
 
     private AttendanceResponses toAttendanceResponse(Attendance attendance) {
         return AttendanceResponses.builder()

@@ -3,8 +3,10 @@ package examination.teacherAndStudents.controller;
 import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.ClassBlockRequest;
 import examination.teacherAndStudents.dto.ClassBlockResponse;
+import examination.teacherAndStudents.dto.FormTeacherAssignmentRequest;
 import examination.teacherAndStudents.dto.UpdateFormTeacherRequest;
 import examination.teacherAndStudents.service.ClassBlockService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -72,5 +74,12 @@ public class ClassBlockController {
                 .build();
         ClassBlockResponse response = classBlockService.updateFormTeacher(request);
         return ResponseEntity.ok(new ApiResponse<>("Form teacher updated successfully", true, response));
+    }
+
+    @PostMapping("/form-teacher/assign")
+    public ResponseEntity<ApiResponse<Void>> assignFormTeachers(
+            @RequestBody @Valid FormTeacherAssignmentRequest request) {
+        classBlockService.assignFormTeachersToClassBlocks(request);
+        return ResponseEntity.status(200).body(new ApiResponse<>("Form teachers assigned successfully", true));
     }
 }
