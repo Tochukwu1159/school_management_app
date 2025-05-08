@@ -31,7 +31,6 @@ public class TimetableController {
         Timetable timetable = timetableService.createTimetable(
                 request.getDayOfWeek(),
                 request.getSubjectSchedules(),
-                request.getTimetableType(),
                 request.getTerm(),
                 request.getYearId(),
                 request.getClassBlockId()

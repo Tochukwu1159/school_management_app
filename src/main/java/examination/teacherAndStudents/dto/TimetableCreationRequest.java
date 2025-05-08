@@ -20,6 +20,5 @@ public class TimetableCreationRequest {
     private Long yearId;
     private Long classBlockId;
     private DayOfWeek dayOfWeek;
-    private TimetableType timetableType;
     private List<SubjectScheduleRequest> subjectSchedules;
 }

@@ -1,13 +1,9 @@
 package examination.teacherAndStudents.entity;
+
 import examination.teacherAndStudents.utils.TeachingStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-
 import lombok.*;
-
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.util.List;
 
 @Getter
 @Setter
@@ -30,22 +26,13 @@ public class SubjectSchedule {
     @NotNull(message = "Subject must not be null")
     private ClassSubject subject;
 
-
     @NotNull(message = "Start time must not be null")
-    @Future(message = "Start time must be in the future")
-    private LocalDateTime startTime;
-
+    private String startTime;
 
     @NotNull(message = "End time must not be null")
-    @Future(message = "End time must be in the future")
-    private LocalDateTime endTime;
-
-
+    private String endTime;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")
     private Profile teacher;
-
-
-    // Getters and setters
 }

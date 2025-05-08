@@ -19,7 +19,7 @@ import java.util.List;
 @Service
 public interface TimetableService {
 
-    Timetable createTimetable( DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, TimetableType timetableType, Long termId, Long sessionId, Long classBlockId);
+    Timetable createTimetable( DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, Long termId, Long sessionId, Long classBlockId);
     Timetable updateTimetable(Long timetableId, DayOfWeek dayOfWeek, List<SubjectScheduleRequest> subjectSchedules, Long termId, Long sessionId);
     Page<Timetable> getAllTimetables(int page, int size, String sortBy, String sortDirection);
     Page<SubjectSchedule> getAllSubjectSchedules(int page, int size, String sortBy, String sortDirection);

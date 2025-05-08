@@ -33,7 +33,6 @@ public class ResultServiceImpl implements ResultService {
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final SessionAverageRepository sessionAverageRepository;
-    private final PromotionCriteriaRepository promotionCriteriaRepository;
     private final GradeRatingService gradeRatingService;
 
 
@@ -41,7 +40,7 @@ public class ResultServiceImpl implements ResultService {
     public ResultServiceImpl(ScoreService scoreService, UserRepository userRepository, ScoreRepository scoreRepository,
                              ResultRepository resultRepository,
                              PositionRepository positionRepository,
-                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository, PromotionCriteriaRepository promotionCriteriaRepository, GradeRatingService gradeRatingService) {
+                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository,  GradeRatingService gradeRatingService) {
         this.scoreService = scoreService;
         this.userRepository = userRepository;
         this.scoreRepository = scoreRepository;
@@ -53,7 +52,6 @@ public class ResultServiceImpl implements ResultService {
         this.academicSessionRepository = academicSessionRepository;
         this.studentTermRepository = studentTermRepository;
         this.sessionAverageRepository = sessionAverageRepository;
-        this.promotionCriteriaRepository = promotionCriteriaRepository;
         this.gradeRatingService = gradeRatingService;
     }
 
@@ -373,67 +371,6 @@ public class ResultServiceImpl implements ResultService {
     }
 
 
-    @Transactional
-    public void promoteStudentsForCurrentSession() {
-        LocalDate today = LocalDate.now();
-
-        // 1. Get current session where results are ready today
-        AcademicSession currentSession = academicSessionRepository
-                .findByResultReadyDateAndStatus(today, SessionStatus.ACTIVE)
-                .orElseThrow(() -> new NotFoundException("No session with ready results today"));
-
-        // 2. Get all classes in the school for this session
-        List<ClassBlock> currentClasses = classBlockRepository
-                .findByClassLevelAcademicYear(currentSession);
-
-        for (ClassBlock currentClass : currentClasses) {
-            // 3. Get promotion rules for this class
-            PromotionCriteria criteria = promotionCriteriaRepository
-                    .findByClassBlock(currentClass)
-                    .orElseThrow(() -> new NotFoundException(
-                            "No promotion criteria for class " + currentClass.getId()));
-
-            // 4. Get student averages
-            List<SessionAverage> averages = sessionAverageRepository
-                    .findAllByClassBlockAndAcademicYear(currentClass, currentSession);
-
-            if (averages.isEmpty()) continue;
-
-            // 5. Process promotions/demotions
-            List<Profile> studentsToUpdate = new ArrayList<>();
-            int promoted = 0;
-            int demoted = 0;
-
-            for (SessionAverage avg : averages) {
-                Profile student = avg.getUserProfile();
-
-                if (avg.getAverageScore() >= criteria.getCutOffScore()) {
-                    // PROMOTE: Assign to new class
-                    student.setClassBlock(criteria.getPromotedClass());
-                    promoted++;
-                } else {
-                    // DEMOTE: Keep in current class (no change)
-                    student.setClassBlock(criteria.getPromotedClass());
-                    demoted++;
-                }
-                studentsToUpdate.add(student);
-            }
-
-            // 6. Batch update
-            profileRepository.saveAll(studentsToUpdate);
-
-            // 7. Update class counts
-            criteria.getPromotedClass().setNumberOfStudents(
-                    criteria.getPromotedClass().getNumberOfStudents() + promoted);
-            currentClass.setNumberOfStudents(
-                    currentClass.getNumberOfStudents() + demoted);
-
-            classBlockRepository.saveAll(List.of(
-                    criteria.getPromotedClass(),
-                    currentClass
-            ));
-        }
-    }
 
     @Override
     public void updateSessionAverage(List<Profile> studentProfiles, ClassBlock classBlock, AcademicSession academicYear) {

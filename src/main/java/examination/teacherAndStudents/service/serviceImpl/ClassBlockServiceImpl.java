@@ -283,7 +283,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
     }
 
 
-    private User verifyAdminAccess() {
+    private void verifyAdminAccess() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("User not found with email: " + email));
@@ -295,6 +295,5 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             log.warn("User {} not associated with a school", email);
             throw new CustomNotFoundException("User not associated with a school");
         }
-        return user;
     }
 }
