@@ -8,6 +8,7 @@ import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.HostelService;
 import examination.teacherAndStudents.utils.AvailabilityStatus;
+import examination.teacherAndStudents.utils.HostelType;
 import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -80,9 +81,6 @@ public class HostelServiceImpl implements HostelService {
         if (hostelRequest.getNumberOfBed() <= 0) {
             throw new IllegalArgumentException("Number of beds must be greater than zero");
         }
-        if (hostelRequest.getCostPerBed().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Cost per bed must be greater than zero");
-        }
 
         Profile warden = null;
         if (hostelRequest.getWardenId() != null) {
@@ -92,7 +90,7 @@ public class HostelServiceImpl implements HostelService {
 
         Hostel newHostel = Hostel.builder()
                 .hostelName(hostelRequest.getHostelName())
-                .costPerBed(hostelRequest.getCostPerBed())
+                .hostelType(HostelType.valueOf(hostelRequest.getHostelType()))
                 .numberOfBed(hostelRequest.getNumberOfBed())
                 .description(hostelRequest.getDescription())
                 .availabilityStatus(AvailabilityStatus.AVAILABLE)
@@ -117,9 +115,6 @@ public class HostelServiceImpl implements HostelService {
         if (updatedHostel.getNumberOfBed() <= 0) {
             throw new IllegalArgumentException("Number of beds must be greater than zero");
         }
-        if (updatedHostel.getCostPerBed().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Cost per bed must be greater than zero");
-        }
 
         Profile warden = null;
         if (updatedHostel.getWardenId() != null) {
@@ -128,7 +123,7 @@ public class HostelServiceImpl implements HostelService {
         }
 
         hostel.setHostelName(updatedHostel.getHostelName());
-        hostel.setCostPerBed(updatedHostel.getCostPerBed());
+        hostel.setHostelType(HostelType.valueOf(updatedHostel.getHostelType()));
         hostel.setNumberOfBed(updatedHostel.getNumberOfBed());
         hostel.setWarden(warden);
 
@@ -167,7 +162,7 @@ public class HostelServiceImpl implements HostelService {
                 .id(hostel.getId())
                 .hostelName(hostel.getHostelName())
                 .numberOfBed(hostel.getNumberOfBed())
-                .costPerBed(hostel.getCostPerBed())
+                .hostelType(String.valueOf(hostel.getHostelType()))
                 .availabilityStatus(hostel.getAvailabilityStatus())
                 .schoolId(hostel.getSchool().getId())
                 .schoolName(hostel.getSchool().getSchoolName())

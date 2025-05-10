@@ -11,7 +11,7 @@ public interface ClassSubjectService {
     List<ClassSubjectResponse> saveClassSubject(ClassSubjectRequest request);
     ClassSubjectResponse getClassSubjectById(Long id);
     Page<ClassSubjectResponse> getAllClassSubjects(
-            Long academicYearId, Long subjectId, Long classSubjectId, String subjectName,
+            Long academicYearId, Long subjectId, Long classSubjectId, String subjectName, Long subClassId,
             int page, int size, String sortBy, String sortDirection);
     void deleteClassSubject(Long id);
     void assignClassSubjectToTeacher(TeacherAssignmentRequest request);

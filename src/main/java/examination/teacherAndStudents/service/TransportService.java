@@ -30,6 +30,8 @@ public interface TransportService {
 
     TransportResponse getTransportById(Long transportId);
 
+    Page<TransportAllocationResponse> getAllocatedStudentsForDriver(Long driverId, int page, int size, String sortBy, String sortDirection);
+
     TransportAllocationResponse removeStudentFromTransport(Long transportId, Long studentId);
     TransportResponse addBusToRoute(AddBusToRouteRequest request);
 }

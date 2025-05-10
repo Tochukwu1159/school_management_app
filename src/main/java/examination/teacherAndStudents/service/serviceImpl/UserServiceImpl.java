@@ -7,14 +7,11 @@ import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.entity.EmergencyContact;
-import examination.teacherAndStudents.entity.StudentTerm;
 import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.FeeService;
 import examination.teacherAndStudents.service.UserService;
-import examination.teacherAndStudents.service.funding.PaymentProvider;
-import examination.teacherAndStudents.service.funding.PaymentProviderFactory;
 import examination.teacherAndStudents.templateService.IdCardService;
 import examination.teacherAndStudents.utils.*;
 import jakarta.mail.MessagingException;
@@ -39,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -622,66 +620,6 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    @Transactional
-    public UserResponse updateStudentClassLevel(Long studentId, Long newClassLevelId) {
-        User existingUser = userRepository.findById(studentId)
-                .orElseThrow(() -> new CustomNotFoundException("User not found with ID: " + studentId));
-
-        ClassBlock newClassBlock = classBlockRepository.findById(newClassLevelId)
-                .orElseThrow(() -> new BadRequestException("Class block not found with ID: " + newClassLevelId));
-
-
-        ClassLevel classLevel = classLevelRepository.findByClassName(newClassBlock.getClassLevel().getClassName());
-        if (classLevel == null) {
-            throw new BadRequestException("Error: Class level not found for class " + newClassBlock.getName());
-        }
-
-        newClassBlock.setNumberOfStudents(newClassBlock.getNumberOfStudents() + 1);
-        classBlockRepository.save(newClassBlock);
-
-
-        return modelMapper.map(existingUser, UserResponse.class);
-    }
-
-    @Transactional
-    public UserResponse PromoteDueAcademicToPerformance(Long studentId, Long newClassLevelId) {
-        // Fetch the existing user
-        User existingUser = userRepository.findById(studentId)
-                .orElseThrow(() -> new CustomNotFoundException("User not found with ID: " + studentId));
-
-        Profile existingProfile = profileRepository.findByUser(existingUser)
-                .orElseThrow(() -> new CustomNotFoundException("Profile not found with ID: " + studentId));
-
-        // Find the class block by the new class level ID
-        ClassBlock newClassBlock = classBlockRepository.findById(newClassLevelId)
-                .orElseThrow(() -> new BadRequestException("Class block not found with ID: " + newClassLevelId));
-
-        // Ensure that the class level is valid for the new class block
-        ClassLevel classLevel = classLevelRepository.findByClassName(newClassBlock.getClassLevel().getClassName());
-        if (classLevel == null) {
-            throw new BadRequestException("Error: Class level not found for class " + newClassBlock.getName());
-        }
-
-        // Decrement the number of students in the current class block of the user
-        ClassBlock currentClassBlock = existingProfile.getClassBlock();
-        if (currentClassBlock != null) {
-            currentClassBlock.setNumberOfStudents(currentClassBlock.getNumberOfStudents() - 1);
-            classBlockRepository.save(currentClassBlock);
-        }
-
-        // Update the student's class block to the new class block
-        existingProfile.setClassBlock(newClassBlock);
-        profileRepository.save(existingProfile);
-
-        // Increment the number of students in the new class block
-        newClassBlock.setNumberOfStudents(newClassBlock.getNumberOfStudents() + 1);
-        classBlockRepository.save(newClassBlock);
-
-        // Build and return the response
-        return modelMapper.map(existingUser, UserResponse.class);
-    }
-
-
 
 
     @Override
@@ -1216,13 +1154,13 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    private List<Document> handleDocumentUploads(
+    private void handleDocumentUploads(
             List<UserRequestDto.DocumentDto> documentDtos,
             School school,
             Profile profile) {
 
         if (documentDtos == null || documentDtos.isEmpty()) {
-            return Collections.emptyList();
+            return;
         }
 
         List<Document> documents = new ArrayList<>();
@@ -1236,7 +1174,7 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        return documentRepository.saveAll(documents);
+        documentRepository.saveAll(documents);
     }
 
     private Document processSingleDocument(
@@ -1256,6 +1194,7 @@ public class UserServiceImpl implements UserService {
                 .profile(profile)
                 .documentType(docRequest.getDocumentType())
                 .documentImageUrl(documentUrl)
+                .documentNo(docRequest.getDocumentNo())
                 .build();
     }
 

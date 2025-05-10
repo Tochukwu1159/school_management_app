@@ -113,14 +113,14 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     @Override
     @Transactional(readOnly = true)
     public Page<ClassSubjectResponse> getAllClassSubjects(
-            Long academicYearId, Long subjectId, Long classSubjectId, String subjectName,
+            Long academicYearId, Long subjectId, Long classSubjectId, String subjectName, Long subClassId,
             int page, int size, String sortBy, String sortDirection) {
         validateAdminUser();
         Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<ClassSubject> classSubjects = classSubjectRepository.findAllWithFilters(
-                academicYearId, subjectId, classSubjectId, subjectName, pageable);
+                academicYearId, subjectId, classSubjectId, subjectName, subClassId, pageable);
 
         return classSubjects.map(this::toResponse);
     }

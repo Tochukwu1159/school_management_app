@@ -23,11 +23,5 @@ public class RouteRequest {
     @NotBlank(message = "End point is required")
     private String endPoint;
 
-
-
-    @NotNull(message = "Stops list cannot be null")
-    @Size(min = 1, message = "At least one stop is required")
-    private List<StopRequest> stops;
-
     // Constructors, getters, and setters
 }

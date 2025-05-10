@@ -13,9 +13,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 public class StopResponse {
     private Long stopId;
-    private String stopName;
     private String address;
-    private int sequenceOrder;
     private LocalTime arrivalTime;
     private Double latitude;
     private Double longitude;

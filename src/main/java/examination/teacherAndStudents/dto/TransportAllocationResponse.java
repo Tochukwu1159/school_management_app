@@ -20,7 +20,6 @@ public class TransportAllocationResponse {
     private Long routeId;
     private String routeName;
     private Long stopId;
-    private String stopName;
     private Long transportId;
     private String transportName;
     private PaymentStatus paymentStatus;

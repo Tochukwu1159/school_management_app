@@ -24,12 +24,15 @@ public interface ClassSubjectRepository extends JpaRepository<ClassSubject, Long
             "(:academicYearId IS NULL OR cs.academicYear.id = :academicYearId) AND " +
             "(:subjectId IS NULL OR cs.subject.id = :subjectId) AND " +
             "(:classSubjectId IS NULL OR cs.id = :classSubjectId) AND " +
+            "(:subClassId IS NULL OR cs.classBlock.id = :subClassId) AND " +
+
             "(:subjectName IS NULL OR LOWER(cs.subject.name) LIKE LOWER(CONCAT('%', :subjectName, '%')))")
     Page<ClassSubject> findAllWithFilters(
             @Param("academicYearId") Long academicYearId,
             @Param("subjectId") Long subjectId,
             @Param("classSubjectId") Long classSubjectId,
             @Param("subjectName") String subjectName,
+            @Param("subClassId") Long subClassId,
             Pageable pageable);
 
 }

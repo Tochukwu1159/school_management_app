@@ -8,6 +8,7 @@ import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.EmailService;
 import examination.teacherAndStudents.service.FeePaymentService;
 import examination.teacherAndStudents.service.TransportService;
+import examination.teacherAndStudents.utils.AccountUtils;
 import examination.teacherAndStudents.utils.AllocationStatus;
 import examination.teacherAndStudents.utils.PaymentStatus;
 import examination.teacherAndStudents.utils.Roles;
@@ -237,12 +238,7 @@ public class TransportServiceImpl implements TransportService {
         BusRoute route = busRouteRepository.findById(request.getRouteId())
                 .orElseThrow(() -> new CustomNotFoundException("Route not found"));
 
-        Stop stop = stopRepository.findById(request.getStopId())
-                .orElseThrow(() -> new CustomNotFoundException("Stop not found"));
 
-        if (!stop.getRoute().getId().equals(route.getId())) {
-            throw new IllegalArgumentException("Selected stop does not belong to the chosen route");
-        }
 
         Profile profile = profileRepository.findByUser(student)
                 .orElseThrow(() -> new CustomNotFoundException("User profile not found"));
@@ -253,6 +249,18 @@ public class TransportServiceImpl implements TransportService {
         if (paymentRepository.existsByStudentFeeAndProfileAndAcademicSessionAndStudentTerm(fee, profile, academicSession, term)) {
             throw new EntityAlreadyExistException("Transport payment already made for this term");
         }
+
+        AccountUtils.GeocodingResult stopCoords = AccountUtils.getCoordinatesFromAddress(request.getStop());
+        Stop stop = Stop.builder()
+                .address(request.getStop())
+                .latitude(stopCoords.getLat())
+                .longitude(stopCoords.getLng())
+                .route(route)
+                .build();
+
+        stopRepository.save(stop);
+
+
 
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .feeId(request.getFeeId())
@@ -491,7 +499,41 @@ public class TransportServiceImpl implements TransportService {
         return mapToTransportResponse(bus);
     }
 
-    public void sendEmailToStudents(String busRoute, Set<User> students) throws MessagingException {
+    @Override
+    public Page<TransportAllocationResponse> getAllocatedStudentsForDriver(Long driverId, int page, int size, String sortBy, String sortDirection) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("User not found"));
+
+        // Restrict access to admin or the driver themselves
+        if (!user.getRoles().contains(Roles.ADMIN)) {
+            Profile driverProfile = profileRepository.findByUser(user)
+                    .orElseThrow(() -> new CustomNotFoundException("Driver profile not found"));
+            if (!driverProfile.getId().equals(driverId)) {
+                throw new UnauthorizedException("You can only view your own allocated students");
+            }
+        }
+
+        // Validate inputs
+        Profile driver = profileRepository.findById(driverId)
+                .orElseThrow(() -> new CustomNotFoundException("Driver not found with ID: " + driverId));
+        StudentTerm term = studentTermRepository.findCurrentTerm(LocalDate.now())
+                .orElseThrow(() -> new CustomNotFoundException("Term not found " ));
+
+        // Create pageable
+        Sort.Direction direction = Sort.Direction.fromString(sortDirection);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+
+        // Query allocations
+        Page<StudentTransportAllocation> allocations = studentTransportTrackerRepository.findByDriverIdAndTermIdAndStatus(
+                driverId, term.getId(), AllocationStatus.SUCCESS, pageable);
+
+        // Map to response
+        return allocations.map(this::mapToAllocationResponse);
+    }
+
+
+        public void sendEmailToStudents(String busRoute, Set<User> students) throws MessagingException {
         for (User student : students) {
             Map<String, Object> model = new HashMap<>();
             model.put("name", student.getFirstName() + " " + student.getLastName());
@@ -528,7 +570,6 @@ public class TransportServiceImpl implements TransportService {
                 .routeId(allocation.getRoute().getId())
                 .routeName(allocation.getRoute().getRouteName())
                 .stopId(allocation.getStop().getStopId())
-                .stopName(allocation.getStop().getStopName())
                 .transportId(allocation.getTransport() != null ? allocation.getTransport().getBusId() : null)
                 .transportName(allocation.getTransport() != null ? allocation.getTransport().getVehicleName() : null)
                 .paymentStatus(allocation.getPaymentStatus())

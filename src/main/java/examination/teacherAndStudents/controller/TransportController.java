@@ -2,7 +2,6 @@ package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.BusLocation;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.service.BusLocationService;
 import examination.teacherAndStudents.service.TransportService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,5 +116,19 @@ public class TransportController {
     public ResponseEntity<BusLocation> getBusLocation(@PathVariable Long busId) {
         BusLocation location = busLocationService.getBusLocation(busId);
         return ResponseEntity.ok(location);
+    }
+
+    @GetMapping("/allocated-students")
+    public ResponseEntity<ApiResponse<Page<TransportAllocationResponse>>> getAllocatedStudentsForDriver(
+            @RequestParam Long driverId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdDate") String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+        Page<TransportAllocationResponse> allocations = transportService.getAllocatedStudentsForDriver(
+                driverId, page, size, sortBy, sortDirection);
+        ApiResponse<Page<TransportAllocationResponse>> apiResponse = new ApiResponse<>("Bus location updated successfully", true, allocations);
+
+        return ResponseEntity.ok(apiResponse);
     }
 }

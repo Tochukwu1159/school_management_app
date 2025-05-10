@@ -48,12 +48,13 @@ public class ClassSubjectController {
             @RequestParam(required = false) Long subjectId,
             @RequestParam(required = false) Long classSubjectId,
             @RequestParam(required = false) String subjectName,
+            @RequestParam(required = false) Long subClassId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDirection) {
         Page<ClassSubjectResponse> responses = classSubjectService.getAllClassSubjects(
-                academicYearId, subjectId, classSubjectId, subjectName, page, size, sortBy, sortDirection);
+                academicYearId, subjectId, classSubjectId, subjectName,subClassId, page, size, sortBy, sortDirection);
         return ResponseEntity.ok(new ApiResponse<>("Class subjects retrieved successfully", true, responses));
     }
 

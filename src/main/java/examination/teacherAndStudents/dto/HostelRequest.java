@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 public class HostelRequest {
     private int numberOfBed;
-    private BigDecimal costPerBed;
+    private String hostelType;
 
     private Long wardenId;
 

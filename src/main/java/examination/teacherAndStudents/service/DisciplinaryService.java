@@ -1,8 +1,9 @@
 package examination.teacherAndStudents.service;
 
+import examination.teacherAndStudents.dto.DisciplinaryActionRequest;
+import examination.teacherAndStudents.dto.DisciplinaryActionResponse;
 import examination.teacherAndStudents.entity.DisciplinaryAction;
-import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.utils.DisciplinaryActionType;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -10,26 +11,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface DisciplinaryService {
-
-    DisciplinaryAction issueDisciplinaryAction(
-            Profile profile,
-            Profile issuedBy,
-            DisciplinaryActionType actionType,
-            String reason,
-            String description,
-            LocalDate startDate,
-            LocalDate endDate);
-
-    List<DisciplinaryAction> getActiveActionsForProfile(Profile profile);
-    boolean isProfileSuspended(Profile profile);
-
+    DisciplinaryActionResponse issueDisciplinaryAction(DisciplinaryActionRequest request);
+    List<DisciplinaryAction> getActiveActionsForProfile(Long profileId);
+    boolean isProfileSuspended(Long profileId);
     void deactivateExpiredActions();
-    void updateDisciplinaryAction(Long actionId, String reason, String description,
-                                  LocalDate endDate, boolean isActive);
-
+    void updateDisciplinaryAction(Long actionId, DisciplinaryActionRequest request);
     void cancelDisciplinaryAction(Long actionId);
-
-    DisciplinaryAction getDisciplinaryActionById(Long id);
-
-    Page<DisciplinaryAction> getAllActiveDisciplinaryActions(Pageable pageable);
+    DisciplinaryActionResponse getDisciplinaryActionById(Long id);
+    Page<DisciplinaryActionResponse> getAllActiveDisciplinaryActions(Pageable pageable);
 }

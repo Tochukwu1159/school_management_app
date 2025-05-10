@@ -67,7 +67,7 @@ public class BusTrackingServiceImpl implements BusTrackingService {
                 .busId(bus.getBusId())
                 .busLatitude(busLocation.getLatitude())
                 .busLongitude(busLocation.getLongitude())
-                .stopName(stop.getStopName())
+                .stopAddress(stop.getAddress())
                 .stopLatitude(stop.getLatitude())
                 .stopLongitude(stop.getLongitude())
                 .distance(distance)

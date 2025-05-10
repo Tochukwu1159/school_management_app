@@ -63,23 +63,6 @@ public class BusRouteServiceImpl implements BusRouteService {
                 .endLongitude(endCoords.getLng())
                 .build();
 
-        // Add stops to the route
-        if (routeRequest.getStops() != null) {
-            routeRequest.getStops().forEach(stopRequest -> {
-
-                AccountUtils.GeocodingResult stopCoords = AccountUtils.getCoordinatesFromAddress(stopRequest.getAddress());
-                Stop stop = Stop.builder()
-                        .stopName(stopRequest.getStopName())
-                        .address(stopRequest.getAddress())
-                        .latitude(stopCoords.getLat())
-                        .longitude(stopCoords.getLng())
-                        .sequenceOrder(stopRequest.getSequenceOrder())
-                        .arrivalTime(stopRequest.getArrivalTime())
-                        .build();
-                newRoute.addStop(stop);
-            });
-        }
-
         BusRoute savedRoute = busRouteRepository.save(newRoute);
         return mapToRouteResponse(savedRoute);
     }
@@ -101,24 +84,6 @@ public class BusRouteServiceImpl implements BusRouteService {
         existingRoute.setEndLatitude(endCoords.getLat());
         existingRoute.setEndLongitude(endCoords.getLng());
 
-        // Update stops
-        existingRoute.getStops().clear();
-        if (routeRequest.getStops() != null) {
-            routeRequest.getStops().forEach(stopRequest -> {
-                AccountUtils.GeocodingResult stopCoords = AccountUtils.getCoordinatesFromAddress(stopRequest.getAddress());
-
-                Stop stop = Stop.builder()
-                        .stopName(stopRequest.getStopName())
-                        .address(stopRequest.getAddress())
-                        .sequenceOrder(stopRequest.getSequenceOrder())
-                        .arrivalTime(stopRequest.getArrivalTime())
-                        .latitude(stopCoords.getLat())
-                        .longitude(stopCoords.getLng())
-                        .build();
-                existingRoute.addStop(stop);
-            });
-        }
-
         BusRoute updatedRoute = busRouteRepository.save(existingRoute);
         return mapToRouteResponse(updatedRoute);
     }
@@ -135,9 +100,6 @@ public class BusRouteServiceImpl implements BusRouteService {
     }
 
     private RouteResponse mapToRouteResponse(BusRoute busRoute) {
-        List<StopResponse> stopResponses = busRoute.getStops().stream()
-                .map(this::mapToStopResponse)
-                .collect(Collectors.toList());
 
         return RouteResponse.builder()
                 .id(busRoute.getId())
@@ -146,19 +108,6 @@ public class BusRouteServiceImpl implements BusRouteService {
                 .endPoint(busRoute.getEndPoint())
                 .createdAt(busRoute.getCreatedAt())
                 .updatedAt(busRoute.getUpdatedAt())
-                .stops(stopResponses)
-                .build();
-    }
-
-    private StopResponse mapToStopResponse(Stop stop) {
-        return StopResponse.builder()
-                .stopId(stop.getStopId())
-                .stopName(stop.getStopName())
-                .address(stop.getAddress())
-                .latitude(stop.getLatitude())
-                .longitude(stop.getLongitude())
-                .sequenceOrder(stop.getSequenceOrder())
-                .arrivalTime(stop.getArrivalTime())
                 .build();
     }
 }

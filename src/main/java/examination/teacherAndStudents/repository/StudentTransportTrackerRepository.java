@@ -3,6 +3,8 @@ package examination.teacherAndStudents.repository;
 import com.google.common.io.Files;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.utils.AllocationStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,4 +29,15 @@ public interface StudentTransportTrackerRepository extends JpaRepository<Student
     Optional<StudentTransportAllocation> findByProfile(Profile profile);
 
     Optional<StudentTransportAllocation> findByProfileAndTerm(Profile student, StudentTerm currentTerm);
+
+    @Query("SELECT sta FROM StudentTransportAllocation sta " +
+            "WHERE sta.transport.driver.id = :driverId " +
+            "AND sta.term.id = :termId " +
+            "AND sta.status = :status")
+    Page<StudentTransportAllocation> findByDriverIdAndTermIdAndStatus(
+            @Param("driverId") Long driverId,
+            @Param("termId") Long termId,
+            @Param("status") AllocationStatus status,
+            Pageable pageable);
+
 }

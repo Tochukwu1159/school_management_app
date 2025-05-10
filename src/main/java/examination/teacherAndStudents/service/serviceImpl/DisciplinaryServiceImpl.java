@@ -1,16 +1,19 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
 import examination.teacherAndStudents.Security.SecurityConfig;
+import examination.teacherAndStudents.dto.DisciplinaryActionRequest;
+import examination.teacherAndStudents.dto.DisciplinaryActionResponse;
 import examination.teacherAndStudents.entity.DisciplinaryAction;
 import examination.teacherAndStudents.entity.Profile;
 import examination.teacherAndStudents.error_handler.BadRequestException;
 import examination.teacherAndStudents.error_handler.EntityNotFoundException;
-import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.DisciplinaryActionRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.service.DisciplinaryService;
 import examination.teacherAndStudents.utils.DisciplinaryActionType;
 import examination.teacherAndStudents.utils.ProfileStatus;
+import examination.teacherAndStudents.utils.Roles;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,12 +23,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
+import java.util.Optional;
 
-/**
- * Service implementation for managing disciplinary actions.
- */
 @Service
 @RequiredArgsConstructor
 public class DisciplinaryServiceImpl implements DisciplinaryService {
@@ -34,350 +36,223 @@ public class DisciplinaryServiceImpl implements DisciplinaryService {
     private final DisciplinaryActionRepository disciplinaryActionRepository;
     private final ProfileRepository profileRepository;
 
-    /**
-     * Issues a new disciplinary action for a profile.
-     *
-     * @param profile     The profile receiving the action.
-     * @param issuedBy    The staff profile issuing the action.
-     * @param actionType  The type of disciplinary action.
-     * @param reason      The reason for the action.
-     * @param description Detailed description of the action.
-     * @param startDate   The start date of the action.
-     * @param endDate     The end date of the action (nullable).
-     * @return The saved DisciplinaryAction entity.
-     * @throws BadRequestException if input parameters are invalid or conflicting actions exist.
-     */
-    @Transactional
+    // Mapping of DisciplinaryActionType to ProfileStatus
+    private static final Map<DisciplinaryActionType, ProfileStatus> ACTION_TYPE_TO_STATUS = Map.of(
+            DisciplinaryActionType.EXPULSION, ProfileStatus.EXPELLED,
+            DisciplinaryActionType.SUSPENSION, ProfileStatus.SUSPENDED,
+            DisciplinaryActionType.PROBATION, ProfileStatus.ON_PROBATION,
+            DisciplinaryActionType.DETENTION, ProfileStatus.RESTRICTED,
+            DisciplinaryActionType.WARNING, ProfileStatus.WARNED,
+            DisciplinaryActionType.FINE, ProfileStatus.FINED,
+            DisciplinaryActionType.COMMUNITY_SERVICE, ProfileStatus.ON_COMMUNITY_SERVICE
+    );
+
+    // Priority for action types (higher number = more severe)
+    private static final Map<DisciplinaryActionType, Integer> ACTION_TYPE_PRIORITY = Map.of(
+            DisciplinaryActionType.EXPULSION, 7,
+            DisciplinaryActionType.SUSPENSION, 6,
+            DisciplinaryActionType.PROBATION, 5,
+            DisciplinaryActionType.DETENTION, 4,
+            DisciplinaryActionType.COMMUNITY_SERVICE, 3,
+            DisciplinaryActionType.FINE, 2,
+            DisciplinaryActionType.WARNING, 1
+    );
+
     @Override
-    public DisciplinaryAction issueDisciplinaryAction(
-            Profile profile,
-            Profile issuedBy,
-            DisciplinaryActionType actionType,
-            String reason,
-            String description,
-            LocalDate startDate,
-            LocalDate endDate) {
-
+    @Transactional
+    public DisciplinaryActionResponse issueDisciplinaryAction(@Valid DisciplinaryActionRequest request) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        Profile admin = profileRepository.findByUserEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
+        Profile issuer = profileRepository.findByUserEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Issuer profile not found for email: " + email));
 
-        validateDisciplinaryActionInput(profile, issuedBy, actionType, reason, startDate, endDate);
+        if (!issuer.getUser().getRoles().contains(Roles.ADMIN) && !issuer.getUser().getRoles().contains(Roles.TEACHER)) {
+            throw new BadRequestException("Only admins or teachers can issue disciplinary actions");
+        }
+
+        Profile profile = profileRepository.findById(request.getProfileId())
+                .orElseThrow(() -> new EntityNotFoundException("Profile not found with ID: " + request.getProfileId()));
+        Profile issuedBy = profileRepository.findById(request.getIssuedById())
+                .orElseThrow(() -> new EntityNotFoundException("Issued by profile not found with ID: " + request.getIssuedById()));
+
+        validateDisciplinaryActionInput(request);
 
         // Check for conflicting actions
-        if (actionType == DisciplinaryActionType.EXPULSION &&
+        if (request.getActionType() == DisciplinaryActionType.EXPULSION &&
                 disciplinaryActionRepository.existsActiveActionForProfile(profile, DisciplinaryActionType.EXPULSION, LocalDate.now())) {
-            throw new BadRequestException("Profile already has an active expulsion.");
+            throw new BadRequestException("Profile already has an active expulsion");
         }
-        if (actionType == DisciplinaryActionType.SUSPENSION &&
+        if (request.getActionType() == DisciplinaryActionType.SUSPENSION &&
                 disciplinaryActionRepository.existsActiveActionForProfile(profile, DisciplinaryActionType.SUSPENSION, LocalDate.now())) {
-            throw new BadRequestException("Profile already has an active suspension.");
+            throw new BadRequestException("Profile already has an active suspension");
         }
 
         DisciplinaryAction action = DisciplinaryAction.builder()
                 .profile(profile)
                 .issuedBy(issuedBy)
-                .actionType(actionType)
-                .reason(reason)
-                .description(description)
-                .startDate(startDate)
-                .endDate(endDate)
-                .school(admin.getUser().getSchool())
+                .actionType(request.getActionType())
+                .reason(request.getReason())
+                .description(request.getDescription())
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .school(issuer.getUser().getSchool())
                 .active(true)
                 .build();
 
-        // Update profile status based on action type
-        updateProfileStatusForAction(profile, actionType, endDate);
+        updateProfileStatus(profile);
         profileRepository.save(profile);
 
         DisciplinaryAction savedAction = disciplinaryActionRepository.save(action);
-        logger.info("Issued disciplinary action ID {} (type: {}) for profile ID {}",
-                savedAction.getId(), actionType, profile.getId());
-        return savedAction;
+        logger.info("Issued disciplinary action ID {} (type: {}) for profile ID {}", savedAction.getId(), request.getActionType(), profile.getId());
+        return mapToResponse(savedAction);
     }
 
-    /**
-     * Retrieves all active disciplinary actions for a given profile.
-     *
-     * @param profile The profile to query actions for.
-     * @return List of active disciplinary actions.
-     */
     @Override
-    public List<DisciplinaryAction> getActiveActionsForProfile(Profile profile) {
+    @Transactional(readOnly = true)
+    public List<DisciplinaryAction> getActiveActionsForProfile(Long profileId) {
+        Profile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new EntityNotFoundException("Profile not found with ID: " + profileId));
         if (profile == null) {
-            throw new BadRequestException("Profile cannot be null.");
+            throw new BadRequestException("Profile cannot be null");
         }
         return disciplinaryActionRepository.findByProfileAndActiveTrue(profile);
     }
 
-    /**
-     * Checks if a profile is currently suspended.
-     *
-     * @param profile The profile to check.
-     * @return True if the profile has an active suspension, false otherwise.
-     */
     @Override
-    public boolean isProfileSuspended(Profile profile) {
+    @Transactional(readOnly = true)
+    public boolean isProfileSuspended(Long profileId) {
+        Profile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new EntityNotFoundException("Profile not found with ID: " + profileId));
         if (profile == null) {
-            throw new BadRequestException("Profile cannot be null.");
+            throw new BadRequestException("Profile cannot be null");
         }
-        return disciplinaryActionRepository.existsActiveActionForProfile(
-                profile, DisciplinaryActionType.SUSPENSION, LocalDate.now());
+        return disciplinaryActionRepository.existsActiveActionForProfile(profile, DisciplinaryActionType.SUSPENSION, LocalDate.now());
     }
 
-    /**
-     * Deactivates all expired disciplinary actions.
-     */
-    @Transactional
     @Override
+    @Transactional
     public void deactivateExpiredActions() {
-        List<DisciplinaryAction> expiredActions = disciplinaryActionRepository
-                .findByActiveTrueAndEndDateBefore(LocalDate.now());
-
+        List<DisciplinaryAction> expiredActions = disciplinaryActionRepository.findByActiveTrueAndEndDateBefore(LocalDate.now());
         for (DisciplinaryAction action : expiredActions) {
             action.setActive(false);
-            Profile profile = action.getProfile();
-            updateProfileStatusAfterActionChange(profile);
-            profileRepository.save(profile);
+            updateProfileStatus(action.getProfile());
+            profileRepository.save(action.getProfile());
         }
         disciplinaryActionRepository.saveAll(expiredActions);
-        logger.info("Deactivated {} expired disciplinary actions.", expiredActions.size());
+        logger.info("Deactivated {} expired disciplinary actions", expiredActions.size());
     }
 
-    /**
-     * Updates an existing disciplinary action.
-     *
-     * @param actionId    The ID of the action to update.
-     * @param reason      The updated reason.
-     * @param description The updated description.
-     * @param endDate     The updated end date.
-     * @param isActive    The updated active status.
-     * @throws EntityNotFoundException if the action 🙂is not found.
-     * @throws BadRequestException if the updated parameters are invalid.
-     */
-    @Transactional
     @Override
-    public void updateDisciplinaryAction(Long actionId, String reason, String description,
-                                         LocalDate endDate, boolean isActive) {
-        if (actionId == null) {
-            throw new BadRequestException("Action ID cannot be null.");
-        }
-
+    @Transactional
+    public void updateDisciplinaryAction(Long actionId, @Valid DisciplinaryActionRequest request) {
         DisciplinaryAction action = disciplinaryActionRepository.findById(actionId)
-                .orElseThrow(() -> new EntityNotFoundException("Disciplinary action not found with id: " + actionId));
+                .orElseThrow(() -> new EntityNotFoundException("Disciplinary action not found with ID: " + actionId));
 
-        validateUpdateInput(reason, endDate, action.getStartDate());
+        Profile profile = profileRepository.findById(request.getProfileId())
+                .orElseThrow(() -> new EntityNotFoundException("Profile not found with ID: " + request.getProfileId()));
+        Profile issuedBy = profileRepository.findById(request.getIssuedById())
+                .orElseThrow(() -> new EntityNotFoundException("Issued by profile not found with ID: " + request.getIssuedById()));
 
-        action.setReason(reason);
-        action.setDescription(description);
-        action.setEndDate(endDate);
-        action.setActive(isActive);
+        validateDisciplinaryActionInput(request);
 
-        // Update profile status based on action type and active status
-        Profile profile = action.getProfile();
-        if (!isActive) {
-            updateProfileStatusAfterActionChange(profile);
-        } else {
-            updateProfileStatusForAction(profile, action.getActionType(), endDate);
-        }
+        action.setProfile(profile);
+        action.setIssuedBy(issuedBy);
+        action.setActionType(request.getActionType());
+        action.setReason(request.getReason());
+        action.setDescription(request.getDescription());
+        action.setStartDate(request.getStartDate());
+        action.setEndDate(request.getEndDate());
+        action.setActive(true);
+
+        updateProfileStatus(profile);
         profileRepository.save(profile);
 
         disciplinaryActionRepository.save(action);
         logger.info("Updated disciplinary action ID {}", actionId);
     }
 
-    /**
-     * Cancels a disciplinary action by setting it to inactive.
-     *
-     * @param actionId The ID of the action to cancel.
-     * @throws EntityNotFoundException if the action is not found.
-     */
-    @Transactional
     @Override
+    @Transactional
     public void cancelDisciplinaryAction(Long actionId) {
-        if (actionId == null) {
-            throw new BadRequestException("Action ID cannot be null.");
-        }
-
         DisciplinaryAction action = disciplinaryActionRepository.findById(actionId)
-                .orElseThrow(() -> new EntityNotFoundException("Disciplinary action not found with id: " + actionId));
+                .orElseThrow(() -> new EntityNotFoundException("Disciplinary action not found with ID: " + actionId));
 
         action.setActive(false);
-
-        // Update profile status after cancellation
-        Profile profile = action.getProfile();
-        updateProfileStatusAfterActionChange(profile);
-        profileRepository.save(profile);
+        updateProfileStatus(action.getProfile());
+        profileRepository.save(action.getProfile());
 
         disciplinaryActionRepository.save(action);
-        logger.info("Canceled disciplinary action ID {}", actionId);
+        logger.info("Cancelled disciplinary action ID {}", actionId);
     }
 
-    /**
-     * Retrieves a disciplinary action by its ID.
-     *
-     * @param id The ID of the disciplinary action.
-     * @return The DisciplinaryAction entity.
-     * @throws EntityNotFoundException if the action is not found.
-     */
     @Override
-    public DisciplinaryAction getDisciplinaryActionById(Long id) {
-        if (id == null) {
-            throw new BadRequestException("Action ID cannot be null.");
-        }
-        return disciplinaryActionRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Disciplinary action not found with id: " + id));
+    @Transactional(readOnly = true)
+    public DisciplinaryActionResponse getDisciplinaryActionById(Long id) {
+        DisciplinaryAction action = disciplinaryActionRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Disciplinary action not found with ID: " + id));
+        return mapToResponse(action);
     }
 
-    /**
-     * Retrieves all active disciplinary actions with pagination and filtering.
-     *
-     * @param pageable Pagination information.
-     * @return Page of active disciplinary actions.
-     */
     @Override
-    public Page<DisciplinaryAction> getAllActiveDisciplinaryActions(Pageable pageable) {
-        Page<DisciplinaryAction> actions = disciplinaryActionRepository.findByActiveTrue(pageable);
-        return (Page<DisciplinaryAction>) actions.filter(action ->
-                action.getStartDate().isBefore(LocalDate.now()) &&
-                        (action.getEndDate() == null || action.getEndDate().isAfter(LocalDate.now())));
+    @Transactional(readOnly = true)
+    public Page<DisciplinaryActionResponse> getAllActiveDisciplinaryActions(Pageable pageable) {
+        return disciplinaryActionRepository.findByActiveTrueAndValidDate(LocalDate.now(), pageable)
+                .map(this::mapToResponse);
     }
 
-    /**
-     * Updates the profile status based on the disciplinary action type.
-     *
-     * @param profile    The profile to update.
-     * @param actionType The type of disciplinary action.
-     * @param endDate    The end date of the action.
-     */
-    private void updateProfileStatusForAction(Profile profile, DisciplinaryActionType actionType, LocalDate endDate) {
-        switch (actionType) {
-            case EXPULSION:
-                profile.setProfileStatus(ProfileStatus.EXPELLED);
-                profile.setSuspensionEndDate(null);
-                break;
-            case SUSPENSION:
-                profile.setProfileStatus(ProfileStatus.SUSPENDED);
-                profile.setSuspensionEndDate(endDate);
-                break;
-            case PROBATION:
-                profile.setProfileStatus(ProfileStatus.ON_PROBATION);
-                profile.setSuspensionEndDate(endDate);
-                break;
-            case DETENTION:
-                profile.setProfileStatus(ProfileStatus.RESTRICTED);
-                profile.setSuspensionEndDate(endDate);
-                break;
-            case WARNING:
-                profile.setProfileStatus(ProfileStatus.WARNED);
-                profile.setSuspensionEndDate(null);
-                break;
-            case FINE:
-                profile.setProfileStatus(ProfileStatus.FINED);
-                profile.setSuspensionEndDate(null);
-                break;
-            case COMMUNITY_SERVICE:
-                profile.setProfileStatus(ProfileStatus.ON_COMMUNITY_SERVICE);
-                profile.setSuspensionEndDate(endDate);
-                break;
-            default:
-                profile.setProfileStatus(ProfileStatus.ACTIVE);
-                profile.setSuspensionEndDate(null);
-                logger.warn("Unknown DisciplinaryActionType: {}. Defaulting profile status to ACTIVE.", actionType);
-        }
-    }
-
-    /**
-     * Updates the profile status after an action is deactivated or canceled.
-     *
-     * @param profile The profile to update.
-     */
-    private void updateProfileStatusAfterActionChange(Profile profile) {
+    private void updateProfileStatus(Profile profile) {
         List<DisciplinaryAction> activeActions = disciplinaryActionRepository.findByProfileAndActiveTrue(profile);
+        if (activeActions.isEmpty()) {
+            profile.setProfileStatus(ProfileStatus.ACTIVE);
+            profile.setSuspensionEndDate(null);
+            return;
+        }
 
-        // Check for the most severe active action
-        if (activeActions.stream().anyMatch(a -> a.getActionType() == DisciplinaryActionType.EXPULSION)) {
-            profile.setProfileStatus(ProfileStatus.EXPELLED);
-            profile.setSuspensionEndDate(null);
-        } else if (activeActions.stream().anyMatch(a -> a.getActionType() == DisciplinaryActionType.SUSPENSION)) {
-            profile.setProfileStatus(ProfileStatus.SUSPENDED);
-            activeActions.stream()
-                    .filter(a -> a.getActionType() == DisciplinaryActionType.SUSPENSION)
-                    .map(DisciplinaryAction::getEndDate)
-                    .filter(Objects::nonNull)
-                    .max(LocalDate::compareTo)
-                    .ifPresent(profile::setSuspensionEndDate);
-        } else if (activeActions.stream().anyMatch(a -> a.getActionType() == DisciplinaryActionType.PROBATION)) {
-            profile.setProfileStatus(ProfileStatus.ON_PROBATION);
-            activeActions.stream()
-                    .filter(a -> a.getActionType() == DisciplinaryActionType.PROBATION)
-                    .map(DisciplinaryAction::getEndDate)
-                    .filter(Objects::nonNull)
-                    .max(LocalDate::compareTo)
-                    .ifPresent(profile::setSuspensionEndDate);
-        } else if (activeActions.stream().anyMatch(a -> a.getActionType() == DisciplinaryActionType.DETENTION)) {
-            profile.setProfileStatus(ProfileStatus.RESTRICTED);
-            activeActions.stream()
-                    .filter(a -> a.getActionType() == DisciplinaryActionType.DETENTION)
-                    .map(DisciplinaryAction::getEndDate)
-                    .filter(Objects::nonNull)
-                    .max(LocalDate::compareTo)
-                    .ifPresent(profile::setSuspensionEndDate);
-        } else if (activeActions.stream().anyMatch(a -> a.getActionType() == DisciplinaryActionType.WARNING)) {
-            profile.setProfileStatus(ProfileStatus.WARNED);
-            profile.setSuspensionEndDate(null);
-        } else if (activeActions.stream().anyMatch(a -> a.getActionType() == DisciplinaryActionType.FINE)) {
-            profile.setProfileStatus(ProfileStatus.FINED);
-            profile.setSuspensionEndDate(null);
-        } else if (activeActions.stream().anyMatch(a -> a.getActionType() == DisciplinaryActionType.COMMUNITY_SERVICE)) {
-            profile.setProfileStatus(ProfileStatus.ON_COMMUNITY_SERVICE);
-            activeActions.stream()
-                    .filter(a -> a.getActionType() == DisciplinaryActionType.COMMUNITY_SERVICE)
-                    .map(DisciplinaryAction::getEndDate)
-                    .filter(Objects::nonNull)
-                    .max(LocalDate::compareTo)
-                    .ifPresent(profile::setSuspensionEndDate);
+        // Find the most severe active action
+        Optional<DisciplinaryAction> mostSevereAction = activeActions.stream()
+                .max(Comparator.comparing(action -> ACTION_TYPE_PRIORITY.getOrDefault(action.getActionType(), 0)));
+
+        if (mostSevereAction.isPresent()) {
+            DisciplinaryAction action = mostSevereAction.get();
+            profile.setProfileStatus(ACTION_TYPE_TO_STATUS.getOrDefault(action.getActionType(), ProfileStatus.ACTIVE));
+            profile.setSuspensionEndDate(action.getEndDate());
         } else {
             profile.setProfileStatus(ProfileStatus.ACTIVE);
             profile.setSuspensionEndDate(null);
         }
     }
 
-    /**
-     * Validates input parameters for issuing a disciplinary action.
-     */
-    private void validateDisciplinaryActionInput(Profile profile, Profile issuedBy,
-                                                 DisciplinaryActionType actionType, String reason,
-                                                 LocalDate startDate, LocalDate endDate) {
-        if (profile == null || issuedBy == null) {
-            throw new BadRequestException("Profile and issuedBy cannot be null.");
+    private void validateDisciplinaryActionInput(DisciplinaryActionRequest request) {
+        if (request.getReason() == null || request.getReason().trim().isEmpty()) {
+            throw new BadRequestException("Reason cannot be null or empty");
         }
-        if (actionType == null) {
-            throw new BadRequestException("Action type cannot be null.");
+        if (request.getDescription() == null || request.getDescription().trim().isEmpty()) {
+            throw new BadRequestException("Description cannot be null or empty");
         }
-        if (reason == null || reason.trim().isEmpty()) {
-            throw new BadRequestException("Reason cannot be null or empty.");
+        if (request.getStartDate() == null) {
+            throw new BadRequestException("Start date cannot be null");
         }
-        if (startDate == null) {
-            throw new BadRequestException("Start date cannot be null.");
+        if (request.getEndDate() != null && request.getEndDate().isBefore(request.getStartDate())) {
+            throw new BadRequestException("End date cannot be before start date");
         }
-        if (startDate.isBefore(LocalDate.now())) {
-            throw new BadRequestException("Start date cannot be in the past.");
-        }
-        if (endDate != null && endDate.isBefore(startDate)) {
-            throw new BadRequestException("End date cannot be before start date.");
+        // Allow past start dates with a warning
+        if (request.getStartDate().isBefore(LocalDate.now())) {
+            logger.warn("Disciplinary action start date is in the past: {}", request.getStartDate());
         }
     }
 
-    /**
-     * Validates input parameters for updating a disciplinary action.
-     */
-    private void validateUpdateInput(String reason, LocalDate endDate, LocalDate startDate) {
-        if (reason == null || reason.trim().isEmpty()) {
-            throw new BadRequestException("Reason cannot be null or empty.");
-        }
-        if (endDate != null && startDate != null && endDate.isBefore(startDate)) {
-            throw new BadRequestException("End date cannot be before start date.");
-        }
+    private DisciplinaryActionResponse mapToResponse(DisciplinaryAction action) {
+        DisciplinaryActionResponse response = new DisciplinaryActionResponse();
+        response.setId(action.getId());
+        response.setProfileId(action.getProfile().getId());
+        response.setProfileName(action.getProfile().getUser().getFirstName() + " " + action.getProfile().getUser().getLastName());
+        response.setIssuedById(action.getIssuedBy().getId());
+        response.setIssuedByName(action.getIssuedBy().getUser().getFirstName() + " " + action.getIssuedBy().getUser().getLastName());
+        response.setActionType(action.getActionType());
+        response.setReason(action.getReason());
+        response.setDescription(action.getDescription());
+        response.setStartDate(action.getStartDate());
+        response.setEndDate(action.getEndDate());
+        response.setActive(action.isActive());
+        return response;
     }
 }

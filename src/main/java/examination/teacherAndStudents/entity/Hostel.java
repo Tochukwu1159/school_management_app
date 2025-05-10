@@ -2,6 +2,7 @@ package examination.teacherAndStudents.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import examination.teacherAndStudents.utils.AvailabilityStatus;
+import examination.teacherAndStudents.utils.HostelType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,8 +24,8 @@ public class Hostel {
     @Column(name = "hostel_name", nullable = false, length = 255)
     private String hostelName;
 
-    @Column(name = "cost_per_bed", nullable = false)
-    private BigDecimal costPerBed;
+    @Enumerated(EnumType.STRING)
+    private HostelType hostelType;
 
     @Column(name = "number_of_bed", nullable = false)
     private int numberOfBed;

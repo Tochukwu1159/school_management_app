@@ -109,6 +109,8 @@ public class UserRequestDto {
         @NotNull(message = "Document type is required")
         private String documentType;
 
+        private String documentNo;
+
         @NotNull(message = "Document file is required")
         private MultipartFile file;
     }

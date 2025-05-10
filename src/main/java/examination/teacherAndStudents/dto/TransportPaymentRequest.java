@@ -23,6 +23,6 @@ public class TransportPaymentRequest {
     @NotNull(message = "Route ID is required")
     private Long routeId;
 
-    @NotNull(message = "Stop ID is required")
-    private Long stopId;
+    @NotNull(message = "Stop  is required")
+    private String stop;
 }

@@ -14,6 +14,8 @@ public  class DocumentDto {
     @NotNull(message = "Document type is required")
     private String documentType;
 
+    private String documentId;
+
     @NotNull(message = "Document file is required")
     private MultipartFile file;
 }

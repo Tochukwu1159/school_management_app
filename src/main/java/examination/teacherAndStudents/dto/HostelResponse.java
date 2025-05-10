@@ -16,7 +16,7 @@ public class HostelResponse {
     private Long id;
     private String hostelName;
     private Integer numberOfBed;
-    private BigDecimal costPerBed;
+    private String hostelType;
     private AvailabilityStatus availabilityStatus;
     private Long schoolId;
     private String schoolName;

@@ -10,7 +10,7 @@ public class BusTrackingResponse {
     private Long busId;
     private Double busLatitude;
     private Double busLongitude;
-    private String stopName;
+    private String stopAddress;
     private Double stopLatitude;
     private Double stopLongitude;
     private Double distance; // in kilometers

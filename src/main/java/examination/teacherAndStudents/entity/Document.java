@@ -29,6 +29,8 @@ public class Document {
     @Column(name = "document_type")
     private String documentType;
 
+    private String documentNo;
+
     @Column(name = "document_image")
     private String documentImageUrl;
 

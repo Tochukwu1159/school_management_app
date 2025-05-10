@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.controller;
 
+import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.BulkExamScheduleRequest;
 import examination.teacherAndStudents.dto.ExamScheduleRequest;
 import examination.teacherAndStudents.dto.ExamScheduleResponse;
@@ -24,32 +25,52 @@ public class ExamScheduleController {
     private final ExamScheduleService examScheduleService;
 
     @PostMapping
-    public ResponseEntity<ExamScheduleResponse> createExamSchedule(@Valid @RequestBody ExamScheduleRequest request) {
+    public ResponseEntity<ApiResponse<ExamScheduleResponse>> createExamSchedule(@Valid @RequestBody ExamScheduleRequest request) {
         ExamScheduleResponse response = examScheduleService.createExamSchedule(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        ApiResponse<ExamScheduleResponse> apiResponse = new ApiResponse<>(
+                "Exam schedule created successfully",
+                true,
+                response
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
     @PostMapping("/create")
-    public ResponseEntity<List<ExamScheduleResponse>> createBulkExamSchedules(@Valid @RequestBody BulkExamScheduleRequest request) {
+    public ResponseEntity<ApiResponse<List<ExamScheduleResponse>>> createBulkExamSchedules(@Valid @RequestBody BulkExamScheduleRequest request) {
         List<ExamScheduleResponse> responses = examScheduleService.createBulkExamSchedules(request);
-        return new ResponseEntity<>(responses, HttpStatus.CREATED);
+        ApiResponse<List<ExamScheduleResponse>> apiResponse = new ApiResponse<>(
+                "Bulk exam schedules created successfully",
+                true,
+                responses
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ExamScheduleResponse> updateExamSchedule(
+    public ResponseEntity<ApiResponse<ExamScheduleResponse>> updateExamSchedule(
             @PathVariable Long id, @Valid @RequestBody ExamScheduleRequest request) {
         ExamScheduleResponse response = examScheduleService.updateExamSchedule(id, request);
-        return ResponseEntity.ok(response);
+        ApiResponse<ExamScheduleResponse> apiResponse = new ApiResponse<>(
+                "Exam schedule updated successfully",
+                true,
+                response
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteExamSchedule(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteExamSchedule(@PathVariable Long id) {
         examScheduleService.deleteExamSchedule(id);
-        return ResponseEntity.noContent().build();
+        ApiResponse<Void> apiResponse = new ApiResponse<>(
+                "Exam schedule deleted successfully",
+                true,
+                null
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
     @GetMapping
-    public ResponseEntity<Page<ExamScheduleResponse>> getAllExamSchedules(
+    public ResponseEntity<ApiResponse<Page<ExamScheduleResponse>>> getAllExamSchedules(
             @RequestParam(required = false) Long subjectId,
             @RequestParam(required = false) Long teacherId,
             @RequestParam(required = false) LocalDate examDate,
@@ -57,6 +78,11 @@ public class ExamScheduleController {
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<ExamScheduleResponse> schedules = examScheduleService.getAllExamSchedules(subjectId, teacherId, examDate, pageable);
-        return ResponseEntity.ok(schedules);
+        ApiResponse<Page<ExamScheduleResponse>> apiResponse = new ApiResponse<>(
+                "Exam schedules fetched successfully",
+                true,
+                schedules
+        );
+        return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 }
