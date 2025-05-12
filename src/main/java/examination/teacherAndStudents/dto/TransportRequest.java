@@ -15,6 +15,8 @@ public class TransportRequest {
     private Long busRouteId;
     private String vehicleName;
     private String vehicleNumber;
+    private Long termId;
+    private Long sessionId;
     private Long driverId;
     private String licenceNumber;
     private String phoneNumber;

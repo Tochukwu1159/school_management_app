@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 @Data
 public class SubjectScheduleRequest {
     private Long subjectId;
-    private String topic;
     private Long teacherId;
+    private boolean breakTime;
     private String startTime; // Changed to String to handle both formats
     private String endTime;   // Changed to String to handle both formats
 }

@@ -28,9 +28,6 @@ public class ClassLevelController {
         this.classBlockRepository = classBlockRepository;
     }
 
-    /**
-     * Retrieves a paginated list of class levels with optional filters.
-     */
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ClassLevel>>> getAllClassLevels(
             @RequestParam(required = false) Long classLevelId,
@@ -47,9 +44,6 @@ public class ClassLevelController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    /**
-     * Retrieves a class level by its ID.
-     */
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ClassLevel>> getClassLevelById(@PathVariable Long id) {
         ClassLevel classLevel = classLevelService.getClassLevelById(id);
@@ -57,9 +51,6 @@ public class ClassLevelController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    /**
-     * Creates a new class level with associated class blocks.
-     */
     @PostMapping
     public ResponseEntity<ApiResponse<ClassLevelWithBlocksResponse>> createClassLevel(@RequestBody @Valid ClassLevelRequest classLevelRequest) {
         ClassLevel createdClassLevel = classLevelService.createClassLevel(classLevelRequest);
@@ -70,7 +61,10 @@ public class ClassLevelController {
 
         ClassLevelWithBlocksResponse response = ClassLevelWithBlocksResponse.builder()
                 .id(createdClassLevel.getId())
-                .className(createdClassLevel.getClassName())
+                .className(ClassNameResponse.builder()
+                        .id(createdClassLevel.getClassName().getId())
+                        .name(createdClassLevel.getClassName().getName())
+                        .build())
                 .academicSessionId(createdClassLevel.getAcademicYear().getId())
                 .classBlocks(blockNames)
                 .build();
@@ -79,9 +73,6 @@ public class ClassLevelController {
         return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
-    /**
-     * Updates the unique URL for a class block.
-     */
     @PutMapping("/url/{id}")
     public ResponseEntity<ApiResponse<ClassLevel>> updateClassLevelUrlForStudents(@PathVariable Long id, @RequestBody ClassLevelRequestUrl classLevelRequest) {
         ClassLevel updatedClassLevel = classLevelService.updateClassBlockUrl(id, classLevelRequest).getClassLevel();
@@ -89,9 +80,6 @@ public class ClassLevelController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    /**
-     * Updates an existing class level.
-     */
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ClassLevel>> updateClassLevel(@PathVariable Long id, @RequestBody @Valid ClassLevelRequest classLevelRequest) {
         ClassLevel updatedClassLevel = classLevelService.updateClassLevel(id, classLevelRequest);
@@ -104,9 +92,6 @@ public class ClassLevelController {
                 : new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
-    /**
-     * Deletes a class level by its ID.
-     */
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteClassLevel(@PathVariable Long id) {
         classLevelService.deleteClassLevel(id);
@@ -114,9 +99,6 @@ public class ClassLevelController {
         return new ResponseEntity<>(response, HttpStatus.NO_CONTENT);
     }
 
-    /**
-     * Retrieves all subclasses (class blocks) for a given class level.
-     */
     @GetMapping("/sub-class/{classLevelId}")
     public ResponseEntity<ApiResponse<List<ClassBlockResponse>>> getSubClassesByClassLevelId(@PathVariable Long classLevelId) {
         List<ClassBlock> subClasses = classLevelService.getSubClassesByClassLevelId(classLevelId);
@@ -141,7 +123,7 @@ public class ClassLevelController {
                 .id(classBlock.getId())
                 .name(classBlock.getName())
                 .classLevelId(classBlock.getClassLevel().getId())
-                .classLevelName(classBlock.getClassLevel().getClassName())
+                .classLevelName(classBlock.getClassLevel().getClassName().getName())
                 .classUniqueUrl(classBlock.getClassUniqueUrl())
                 .numberOfStudents(classBlock.getNumberOfStudents())
                 .formTeacherId(formTeacherId)

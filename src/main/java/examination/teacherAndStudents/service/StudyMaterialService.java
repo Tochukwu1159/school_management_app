@@ -9,12 +9,12 @@ import java.util.List;
 
 
 public interface StudyMaterialService {
-    Page<StudyMaterialResponse> getAllMaterials(int page, int size, String sortBy, String sortDirection);
-    void deleteMaterial(Long id);
-    StudyMaterialResponse updateMaterial(Long id, StudyMaterialRequest request);
-    StudyMaterialResponse getMaterialById(Long id);
-    StudyMaterialResponse saveMaterial(StudyMaterialRequest request);
-
+//    Page<StudyMaterialResponse> getAllMaterials(int page, int size, String sortBy, String sortDirection);
+//    void deleteMaterial(Long id);
+//    StudyMaterialResponse updateMaterial(Long id, StudyMaterialRequest request);
+//    StudyMaterialResponse getMaterialById(Long id);
+//    StudyMaterialResponse saveMaterial(StudyMaterialRequest request);
+//
 
 
 }

@@ -20,7 +20,7 @@ public class SessionAverageResponse {
                 sessionAverage.getUserProfile().getUser().getFirstName() + " " +sessionAverage.getUserProfile().getUser().getLastName(),
                 sessionAverage.getAverageScore(),
                 sessionAverage.getClassBlock().getName(),
-                sessionAverage.getAcademicYear().getName()
+                sessionAverage.getAcademicYear().getSessionName().getName()
         );
     }
 }

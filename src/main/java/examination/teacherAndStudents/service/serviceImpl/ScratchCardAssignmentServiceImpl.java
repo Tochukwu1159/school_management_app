@@ -119,7 +119,7 @@ public class ScratchCardAssignmentServiceImpl implements ScratchCardAssignmentSe
                 .orElseThrow(() -> new CustomNotFoundException(
                         "No scratch card found for student %s in %s %s".formatted(
                                 studentProfile.getUser().getFirstName() + " " + studentProfile.getUser().getLastName(),
-                                session.getName(),
+                                session.getSessionName().getName(),
                                 term.getName())));
 
         try {
@@ -137,7 +137,7 @@ public class ScratchCardAssignmentServiceImpl implements ScratchCardAssignmentSe
                 .pin(EncryptionUtil.decrypt(card.getPin()))
                 .maxUsageCount(card.getMaxUsageCount())
                 .sessionId(card.getAcademicSession().getId())
-                .sessionName(card.getAcademicSession().getName())
+                .sessionName(card.getAcademicSession().getSessionName().getName())
                 .termId(card.getStudentTerm().getId())
                 .termName(card.getStudentTerm().getName())
                 .createdAt(card.getCreatedAt())

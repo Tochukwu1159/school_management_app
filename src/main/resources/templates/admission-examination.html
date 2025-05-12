@@ -40,36 +40,41 @@
 <body>
 <div class="container">
   <div class="header">
-    <h2 th:text="'Entrance Examination - ' + ${schoolName}">Entrance Examination</h2>
+    <h2 th:text="'Entrance Examination Schedule - ' + ${schoolName}">Entrance Examination Schedule</h2>
   </div>
 
   <div class="details">
     <p>Dear <span th:text="${studentName}">Student</span>,</p>
 
-    <p>We are pleased to inform you that your entrance examination has been scheduled as follows:</p>
+    <p>We are pleased to inform you that your application for admission to <span th:text="${schoolName}">School Name</span> has progressed to the entrance examination stage. Passing this examination is a requirement for further consideration of your admission.</p>
+
+    <p>Your entrance examination has been scheduled as follows:</p>
 
     <ul>
       <li><strong>Date & Time:</strong> <span class="highlight" th:text="${examDateTime}">July 15, 2025 10:00 AM</span></li>
       <li><strong>Venue:</strong> <span th:text="${venue}">School Address</span></li>
     </ul>
 
-    <p>Please arrive at least 30 minutes early and bring all required documents.</p>
+    <p>Please arrive at least 30 minutes early and bring all required documents, including a valid ID and any materials specified in your application instructions.</p>
 
-    <p>If you have any questions or need further assistance, feel free to contact us:</p>
+    <p>Admission decisions will be made based on your performance in the entrance examination and the completion of all other application requirements. You will be notified of the results and next steps after the examination.</p>
+
+    <p>For any questions or assistance, please contact us:</p>
 
     <ul>
       <li><strong>Email:</strong> <span th:text="${contactEmail}">contact@school.com</span></li>
       <li><strong>Phone:</strong> <span th:text="${contactPhone}">+1-234-567-8900</span></li>
     </ul>
 
-    <p>We look forward to welcoming you!</p>
+    <p>We wish you the best of luck in your examination!</p>
 
     <p>Best regards,<br/>
-      <strong th:text="${schoolName}">School Name</strong></p>
+      <strong th:text="${schoolName}">School Name</strong><br/>
+      Admissions Office</p>
   </div>
 
   <div class="footer">
-    &copy; <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">School Name</span>. All rights reserved.
+    © <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">School Name</span>. All rights reserved.
   </div>
 </div>
 </body>

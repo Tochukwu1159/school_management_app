@@ -300,30 +300,33 @@ public class LibraryServiceImpl implements LibraryService {
         borrowing.setActualReturnDate(returnDate);
         borrowing.setStatus(BorrowingStatus.RETURNED);
 
-            BigDecimal fee = null;
+        BigDecimal fee = BigDecimal.ZERO;
+        borrowing.setLate(false);
+        borrowing.setFineAmount(BigDecimal.ZERO);
+
         if (returnDate.isAfter(borrowing.getDueDate())) {
             borrowing.setLate(true);
             long daysLate = ChronoUnit.DAYS.between(borrowing.getDueDate(), returnDate);
 
             BigDecimal lateFee = profile.getUser().getSchool().getLibraryBookLateReturnFee();
 
-            if (lateFee != null) {
-                 fee = BigDecimal.valueOf(daysLate).multiply(lateFee);
+            if (lateFee != null && lateFee.compareTo(BigDecimal.ZERO) > 0) {
+                fee = BigDecimal.valueOf(daysLate).multiply(lateFee);
                 borrowing.setFineAmount(fee);
-            } else {
-                borrowing.setFineAmount(BigDecimal.ZERO);
             }
         }
 
+        // Only process payment if there is a non-zero fee
+        if (fee.compareTo(BigDecimal.ZERO) > 0) {
+            PaymentWithoutFeeIdRequest paymentWithoutFeeIdRequest = PaymentWithoutFeeIdRequest.builder()
+                    .amount(fee)
+                    .method(PaymentMethod.BALANCE)
+                    .purpose(Purpose.LATE_BOOK_RETURN)
+                    .description("Penalty for late book return")
+                    .build();
 
-        PaymentWithoutFeeIdRequest paymentWithoutFeeIdRequest = PaymentWithoutFeeIdRequest.builder()
-                .amount(fee)
-                .method(PaymentMethod.BALANCE)
-                .purpose(Purpose.LATE_BOOK_RETURN)
-                .description("Penalty for late book return")
-                .build();
-
-       paymentService.processPaymentWithoutFeeId(paymentWithoutFeeIdRequest);
+            paymentService.processPaymentWithoutFeeId(paymentWithoutFeeIdRequest);
+        }
 
         BookBorrowing savedBorrowing = bookBorrowingRepository.save(borrowing);
         logger.info("Returning book for borrowing ID {}", borrowingId);
@@ -331,6 +334,7 @@ public class LibraryServiceImpl implements LibraryService {
 
         return mapToBookBorrowingResponse(savedBorrowing);
     }
+
 
     @Transactional
     public BookReservation reserveBook(Long memberId, Long bookId) {

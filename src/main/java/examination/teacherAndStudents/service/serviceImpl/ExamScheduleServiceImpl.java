@@ -152,7 +152,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         response.setTermId(schedule.getStudentTerm().getId());
         response.setTermName(schedule.getStudentTerm().getName());
         response.setYearId(schedule.getAcademicSession().getId());
-        response.setYearName(schedule.getAcademicSession().getName());
+        response.setYearName(schedule.getAcademicSession().getSessionName().getName());
         response.setExamDate(schedule.getExamDate());
         response.setStartTime(schedule.getStartTime());
         response.setEndTime(schedule.getEndTime());

@@ -50,38 +50,56 @@
         .button:hover {
             background-color: #0033a0;
         }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>Welcome to <span th:text="${schoolName}">Our School</span>!</h1>
+        <h1>Congratulations, <span th:text="${studentName}">Student</span>!</h1>
     </div>
     <div class="content">
         <p>Dear <span th:text="${studentName}">Student</span>,</p>
-        <p>Congratulations! We are delighted to confirm your admission to <span th:text="${schoolName}">Our School</span>. We look forward to welcoming you to our community.</p>
+        <p>We are thrilled to confirm your admission to <span th:text="${schoolName}">School Name</span>! Your application (Number: <span th:text="${applicationNumber}">APP123456</span>) has been approved, and we are excited to welcome you to our academic community.</p>
 
-        <p>Please log in to the student portal to complete your enrollment, update your profile, and access important resources. If you received an initial password, we recommend changing it after your first login for security.</p>
+        <h3>Next Steps</h3>
+        <p>Please log in to the student portal to complete your enrollment, update your profile, and access important resources. Use the credentials provided in your application confirmation email. If you have not changed your temporary password, we strongly recommend doing so after your first login for security.</p>
+        <p style="text-align: center;">
+            <a th:href="${studentPortalUrl}" class="button">Access Student Portal</a>
+        </p>
+
         <h3>Orientation Details</h3>
-        <p>We have scheduled an orientation session to help you get started:</p>
+        <p>An orientation session is scheduled to help you prepare for your journey with us:</p>
         <ul>
             <li><strong>Date:</strong> <span th:text="${orientationDate}">May 16, 2025</span></li>
-            <li><strong>Location:</strong> Details will be shared via the student portal or follow-up email.</li>
+            <li><strong>Location:</strong> <span th:text="${orientationLocation}">To be announced via the student portal or email</span></li>
         </ul>
-        <p style="text-align: center;">
-            <a th:href="${loginUrl}" class="button">Access Student Portal</a>
-        </p>
+        <p>Please check the student portal regularly for updates on orientation and enrollment deadlines.</p>
+
         <h3>Contact Us</h3>
-        <p>If you have any questions or need assistance, please contact our admissions team:</p>
+        <p>If you have any questions or need assistance, please contact our admissions office:</p>
         <ul>
             <li><strong>Email:</strong> <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">admissions@school.edu</a></li>
+            <li><strong>Phone:</strong> <span th:text="${contactPhone}">+1-234-567-8900</span></li>
         </ul>
-        <p>Once again, welcome to <span th:text="${schoolName}">Our School</span>! We are excited to have you join us.</p>
-        <p>Best regards,<br>The Admissions Team<br><span th:text="${schoolName}">Our School</span></p>
+
+        <p>We look forward to seeing you thrive at <span th:text="${schoolName}">School Name</span>!</p>
+        <p>Best regards,<br>
+            The Admissions Office<br>
+            <span th:text="${schoolName}">School Name</span></p>
     </div>
     <div class="footer">
-        <p>© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">Our School</span>. All rights reserved.</p>
-        <p><a href="#">Unsubscribe</a> | <a th:href="'https://' + ${schoolName.toLowerCase().replace(' ', '')} + '.edu/privacy'">Privacy Policy</a></p>
+        <p>© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">School Name</span>. All rights reserved.</p>
+        <p>
+            <a th:href="${unsubscribeUrl}">Unsubscribe</a> |
+            <a th:href="${privacyPolicyUrl}">Privacy Policy</a>
+        </p>
     </div>
 </div>
 </body>

@@ -12,7 +12,6 @@ import java.util.Optional;
 
 @Repository
 public interface ClassLevelRepository extends JpaRepository<ClassLevel, Long> {
-    ClassLevel findByClassName(String classAssigned);
 
     @Query("SELECT cl FROM ClassLevel cl WHERE " +
             "(:classLevelId IS NULL OR cl.id = :classLevelId) AND " +

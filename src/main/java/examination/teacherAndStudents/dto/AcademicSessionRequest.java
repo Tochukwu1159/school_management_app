@@ -10,7 +10,7 @@ import java.time.LocalDate;
 public class AcademicSessionRequest {
 
     @NotBlank(message = "Name is required")
-    private String name;
+    private Long sessionNameId;
 
     @NotNull(message = "Academic Start date is required")
     private LocalDate startDate;

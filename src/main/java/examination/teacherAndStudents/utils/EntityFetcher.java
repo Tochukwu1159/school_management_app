@@ -39,10 +39,12 @@ public class EntityFetcher {
     private final RatingRepository ratingRepository;
     private final ClassSubjectRepository classSubjectRepository;
     private final CurriculumRepository curriculumRepository;
+    private final SessionNameRepository sessionNameRepository;
+    private final ClassNameRepository classNameRepository;
 
     public EntityFetcher(AcademicSessionRepository academicSessionRepository,
                          ClassBlockRepository classBlockRepository,
-                         StudentTermRepository studentTermRepository, UserRepository userRepository, ProfileRepository profileRepository,TimetableRepository timetableRepository, StaffLevelRepository staffLevelRepository, StaffAttendanceRepository staffAttendanceRepository, SubjectRepository subjectRepository, BookRepository bookRepository, NoticeRepository noticeRepository, BookBorrowingRepository bookBorrowingRepository, ResultRepository resultRepository, PositionRepository positionRepository, SessionAverageRepository sessionAverageRepository, ClassLevelRepository classLevelRepository, BusRouteRepository busRouteRepository, RatingRepository ratingRepository, ClassSubjectRepository classSubjectRepository, CurriculumRepository curriculumRepository) {
+                         StudentTermRepository studentTermRepository, UserRepository userRepository, ProfileRepository profileRepository, TimetableRepository timetableRepository, StaffLevelRepository staffLevelRepository, StaffAttendanceRepository staffAttendanceRepository, SubjectRepository subjectRepository, BookRepository bookRepository, NoticeRepository noticeRepository, BookBorrowingRepository bookBorrowingRepository, ResultRepository resultRepository, PositionRepository positionRepository, SessionAverageRepository sessionAverageRepository, ClassLevelRepository classLevelRepository, BusRouteRepository busRouteRepository, RatingRepository ratingRepository, ClassSubjectRepository classSubjectRepository, CurriculumRepository curriculumRepository, SessionNameRepository sessionNameRepository, ClassNameRepository classNameRepository) {
         this.academicSessionRepository = academicSessionRepository;
         this.classBlockRepository = classBlockRepository;
         this.studentTermRepository = studentTermRepository;
@@ -63,6 +65,8 @@ public class EntityFetcher {
         this.ratingRepository = ratingRepository;
         this.classSubjectRepository = classSubjectRepository;
         this.curriculumRepository = curriculumRepository;
+        this.sessionNameRepository = sessionNameRepository;
+        this.classNameRepository = classNameRepository;
     }
 
 public User fetchLoggedInAdmin(String email) {
@@ -81,13 +85,7 @@ public User fetchLoggedInAdmin(String email) {
         return userRepository.findByEmail(email).orElseThrow(() -> new NotFoundException("User not found"));
 
     }
-public ClassLevel fetchClassLevel(String className) {
-        ClassLevel classLevel = classLevelRepository.findByClassName(className);
-    if (classLevel == null) {
-        throw new BadRequestException("Error: Class level not found");
-    }
-    return classLevel;
-}
+
 
     public AcademicSession fetchAcademicSession(Long sessionId) {
         return academicSessionRepository.findById(sessionId)
@@ -206,4 +204,12 @@ public List<Result> FetchResults(ClassBlock classBlock, AcademicSession academic
                 classBlock, academicSession, studentTerm);
 }
 
+    public SessionName fetchSessionName(Long sessionNameId) {
+        return sessionNameRepository.findById(sessionNameId).orElseThrow(()-> new CustomNotFoundException("Session name not found"));
+    }
+
+    public ClassName fetchClassName(Long id) {
+        return classNameRepository.findById(id)
+                .orElseThrow(() -> new CustomNotFoundException("Class name not found with ID: " + id));
+    }
 }

@@ -109,11 +109,9 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
 
-
     @Transactional
-    @Override
     public ApplicationResponse reviewApplication(Long applicationId, ApplicationReviewDto review) {
-        // 1. Fetch application and validate
+        // 1. Fetch and validate application
         AdmissionApplication application = admissionApplicationRepository.findById(applicationId)
                 .orElseThrow(() -> new CustomNotFoundException("Application not found"));
 
@@ -123,30 +121,33 @@ public class ApplicationServiceImpl implements ApplicationService {
                 .orElseThrow(() -> new RuntimeException("Unauthorized access - Admin privileges required"));
 
         // 3. Validate application state
-        if (application.getStatus() != ApplicationStatus.PENDING_REVIEW &&
-                application.getStatus() != ApplicationStatus.DOCUMENTS_REQUIRED &&
-                application.getStatus() != ApplicationStatus.PRE_APPROVED &&
-                application.getStatus() != ApplicationStatus.EXAM_COMPLETED) {
-            throw new BadRequestException("Application is not in reviewable state");
+        if (!isReviewableState(application.getStatus())) {
+            throw new BadRequestException("Application is not in a reviewable state");
         }
 
         User applicant = application.getProfile().getUser();
         School school = admin.getSchool();
 
-        // 4. Handle pre-approval for schools requiring entry exams
-        if (school.getSupportsEntryExam() && review.getExamDate() != null &&
-                application.getStatus() == ApplicationStatus.PENDING_REVIEW) {
-            application.setExamDate(review.getExamDate());
-            application.setStatus(ApplicationStatus.PRE_APPROVED);
+        // 4. Handle entrance exam scheduling
+        if (school.getSupportsEntryExam() &&
+                application.getStatus() == ApplicationStatus.PENDING_REVIEW &&
+                review.isApproved()) {
+            LocalDateTime examDate = school.getExamDate();
+            if (examDate == null) {
+                throw new BadRequestException("School has no exam date configured");
+            }
+            application.setExamDate(examDate);
+            application.setStatus(ApplicationStatus.EXAM_SCHEDULED);
             emailService.sendExamScheduleNotification(
                     applicant.getEmail(),
                     applicant.getFirstName(),
-                    review.getExamDate(),
+                    examDate,
                     school
             );
         }
-        // 5. Handle exam result update
-        else if (school.getSupportsEntryExam() && application.getStatus() == ApplicationStatus.PRE_APPROVED &&
+        // 5. Handle exam result processing
+        else if (school.getSupportsEntryExam() &&
+                application.getStatus() == ApplicationStatus.EXAM_SCHEDULED &&
                 review.getExamScore() >= 0) {
             application.setScore(review.getExamScore());
             application.setPassed(review.isPassed());
@@ -154,15 +155,8 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
         // 6. Process final review decision
         else {
-            // Validate application fee if required
-            if (school.getIsApplicationFee() && !application.isFeePaid()) {
-                throw new BadRequestException("Application fee has not been paid");
-            }
-
-            // Validate exam results if school supports entry exams
-            if (school.getSupportsEntryExam() && (!application.isPassed() || application.getScore() <= 0)) {
-                throw new BadRequestException("Applicant has not passed the entry exam");
-            }
+            // Validate prerequisites
+            validateApplicationPrerequisites(application, school);
 
             if (review.isApproved()) {
                 handleApprovedApplication(application, applicant);
@@ -170,6 +164,8 @@ public class ApplicationServiceImpl implements ApplicationService {
                 handleIncompleteApplication(application, review, applicant, school);
             } else if (review.isRejected()) {
                 handleRejectedApplication(application, review, applicant, school);
+            } else {
+                throw new BadRequestException("Invalid review action");
             }
         }
 
@@ -177,22 +173,40 @@ public class ApplicationServiceImpl implements ApplicationService {
         admissionApplicationRepository.save(application);
         userRepository.save(applicant);
 
-       return ApplicationResponse.builder().reviewMessage("Application review completed").build();
+        return ApplicationResponse.builder()
+                .reviewMessage("Application review completed successfully")
+                .build();
+    }
+
+    private boolean isReviewableState(ApplicationStatus status) {
+        return status == ApplicationStatus.PENDING_REVIEW ||
+                status == ApplicationStatus.DOCUMENTS_REQUIRED ||
+                status == ApplicationStatus.EXAM_SCHEDULED ||
+                status == ApplicationStatus.EXAM_COMPLETED;
+    }
+
+    private void validateApplicationPrerequisites(AdmissionApplication application, School school) {
+        if (school.getIsApplicationFee() && !application.isFeePaid()) {
+            throw new BadRequestException("Application fee has not been paid");
+        }
+        if (school.getSupportsEntryExam() &&
+                (!application.isPassed() || application.getScore() <= 0)) {
+            throw new BadRequestException("Applicant has not passed the entry exam");
+        }
     }
 
     private void handleApprovedApplication(AdmissionApplication application, User applicant) {
-        if (applicant == null || application == null || applicant.getUserProfile() == null || applicant.getSchool() == null) {
-            throw new IllegalArgumentException("Applicant, application, user profile, or school cannot be null");
-        }
+        validateApplicationEntities(application, applicant);
 
-        // Update profile status and verification
+        // Update statuses
         applicant.setProfileStatus(ProfileStatus.ACTIVE);
         applicant.setIsVerified(true);
         application.getProfile().setProfileStatus(ProfileStatus.ACTIVE);
         application.setStatus(ApplicationStatus.APPROVED);
 
-        // Handle referral if it exists
-        Referral referral = referralRepository.findByReferredUserAndStatus(application.getProfile(), ReferralStatus.PENDING);
+        // Handle referral
+        Referral referral = referralRepository.findByReferredUserAndStatus(
+                application.getProfile(), ReferralStatus.PENDING);
         if (referral != null) {
             referral.setStatus(ReferralStatus.COMPLETED);
             referralRepository.save(referral);
@@ -202,30 +216,29 @@ public class ApplicationServiceImpl implements ApplicationService {
                             .user(referral.getReferringUser())
                             .points(0)
                             .build());
-
             userPoints.setPoints(userPoints.getPoints() + 1);
             userPointsRepository.save(userPoints);
         }
 
-        // Increment class block student count
+        // Update class block
         ClassBlock classBlock = applicant.getUserProfile().getClassBlock();
         if (classBlock != null) {
             classBlock.setNumberOfStudents(classBlock.getNumberOfStudents() + 1);
             classBlockRepository.save(classBlock);
         }
 
-        // Update school population
+        // Update school
         School school = applicant.getSchool();
         school.incrementActualNumberOfStudents();
         schoolRepository.save(school);
 
-        // Send admission confirmation email
+        // Send confirmation
         emailService.sendAdmissionConfirmation(
                 applicant.getEmail(),
                 applicant.getFirstName(),
-                applicant.getMiddleName(), // Assuming middle name is optional; null if not available
+                applicant.getMiddleName(),
                 application.getApplicationNumber(),
-                application.getSchool()
+                school
         );
     }
 
@@ -250,9 +263,12 @@ public class ApplicationServiceImpl implements ApplicationService {
                                            ApplicationReviewDto review,
                                            User applicant,
                                            School school) {
+        if (review.getRejectionReason() == null || review.getRejectionReason().isEmpty()) {
+            throw new BadRequestException("Rejection reason must be provided");
+        }
+
         applicant.setProfileStatus(ProfileStatus.REJECTED);
         application.getProfile().setProfileStatus(ProfileStatus.REJECTED);
-        application.getProfile().getUser().setProfileStatus(ProfileStatus.REJECTED);
         application.setStatus(ApplicationStatus.REJECTED);
         application.setRejectionReason(review.getRejectionReason());
 
@@ -264,18 +280,86 @@ public class ApplicationServiceImpl implements ApplicationService {
         );
     }
 
+    private void validateApplicationEntities(AdmissionApplication application, User applicant) {
+        if (applicant == null ||
+                application == null ||
+                applicant.getUserProfile() == null ||
+                applicant.getSchool() == null) {
+            throw new IllegalArgumentException("Applicant, application, user profile, or school cannot be null");
+        }
+    }
+
     private Map<String, Object> createApplicationFeeMetadata(AdmissionApplication application) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("applicationNumber", application.getApplicationNumber());
         metadata.put("studentName", application.getProfile().getUser().getFirstName() + " " +
                 application.getProfile().getUser().getLastName());
         metadata.put("paymentType", "APPLICATION_FEE");
-        metadata.put("schoolId", application.getSchool().getId()); // Storing as Long instead of String
-        metadata.put("academicSession", application.getSession().getName());
-        metadata.put("amount", application.getApplicationFee()); // Adding amount as BigDecimal
-        metadata.put("timestamp", LocalDateTime.now()); // Adding timestamp as Object
+        metadata.put("schoolId", application.getSchool().getId());
+        metadata.put("academicSession", application.getSession().getSessionName().getName());
+        metadata.put("amount", application.getApplicationFee());
+        metadata.put("timestamp", LocalDateTime.now());
         return metadata;
     }
 
 
 }
+// approved condition(this sends pre-exam email if theschool suports it)
+
+//{
+//        "approved": true,
+//        "rejected": false,
+//        "incomplete": false,
+//        "examScore": 0,
+//        "passed": false,
+//        "missingDocuments": [],
+//        "rejectionReason": null
+//        }
+
+//result condition
+
+// {
+//   "approved": false,
+//   "rejected": false,
+//   "incomplete": false,
+//   "examScore": 85,
+//   "passed": true,
+//   "missingDocuments": [],
+//   "rejectionReason": null
+// }
+
+//after result condition
+
+//{
+//        "approved": true,
+//        "rejected": false,
+//        "incomplete": false,
+//        "examScore": 0,
+//        "passed": false,
+//        "missingDocuments": [],
+//        "rejectionReason": null
+//        }
+
+//rejection condition
+
+// {
+//   "approved": false,
+//   "rejected": true,
+//   "incomplete": false,
+//   "examScore": 0,
+//   "passed": false,
+//   "missingDocuments": [],
+//   "rejectionReason": "Did not meet final review criteria"
+// }
+
+//document required
+
+// {
+//   "approved": false,
+//   "rejected": false,
+//   "incomplete": true,
+//   "examScore": 0,
+//   "passed": false,
+//   "missingDocuments": ["Transcript", "Recommendation Letter", "ID Copy"],
+//   "rejectionReason": null
+// }

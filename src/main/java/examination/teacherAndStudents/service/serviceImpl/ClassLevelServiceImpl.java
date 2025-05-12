@@ -10,8 +10,10 @@ import examination.teacherAndStudents.error_handler.UnauthorizedException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.ClassBlockRepository;
 import examination.teacherAndStudents.repository.ClassLevelRepository;
+import examination.teacherAndStudents.repository.ClassNameRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.ClassLevelService;
+import examination.teacherAndStudents.utils.EntityFetcher;
 import examination.teacherAndStudents.utils.Roles;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +43,8 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     private final UserRepository userRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final ClassBlockRepository classBlockRepository;
+    private final ClassNameRepository classNameRepository;
+    private final EntityFetcher entityFetcher;
 
     @Transactional(readOnly = true)
     @Override
@@ -81,8 +85,8 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     @Override
     public ClassLevel createClassLevel(ClassLevelRequest classLevelRequest) {
         User admin = verifyAdminAccess();
-        logger.info("Admin {} creating class level: {} with block range: {}", admin.getEmail(),
-                classLevelRequest.getClassName(), classLevelRequest.getClassBlocks());
+        logger.info("Admin {} creating class level with classNameId: {} and block range: {}", admin.getEmail(),
+                classLevelRequest.getClassNameId(), classLevelRequest.getClassBlocks());
 
         AcademicSession academicSession = academicSessionRepository.findById(classLevelRequest.getAcademicSessionId())
                 .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + classLevelRequest.getAcademicSessionId()));
@@ -93,8 +97,10 @@ public class ClassLevelServiceImpl implements ClassLevelService {
             throw new UnauthorizedException("Academic session must belong to the same school");
         }
 
+        ClassName className = entityFetcher.fetchClassName(classLevelRequest.getClassNameId());
+
         ClassLevel classLevel = ClassLevel.builder()
-                .className(classLevelRequest.getClassName())
+                .className(className)
                 .academicYear(academicSession)
                 .school(admin.getSchool())
                 .build();
@@ -115,7 +121,7 @@ public class ClassLevelServiceImpl implements ClassLevelService {
             for (char block = startBlock.charAt(0); block <= endBlock.charAt(0); block++) {
                 ClassBlock classBlock = ClassBlock.builder()
                         .classLevel(savedClassLevel)
-                        .name(savedClassLevel.getClassName() + "-" + block)
+                        .name(className.getName() + "-" + block)
                         .school(savedClassLevel.getSchool())
                         .numberOfStudents(0)
                         .build();
@@ -128,6 +134,7 @@ public class ClassLevelServiceImpl implements ClassLevelService {
 
         return savedClassLevel;
     }
+
     @Transactional(readOnly = true)
     @Override
     public List<ClassBlock> getSubClassesByClassLevelId(Long classLevelId) {
@@ -151,9 +158,8 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     @Override
     public ClassLevel updateClassLevel(Long id, ClassLevelRequest classLevelRequest) {
         User admin = verifyAdminAccess();
-        logger.info("Admin {} updating class level ID: {} with blocks: {}", admin.getEmail(), id, classLevelRequest.getClassBlocks());
-
-//        validateSubscription(admin.getSchool());
+        logger.info("Admin {} updating class level ID: {} with classNameId: {} and blocks: {}", admin.getEmail(), id,
+                classLevelRequest.getClassNameId(), classLevelRequest.getClassBlocks());
 
         ClassLevel classLevel = classLevelRepository.findById(id)
                 .orElseThrow(() -> new CustomNotFoundException("Class level not found with ID: " + id));
@@ -166,7 +172,9 @@ public class ClassLevelServiceImpl implements ClassLevelService {
         AcademicSession academicSession = academicSessionRepository.findById(classLevelRequest.getAcademicSessionId())
                 .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + classLevelRequest.getAcademicSessionId()));
 
-        classLevel.setClassName(classLevelRequest.getClassName());
+        ClassName className = entityFetcher.fetchClassName(classLevelRequest.getClassNameId());
+
+        classLevel.setClassName(className);
         classLevel.setAcademicYear(academicSession);
 
         // Update class blocks
@@ -177,7 +185,7 @@ public class ClassLevelServiceImpl implements ClassLevelService {
 
             // Create or update blocks
             for (String block : classLevelRequest.getClassBlocks()) {
-                String blockName = classLevel.getClassName() + "-" + block;
+                String blockName = className.getName() + "-" + block;
                 ClassBlock classBlock = existingBlockMap.getOrDefault(blockName, ClassBlock.builder()
                         .classLevel(classLevel)
                         .name(blockName)
@@ -204,8 +212,6 @@ public class ClassLevelServiceImpl implements ClassLevelService {
         User admin = verifyAdminAccess();
         logger.info("Admin {} updating class block URL for ID: {}", admin.getEmail(), classBlockId);
 
-//        validateSubscription(admin.getSchool());
-
         ClassBlock classBlock = classBlockRepository.findById(classBlockId)
                 .orElseThrow(() -> new CustomNotFoundException("Class block not found with ID: " + classBlockId));
 
@@ -225,8 +231,6 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     public void deleteClassLevel(Long id) {
         User admin = verifyAdminAccess();
         logger.info("Admin {} deleting class level ID: {}", admin.getEmail(), id);
-
-//        validateSubscription(admin.getSchool());
 
         ClassLevel classLevel = classLevelRepository.findById(id)
                 .orElseThrow(() -> new CustomNotFoundException("Class level not found with ID: " + id));

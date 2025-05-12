@@ -8,12 +8,11 @@ import java.util.Set;
 @Data
 public class ApplicationReviewDto {
     private boolean approved;
-    private int examScore;
-    private boolean passed;
     private boolean rejected;
     private boolean incomplete;
+    private int examScore;
+    private boolean passed;
     private LocalDateTime examDate;
-    private Set<String> missingDocuments; // If additional documents needed
-    private String rejectionReason; // If rejected
-    // getters & setters
+    private Set<String> missingDocuments;
+    private String rejectionReason;
 }

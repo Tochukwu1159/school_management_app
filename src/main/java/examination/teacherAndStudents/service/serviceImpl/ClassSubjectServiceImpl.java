@@ -66,9 +66,6 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
             // Validate Subject
             Subject subject = subjectRepository.findById(subjectId)
                     .orElseThrow(() -> new NotFoundException("Subject with id " + subjectId + " not found"));
-            if (!subject.getSchool().getId().equals(userSchool.getId())) {
-                throw new IllegalArgumentException("Subject with id " + subjectId + " does not belong to the user's school");
-            }
 
             // Check for existing ClassSubject
             boolean exists = classSubjectRepository.existsBySubjectAndClassBlockAndAcademicYear(
@@ -251,12 +248,12 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
                         classSubject.getClassBlock().getName(),
                         new ClassLevelResponse(
                                 classSubject.getClassBlock().getClassLevel().getId(),
-                                classSubject.getClassBlock().getClassLevel().getClassName()
+                                classSubject.getClassBlock().getClassLevel().getClassName().getName()
                         )
                 ))
                 .academicYear(new AcademicSessionResponse(
                         classSubject.getAcademicYear().getId(),
-                        classSubject.getAcademicYear().getName()
+                        classSubject.getAcademicYear().getSessionName().getName()
                 ))
                 .teacher(classSubject.getTeacher() != null ? new SubjectUserResponse(
                         classSubject.getTeacher().getId(),

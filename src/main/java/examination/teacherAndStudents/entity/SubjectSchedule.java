@@ -23,8 +23,7 @@ public class SubjectSchedule {
 
     @ManyToOne
     @JoinColumn(name = "subject_id")
-    @NotNull(message = "Subject must not be null")
-    private ClassSubject subject;
+    private ClassSubject subject; // Nullable for breaks
 
     @NotNull(message = "Start time must not be null")
     private String startTime;
@@ -34,5 +33,8 @@ public class SubjectSchedule {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")
-    private Profile teacher;
+    private Profile teacher; // Nullable for breaks
+
+    @Column(nullable = false)
+    private boolean isBreak = false; // Flag to indicate if this is a break period
 }

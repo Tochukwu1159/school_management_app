@@ -71,6 +71,8 @@ public class School {
 
     private String schoolCode;
 
+    private LocalDateTime examDate;
+
     private String schoolPrimaryColour;
 
     @Column(name = "is_application_fee", nullable = false, columnDefinition = "boolean default false")

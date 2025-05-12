@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Application Confirmation</title>
+  <title>Application Submission Confirmation</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -74,37 +74,39 @@
 <body>
 <div class="container">
   <div class="header">
-    <h1>Application Confirmation</h1>
+    <h1>Application Submission Confirmation</h1>
   </div>
   <div class="content">
-    <p>Dear <span th:text="${recipientName}">Recipient</span>,</p>
-    <p>Thank you for submitting your application to <span th:text="${organizationName}">Our Organization</span>. We have successfully received your application and it is now under review.</p>
+    <p>Dear <span th:text="${studentName}">Student</span>,</p>
+    <p>Thank you for submitting your application to <span th:text="${schoolName}">School Name</span>. We have successfully received your application, and it is now in the review process.</p>
 
-    <h3>Application Details:</h3>
+    <h3>Your Application Details:</h3>
     <ul>
-      <li><strong>Application ID:</strong> <span th:text="${applicationNumber}">12345</span></li>
-      <li><strong>Submitted On:</strong> <span th:text="${submissionDate}">2025-04-25</span></li>
+      <li><strong>Application Number:</strong> <span th:text="${applicationNumber}">APP123456</span></li>
     </ul>
 
     <h3>Login Credentials:</h3>
+    <p>Use the following credentials to log in to your account and track your application status:</p>
     <ul>
-      <li><strong>User Name:</strong> <span th:text="${regNo}">REG123456</span></li>
-      <li><strong>Password:</strong> <span th:text="${password}">password123</span></li>
+      <li><strong>Username:</strong> <span th:text="${username}">student@example.com</span></li>
+      <li><strong>Temporary Password:</strong> <span th:text="${password}">tempPass123</span></li>
     </ul>
 
-    <p>We will process your application and notify you of the next steps within <span th:text="${processingTime}">5-7 business days</span>. You can check the status of your application at any time by logging into your account.</p>
+    <p>We recommend changing your password after your first login for security purposes.</p>
+
+    <p>Your application will be reviewed, and you will be notified of the next steps, which may include submitting additional documents, scheduling an entrance exam (if applicable), or receiving an admission decision. This process typically takes <span th:text="${processingTime}">5-7 business days</span>.</p>
 
     <p style="text-align: center; margin-top: 30px;">
       <a th:href="${applicationStatusUrl}" class="button">Check Application Status</a>
     </p>
 
-    <p>If you have any questions or need further assistance, please contact our support team at <a th:href="'mailto:' + ${supportEmail}" th:text="${supportEmail}">support@organization.com</a>.</p>
+    <p>If you have any questions or need assistance, please contact our admissions office at <a th:href="'mailto:' + ${supportEmail}" th:text="${supportEmail}">admissions@school.com</a> or <span th:text="${supportPhone}">+1-234-567-8900</span>.</p>
 
-    <p>Best regards,<br><strong><span th:text="${organizationName}">Our Organization</span> Team</strong></p>
+    <p>Best regards,<br><strong><span th:text="${schoolName}">School Name</span> Admissions Office</strong></p>
   </div>
 
   <div class="footer">
-    <p>&copy; <span th:text="${currentYear}">2025</span> <span th:text="${organizationName}">Our Organization</span>. All rights reserved.</p>
+    <p>© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">School Name</span>. All rights reserved.</p>
     <p>
       <a th:href="${unsubscribeUrl}">Unsubscribe</a> |
       <a th:href="${privacyPolicyUrl}">Privacy Policy</a>

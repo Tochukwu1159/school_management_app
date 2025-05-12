@@ -117,7 +117,7 @@ public class ScratchCardServiceImpl implements ScratchCardService {
                 .expiryDate(card.getExpiryDate())
                 .createdAt(card.getCreatedAt())
                 .sessionId(card.getAcademicSession().getId())
-                .sessionName(card.getAcademicSession().getName())
+                .sessionName(card.getAcademicSession().getSessionName().getName())
                 .termId(card.getStudentTerm().getId())
                 .termName(card.getStudentTerm().getName())
                 .build();

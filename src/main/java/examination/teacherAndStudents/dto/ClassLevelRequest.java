@@ -10,8 +10,8 @@ import java.util.List;
 
 @Data
 public class ClassLevelRequest {
-    @NotBlank(message = "Class name is required")
-    private String className;
+    @NotNull(message = "Class name ID is required")
+    private Long classNameId;
 
     @NotNull(message = "Academic session ID is required") // Changed from @NotEmpty
     private Long academicSessionId;

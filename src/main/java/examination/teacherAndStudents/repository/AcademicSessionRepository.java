@@ -17,11 +17,10 @@ import java.util.Optional;
 public interface AcademicSessionRepository extends JpaRepository<AcademicSession, Long> {
 
 
-    Optional<AcademicSession> findByResultReadyDateAndStatus(LocalDate today, SessionStatus sessionStatus);
 
     @Query("SELECT a FROM AcademicSession a WHERE " +
             "(:schoolId IS NULL OR a.school.id = :schoolId) AND " +
-            "(:name IS NULL OR LOWER(a.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
+            "(:name IS NULL OR LOWER(a.sessionName.name) LIKE LOWER(CONCAT('%', :name, '%'))) AND " +
             "(:status IS NULL OR a.status = :status) AND " +
             "(:promotion IS NULL OR a.sessionPromotion = :promotion) AND " +
             "(:id IS NULL OR a.id = :id)")
@@ -41,5 +40,4 @@ public interface AcademicSessionRepository extends JpaRepository<AcademicSession
                 "AND CURRENT_DATE BETWEEN t.startDate AND t.endDate")
         Optional<AcademicSession> findCurrentSession(@Param("schoolId") Long schoolId);
 
-//    AcademicSession findByResultReadyDateBeforeOrEqualAndStatus(LocalDate now, SessionStatus sessionStatus);
 }

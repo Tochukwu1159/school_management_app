@@ -25,9 +25,10 @@ public class AcademicSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
-    @Size(min = 1, max = 100)
-    private String name;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_name_id")
+
+    private SessionName sessionName;
 
     @NotNull
     private LocalDate startDate;

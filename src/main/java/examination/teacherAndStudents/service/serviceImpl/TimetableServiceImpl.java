@@ -9,7 +9,6 @@ import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.TimetableService;
 import examination.teacherAndStudents.utils.*;
-import io.jsonwebtoken.lang.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -128,10 +127,12 @@ public class TimetableServiceImpl implements TimetableService {
             AcademicSession academicYear = academicSessionRepository.findById(sessionId)
                     .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + sessionId));
 
-            // Check for existing timetable with same classBlock, term, and timetableType
             if (timetableRepository.existsByClassBlockIdAndTermIdAndDayOfWeek(classBlockId, termId, dayOfWeek)) {
                 throw new IllegalStateException(dayOfWeek + " already exists for this class block and term. Please update the existing timetable.");
             }
+
+            validateScheduleTimeOverlaps(subjectSchedules, classBlockId, termId, dayOfWeek);
+
 
             Timetable timetable = Timetable.builder()
                     .classBlock(classBlock)
@@ -145,8 +146,8 @@ public class TimetableServiceImpl implements TimetableService {
             timetable = timetableRepository.save(timetable);
 
             List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek);
-            timetable.getSubjectSchedules().clear(); // Clear existing collection
-            timetable.getSubjectSchedules().addAll(schedules); // Add new schedules
+            timetable.getSubjectSchedules().clear();
+            timetable.getSubjectSchedules().addAll(schedules);
 
             Timetable savedTimetable = timetableRepository.save(timetable);
             log.info("Created timetable ID {} for school ID {} on {}", savedTimetable.getId(), school.getId(), dayOfWeek);
@@ -160,57 +161,113 @@ public class TimetableServiceImpl implements TimetableService {
         }
     }
 
+
+    private void validateScheduleTimeOverlaps(List<SubjectScheduleRequest> subjectSchedules, Long classBlockId, Long termId, DayOfWeek dayOfWeek) {
+        // Check for overlaps within the payload
+        for (int i = 0; i < subjectSchedules.size(); i++) {
+            SubjectScheduleRequest current = subjectSchedules.get(i);
+            LocalTime currentStart = parseTime(current.getStartTime());
+            LocalTime currentEnd = parseTime(current.getEndTime());
+
+            if (!currentEnd.isAfter(currentStart)) {
+                throw new IllegalArgumentException("End time must be after start time for schedule starting at: " + current.getStartTime());
+            }
+
+            for (int j = i + 1; j < subjectSchedules.size(); j++) {
+                SubjectScheduleRequest other = subjectSchedules.get(j);
+                LocalTime otherStart = parseTime(other.getStartTime());
+                LocalTime otherEnd = parseTime(other.getEndTime());
+
+                if (currentStart.isBefore(otherEnd) && currentEnd.isAfter(otherStart)) {
+                    throw new IllegalArgumentException("Time overlap detected in payload between " +
+                            current.getStartTime() + "-" + current.getEndTime() + " and " +
+                            other.getStartTime() + "-" + other.getEndTime());
+                }
+            }
+        }
+
+        // Check for overlaps with existing schedules in the database
+        List<SubjectSchedule> existingSchedules = subjectScheduleRepository.findByClassBlockIdAndTermIdAndDayOfWeek(classBlockId, termId, dayOfWeek);
+        for (SubjectScheduleRequest request : subjectSchedules) {
+            LocalTime newStart = parseTime(request.getStartTime());
+            LocalTime newEnd = parseTime(request.getEndTime());
+
+            for (SubjectSchedule existing : existingSchedules) {
+                LocalTime existingStart = LocalTime.parse(existing.getStartTime(), DateTimeFormatter.ofPattern("HH:mm:ss"));
+                LocalTime existingEnd = LocalTime.parse(existing.getEndTime(), DateTimeFormatter.ofPattern("HH:mm:ss"));
+
+                if (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart)) {
+                    throw new IllegalStateException("Time slot " + request.getStartTime() + " to " + request.getEndTime() +
+                            " overlaps with existing schedule " + existing.getStartTime() + " to " + existing.getEndTime() +
+                            " on " + dayOfWeek);
+                }
+            }
+        }
+    }
+
     private List<SubjectSchedule> createSubjectSchedules(List<SubjectScheduleRequest> subjectSchedules, Timetable timetable, DayOfWeek dayOfWeek) {
         List<SubjectSchedule> schedules = new ArrayList<>();
 
         for (SubjectScheduleRequest request : subjectSchedules) {
-            if (request.getSubjectId() == null || request.getTeacherId() == null ||
-                    request.getStartTime() == null || request.getEndTime() == null) {
-                throw new IllegalArgumentException("Subject ID, teacher ID, start time, and end time must not be null");
+            if (request.getStartTime() == null || request.getEndTime() == null) {
+                throw new IllegalArgumentException("Start time and end time must not be null");
             }
 
-            // Parse and validate times
             LocalTime startTime = parseTime(request.getStartTime());
             LocalTime endTime = parseTime(request.getEndTime());
 
             if (!endTime.isAfter(startTime)) {
-                throw new IllegalArgumentException("End time must be after start time for subject ID: " + request.getSubjectId());
+                throw new IllegalArgumentException("End time must be after start time");
             }
 
-            // Normalize time format to HH:mm:ss
             String normalizedStartTime = normalizeTimeFormat(startTime);
             String normalizedEndTime = normalizeTimeFormat(endTime);
 
-            ClassSubject classSubject = classSubjectRepository.findById(request.getSubjectId())
-                    .orElseThrow(() -> new CustomNotFoundException("Class subject not found with ID: " + request.getSubjectId()));
-
-            subjectRepository.findById(classSubject.getSubject().getId())
-                    .orElseThrow(() -> new CustomNotFoundException("Subject not found with ID: " + classSubject.getSubject().getId()));
-
-            Profile teacherProfile = profileRepository.findById(request.getTeacherId())
-                    .orElseThrow(() -> new CustomNotFoundException("Teacher profile not found with ID: " + request.getTeacherId()));
-
-            // Check for teacher time overlap
-            if (hasTeacherTimeOverlap(timetable.getSchool().getId(), teacherProfile, normalizedStartTime, normalizedEndTime, dayOfWeek)) {
-                throw new IllegalStateException("Teacher ID " + teacherProfile.getId() + " is already scheduled at this time on " + dayOfWeek);
+            if (hasTimeOverlap(timetable, normalizedStartTime, normalizedEndTime, dayOfWeek)) {
+                throw new IllegalStateException("Time slot " + normalizedStartTime + " to " + normalizedEndTime + " on " + dayOfWeek + " is already occupied");
             }
 
-            SubjectSchedule schedule = SubjectSchedule.builder()
+            SubjectSchedule.SubjectScheduleBuilder scheduleBuilder = SubjectSchedule.builder()
                     .timetable(timetable)
-                    .subject(classSubject)
-                    .teacher(teacherProfile)
                     .startTime(normalizedStartTime)
                     .endTime(normalizedEndTime)
-                    .build();
+                    .isBreak(request.isBreakTime());
 
-            schedules.add(schedule);
+            if (!request.isBreakTime()) {
+                if (request.getSubjectId() == null || request.getTeacherId() == null) {
+                    throw new IllegalArgumentException("Subject ID and teacher ID must not be null for non-break schedules");
+                }
+                if (request.getSubjectId() != null && request.getTeacherId() != null && request.isBreakTime()) {
+                    throw new IllegalArgumentException("Break schedules must not include subject ID or teacher ID");
+                }
+
+                ClassSubject classSubject = classSubjectRepository.findById(request.getSubjectId())
+                        .orElseThrow(() -> new CustomNotFoundException("Class subject not found with ID: " + request.getSubjectId()));
+
+                subjectRepository.findById(classSubject.getSubject().getId())
+                        .orElseThrow(() -> new CustomNotFoundException("Subject not found with ID: " + classSubject.getSubject().getId()));
+
+                Profile teacherProfile = profileRepository.findById(request.getTeacherId())
+                        .orElseThrow(() -> new CustomNotFoundException("Teacher profile not found with ID: " + request.getTeacherId()));
+
+                if (hasTeacherTimeOverlap(timetable.getSchool().getId(), teacherProfile, normalizedStartTime, normalizedEndTime, dayOfWeek)) {
+                    throw new IllegalStateException("Teacher ID " + teacherProfile.getId() + " is already scheduled at this time on " + dayOfWeek);
+                }
+
+                scheduleBuilder.subject(classSubject).teacher(teacherProfile);
+            } else {
+                if (request.getSubjectId() != null || request.getTeacherId() != null) {
+                    throw new IllegalArgumentException("Break schedules must not include subject ID or teacher ID");
+                }
+            }
+
+            schedules.add(scheduleBuilder.build());
         }
         return schedules;
     }
 
     private LocalTime parseTime(String timeInput) {
         try {
-            // Parse time-only (e.g., "06:08:31" or "07:08")
             return LocalTime.parse(timeInput, DateTimeFormatter.ofPattern("HH:mm[:ss]"));
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Invalid time format: " + timeInput + ". Expected HH:mm:ss or HH:mm");
@@ -218,7 +275,6 @@ public class TimetableServiceImpl implements TimetableService {
     }
 
     private String normalizeTimeFormat(LocalTime time) {
-        // Always store times in HH:mm:ss format
         return time.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
     }
 
@@ -226,17 +282,27 @@ public class TimetableServiceImpl implements TimetableService {
         LocalTime newStart = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm:ss"));
         LocalTime newEnd = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-        List<SubjectSchedule> existingSchedules = subjectScheduleRepository.findByTeacherAndSchoolId(teacher, schoolId);
+        List<SubjectSchedule> existingSchedules = subjectScheduleRepository.findByTeacherAndSchoolIdAndTimetableDayOfWeek(teacher, schoolId, dayOfWeek);
         for (SubjectSchedule schedule : existingSchedules) {
-            // Check if the existing schedule is for the same dayOfWeek
-            if (schedule.getTimetable().getDayOfWeek() != dayOfWeek) {
-                continue;
-            }
-
             LocalTime existingStart = LocalTime.parse(schedule.getStartTime(), DateTimeFormatter.ofPattern("HH:mm:ss"));
             LocalTime existingEnd = LocalTime.parse(schedule.getEndTime(), DateTimeFormatter.ofPattern("HH:mm:ss"));
 
-            // Check for overlap: new schedule starts before existing ends AND new schedule ends after existing starts
+            if (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasTimeOverlap(Timetable timetable, String startTime, String endTime, DayOfWeek dayOfWeek) {
+        LocalTime newStart = LocalTime.parse(startTime, DateTimeFormatter.ofPattern("HH:mm:ss"));
+        LocalTime newEnd = LocalTime.parse(endTime, DateTimeFormatter.ofPattern("HH:mm:ss"));
+
+        List<SubjectSchedule> existingSchedules = subjectScheduleRepository.findByTimetableIdAndTimetableDayOfWeek(timetable.getId(), dayOfWeek);
+        for (SubjectSchedule schedule : existingSchedules) {
+            LocalTime existingStart = LocalTime.parse(schedule.getStartTime(), DateTimeFormatter.ofPattern("HH:mm:ss"));
+            LocalTime existingEnd = LocalTime.parse(schedule.getEndTime(), DateTimeFormatter.ofPattern("HH:mm:ss"));
+
             if (newStart.isBefore(existingEnd) && newEnd.isAfter(existingStart)) {
                 return true;
             }
@@ -262,13 +328,21 @@ public class TimetableServiceImpl implements TimetableService {
             AcademicSession academicYear = academicSessionRepository.findById(sessionId)
                     .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + sessionId));
 
+            if (!timetable.getDayOfWeek().equals(dayOfWeek) &&
+                    timetableRepository.existsByClassBlockIdAndTermIdAndDayOfWeek(timetable.getClassBlock().getId(), termId, dayOfWeek)) {
+                throw new IllegalStateException(dayOfWeek + " already exists for this class block and term. Please choose a different day.");
+            }
+
+            validateScheduleTimeOverlaps(subjectSchedules, timetable.getClassBlock().getId(), termId, dayOfWeek);
+
+
             timetable.setDayOfWeek(dayOfWeek);
             timetable.setTerm(studentTerm);
             timetable.setAcademicYear(academicYear);
 
             List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek);
-            timetable.getSubjectSchedules().clear(); // Clear existing collection
-            timetable.getSubjectSchedules().addAll(schedules); // Add new schedules
+            timetable.getSubjectSchedules().clear();
+            timetable.getSubjectSchedules().addAll(schedules);
 
             Timetable updatedTimetable = timetableRepository.save(timetable);
             log.info("Updated timetable ID {} for school ID {}", timetableId, school.getId());

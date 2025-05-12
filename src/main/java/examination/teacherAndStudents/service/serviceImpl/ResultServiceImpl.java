@@ -545,7 +545,7 @@ public class ResultServiceImpl implements ResultService {
 
         // Build and return the statistics report
         return new StatisticsReport(
-                academicSession.getName(),
+                academicSession.getSessionName().getName(),
                 classBlock.getName(),
                 scoreDistribution,
                 meanScore,
@@ -614,7 +614,7 @@ public class ResultServiceImpl implements ResultService {
 
         // Build and return the statistics report
         return new TermStatisticsReport(
-                academicSession.getName(),
+                academicSession.getSessionName().getName(),
                 classBlock.getName(),
                 studentTerm.getName(),
                 scoreDistribution,

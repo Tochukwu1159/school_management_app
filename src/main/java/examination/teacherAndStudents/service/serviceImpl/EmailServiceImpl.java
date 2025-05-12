@@ -170,7 +170,7 @@ public class EmailServiceImpl implements EmailService {
 
             // Prepare model for Thymeleaf template
             Map<String, Object> model = new HashMap<>();
-            model.put("recipientName", user.getFirstName() + " " + user.getLastName());
+            model.put("recipientName", user.getFirstName());
             model.put("password", password);
             model.put("regNo", regNo);
             model.put("applicationNumber", applicationNumber);

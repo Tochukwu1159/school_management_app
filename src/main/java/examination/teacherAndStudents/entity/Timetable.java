@@ -23,11 +23,6 @@ public class Timetable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "classBlock_id")
     private ClassBlock classBlock;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private TimetableType timetableType;
-
     @ManyToOne
     @JoinColumn(name = "term_id", nullable = false)
     private StudentTerm term;

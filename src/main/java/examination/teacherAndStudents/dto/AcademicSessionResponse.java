@@ -13,13 +13,13 @@ import java.time.LocalDate;
 public class AcademicSessionResponse {
 
     private Long id;
-    private String name;
+    private String sessionName;
     private LocalDate startDate;
     private LocalDate endDate;
 
     public AcademicSessionResponse(Long id, String name) {
         this.id = id;
-        this.name = name;
+        this.sessionName = name;
     }
 
 }

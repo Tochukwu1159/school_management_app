@@ -10,7 +10,7 @@ import java.util.List;
 @Builder
 public class ClassLevelWithBlocksResponse {
     private Long id;
-    private String className;
+    private ClassNameResponse className;
     private Long academicSessionId;
     private List<String> classBlocks;
 }

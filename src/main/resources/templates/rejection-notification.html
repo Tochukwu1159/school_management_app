@@ -50,6 +50,13 @@
         .button:hover {
             background-color: #0033a0;
         }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -59,31 +66,40 @@
     </div>
     <div class="content">
         <p>Dear <span th:text="${studentName}">Student</span>,</p>
-        <p>We regret to inform you that your application to <span th:text="${schoolName}">Our School</span> has not been successful at this time.</p>
+        <p>We regret to inform you that your application (Number: <span th:text="${applicationNumber}">APP123456</span>) to <span th:text="${schoolName}">School Name</span> has not been approved at this time. We appreciate the effort and time you invested in applying to our institution.</p>
+
         <h3>Reason for Rejection</h3>
-        <p th:text="${rejectionReason}">Unfortunately, your application did not meet the required criteria.</p>
-        <div th:if="${canReapply}">
-            <h3>Next Steps</h3>
-            <p>You are eligible to reapply for admission during the <span th:text="${reapplicationPeriod}">next academic session</span>. We encourage you to review the application requirements and submit a new application when the next application period opens.</p>
-            <p style="text-align: center;">
-                <a th:href="'https://' + ${schoolName.toLowerCase().replace(' ', '')} + '.edu/admissions'" class="button">Learn More About Admissions</a>
-            </p>
-        </div>
-        <div th:unless="${canReapply}">
-            <p>At this time, reapplication is not available. Please contact our admissions office for further guidance.</p>
-        </div>
+        <p th:text="${rejectionReason}">Your application did not meet the required criteria.</p>
+
+        <h3>Next Steps</h3>
+        <p th:if="${canReapply}">
+            You are eligible to reapply for admission during the <span th:text="${reapplicationPeriod}">next academic session</span>. We encourage you to review our admission requirements and submit a new application when the next application period opens. Visit our admissions page for more information:
+        </p>
+        <p th:unless="${canReapply}">
+            At this time, reapplication is not available for this program. However, you may explore other programs or future application cycles. Please visit our admissions page or contact our admissions office for guidance:
+        </p>
+        <p style="text-align: center;">
+            <a th:href="${admissionsUrl}" class="button">Visit Admissions Page</a>
+        </p>
+
         <h3>Contact Us</h3>
-        <p>If you have any questions or need further assistance, please reach out to our admissions team:</p>
+        <p>If you have questions or would like feedback on your application, please contact our admissions office:</p>
         <ul>
             <li><strong>Email:</strong> <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">admissions@school.edu</a></li>
-            <li><strong>Phone:</strong> <span th:text="${contactPhone}">+1-123-456-7890</span></li>
+            <li><strong>Phone:</strong> <span th:text="${contactPhone}">+1-234-567-8900</span></li>
         </ul>
-        <p>We appreciate your interest in <span th:text="${schoolName}">Our School</span> and wish you the best in your future endeavors.</p>
-        <p>Sincerely,<br>The Admissions Team<br><span th:text="${schoolName}">Our School</span></p>
+
+        <p>Thank you for your interest in <span th:text="${schoolName}">School Name</span>. We wish you success in your future academic endeavors.</p>
+        <p>Sincerely,<br>
+            The Admissions Office<br>
+            <span th:text="${schoolName}">School Name</span></p>
     </div>
     <div class="footer">
-        <p>© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">Our School</span>. All rights reserved.</p>
-        <p><a href="#">Unsubscribe</a> | <a th:href="'https://' + ${schoolName.toLowerCase().replace(' ', '')} + '.edu/privacy'">Privacy Policy</a></p>
+        <p>© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">School Name</span>. All rights reserved.</p>
+        <p>
+            <a th:href="${unsubscribeUrl}">Unsubscribe</a> |
+            <a th:href="${privacyPolicyUrl}">Privacy Policy</a>
+        </p>
     </div>
 </div>
 </body>

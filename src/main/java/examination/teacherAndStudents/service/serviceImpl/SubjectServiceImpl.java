@@ -81,13 +81,12 @@ public class SubjectServiceImpl implements SubjectService {
             }
 
             // Check for existing subject
-            if (subjectRepository.existsBySchoolIdAndName(school.getId(), subjectRequest.getName().trim())) {
-                throw new IllegalArgumentException("Subject '" + subjectRequest.getName() + "' already exists in this school");
+            if (subjectRepository.existsByName(subjectRequest.getName().trim())) {
+                throw new IllegalArgumentException("Subject '" + subjectRequest.getName() + "' already exists");
             }
 
             Subject subject = Subject.builder()
                     .name(subjectRequest.getName().trim())
-                    .school(school)
                     .build();
 
             Subject savedSubject = subjectRepository.save(subject);
@@ -113,9 +112,9 @@ public class SubjectServiceImpl implements SubjectService {
                 throw new IllegalArgumentException("Subject name must not be null or empty");
             }
 
-            Subject existingSubject = subjectRepository.findByIdAndSchoolId(subjectId, school.getId())
+            Subject existingSubject = subjectRepository.findById(subjectId)
                     .orElseThrow(() -> new CustomNotFoundException(
-                            "Subject not found with ID " + subjectId + " in school ID " + school.getId()));
+                            "Subject not found"));
 
             existingSubject.setName(subjectRequest.getName().trim());
             Subject updatedSubject = subjectRepository.save(existingSubject);
@@ -138,9 +137,9 @@ public class SubjectServiceImpl implements SubjectService {
             User user = validateAuthenticatedUser(false);
             School school = user.getSchool();
 
-            Subject subject = subjectRepository.findByIdAndSchoolId(subjectId, school.getId())
+            Subject subject = subjectRepository.findById(subjectId)
                     .orElseThrow(() -> new CustomNotFoundException(
-                            "Subject not found with ID " + subjectId + " in school ID " + school.getId()));
+                            "Subject not found "));
 
             log.info("Fetched subject ID {} for school ID {}", subjectId, school.getId());
             return modelMapper.map(subject, SubjectResponse.class);
@@ -161,8 +160,8 @@ public class SubjectServiceImpl implements SubjectService {
             School school = user.getSchool();
 
             Pageable pageable = createPageable(page, size, sortBy, sortDirection);
-            Page<Subject> subjects = subjectRepository.findAllBySchoolIdAndNameContaining(
-                    school.getId(), name != null ? name.trim() : "", pageable);
+            Page<Subject> subjects = subjectRepository.findAllByNameContaining(
+                     name != null ? name.trim() : "", pageable);
 
             log.info("Fetched {} subjects for school ID {}", subjects.getTotalElements(), school.getId());
             return subjects.map(subject -> modelMapper.map(subject, SubjectResponse.class));
@@ -182,9 +181,9 @@ public class SubjectServiceImpl implements SubjectService {
             User admin = validateAuthenticatedUser(true);
             School school = admin.getSchool();
 
-            Subject subject = subjectRepository.findByIdAndSchoolId(subjectId, school.getId())
+            Subject subject = subjectRepository.findById(subjectId)
                     .orElseThrow(() -> new CustomNotFoundException(
-                            "Subject not found with ID " + subjectId + " in school ID " + school.getId()));
+                            "Subject not found "));
 
             // Check for dependencies (optional)
             if (subjectRepository.hasDependencies(subjectId)) {

@@ -82,9 +82,9 @@ public class TransportServiceImpl implements TransportService {
                 .bus(transport)
                 .busRoute(busRoute)
                 .remainingCapacity(transport.getCapacity())
-                .session(academicSessionRepository.findCurrentSession(transport.getSchool().getId())
+                .session(academicSessionRepository.findById(transportRequest.getSessionId())
                         .orElseThrow(() -> new CustomNotFoundException("No active academic session")))
-                .term(studentTermRepository.findCurrentTerm(LocalDate.now())
+                .term(studentTermRepository.findById(transportRequest.getTermId())
                         .orElseThrow(() -> new CustomNotFoundException("No active term")))
                 .build();
         transportTrackerRepository.save(transportTracker);
@@ -128,9 +128,9 @@ public class TransportServiceImpl implements TransportService {
         if (updatedTransport.getCapacity() > 0) {
             TransportTracker tracker = transportTrackerRepository.findByBusAndSessionAndTerm(
                             transport,
-                            academicSessionRepository.findCurrentSession(admin.getSchool().getId())
+                            academicSessionRepository.findById(updatedTransport.getSessionId())
                                     .orElseThrow(() -> new CustomNotFoundException("No active academic session")),
-                            studentTermRepository.findCurrentTerm(LocalDate.now())
+                            studentTermRepository.findById(updatedTransport.getTermId())
                                     .orElseThrow(() -> new CustomNotFoundException("No active term")))
                     .orElseThrow(() -> new CustomNotFoundException("Transport Tracker not found"));
 

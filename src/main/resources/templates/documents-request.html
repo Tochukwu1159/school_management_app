@@ -54,35 +54,53 @@
             list-style-type: disc;
             padding-left: 20px;
         }
+        li {
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>Additional Documents Required</h1>
+        <h1>Additional Documents Required for Your Application</h1>
     </div>
     <div class="content">
         <p>Dear <span th:text="${studentName}">Student</span>,</p>
-        <p>Thank you for applying to <span th:text="${schoolName}">Our School</span>. Upon reviewing your application, we have identified that some required documents are missing. To proceed with your application, please submit the following documents by <span th:text="${submissionDeadline}">May 2, 2025</span>:</p>
-        <h3>Missing Documents</h3>
+        <p>Thank you for applying to <span th:text="${schoolName}">School Name</span>. Upon reviewing your application (Number: <span th:text="${applicationNumber}">APP123456</span>), we have identified that additional documents are required to continue processing your application.</p>
+
+        <h3>Required Documents</h3>
+        <p>Please submit the following documents by <span th:text="${submissionDeadline}">May 2, 2025</span>:</p>
         <ul>
             <li th:each="doc : ${missingDocuments}" th:text="${doc}">Document Name</li>
         </ul>
-        <p>You can upload the requested documents through the student portal or send them directly to our admissions office. Failure to submit these documents by the deadline may result in your application being deferred or rejected.</p>
+
+        <p>You can upload the requested documents through the student portal using your existing login credentials. Ensure all documents are in PDF format and clearly labeled with your application number. If you prefer, you may also send physical copies to our admissions office at <span th:text="${admissionsOfficeAddress}">123 School Lane, City, State, ZIP</span>.</p>
+
+        <p><strong>Important:</strong> Failure to submit these documents by the deadline may result in your application being deferred or rejected.</p>
+
         <p style="text-align: center;">
-            <a th:href="'https://' + ${schoolName.toLowerCase().replace(' ', '')} + '.edu/portal'" class="button">Upload Documents</a>
+            <a th:href="${studentPortalUrl}" class="button">Upload Documents</a>
         </p>
+
         <h3>Contact Us</h3>
-        <p>If you have any questions or need assistance with submitting the documents, please contact our admissions team:</p>
+        <p>If you have questions or need assistance with submitting your documents, please contact our admissions office:</p>
         <ul>
             <li><strong>Email:</strong> <a th:href="'mailto:' + ${contactEmail}" th:text="${contactEmail}">admissions@school.edu</a></li>
+            <li><strong>Phone:</strong> <span th:text="${contactPhone}">+1-234-567-8900</span></li>
         </ul>
-        <p>We appreciate your prompt attention to this matter and look forward to receiving your documents.</p>
-        <p>Best regards,<br>The Admissions Team<br><span th:text="${schoolName}">Our School</span></p>
+
+        <p>We appreciate your prompt attention to this matter and look forward to receiving your documents to continue processing your application.</p>
+
+        <p>Best regards,<br>
+            The Admissions Office<br>
+            <span th:text="${schoolName}">School Name</span></p>
     </div>
     <div class="footer">
-        <p>© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">Our School</span>. All rights reserved.</p>
-        <p><a href="#">Unsubscribe</a> | <a th:href="'https://' + ${schoolName.toLowerCase().replace(' ', '')} + '.edu/privacy'">Privacy Policy</a></p>
+        <p>© <span th:text="${#dates.format(#dates.createNow(), 'yyyy')}">2025</span> <span th:text="${schoolName}">School Name</span>. All rights reserved.</p>
+        <p>
+            <a th:href="${unsubscribeUrl}">Unsubscribe</a> |
+            <a th:href="${privacyPolicyUrl}">Privacy Policy</a>
+        </p>
     </div>
 </div>
 </body>

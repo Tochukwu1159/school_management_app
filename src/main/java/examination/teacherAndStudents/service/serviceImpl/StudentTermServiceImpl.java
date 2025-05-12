@@ -192,7 +192,7 @@ public class StudentTermServiceImpl implements StudentTermService {
     private AcademicSessionResponse mapToSessionResponse(AcademicSession session) {
         return AcademicSessionResponse.builder()
                 .id(session.getId())
-                .name(session.getName())
+                .sessionName(session.getSessionName().getName())
                 .startDate(session.getStartDate())
                 .endDate(session.getEndDate())
                 .build();

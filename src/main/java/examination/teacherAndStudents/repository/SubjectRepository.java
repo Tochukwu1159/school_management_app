@@ -15,15 +15,13 @@ import java.util.Optional;
 @Repository
 public interface SubjectRepository extends JpaRepository<Subject, Long> {
     Subject findByName(String subject);
-    @Query("SELECT s FROM Subject s WHERE (:schoolId IS NULL OR s.school.id = :schoolId) AND (:name IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :name, '%')))")
-    List<Subject> findAllByFilters(@Param("schoolId") Long schoolId, @Param("name") String name);
+    @Query("SELECT s FROM Subject s WHERE (:name IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :name, '%')))")
+    List<Subject> findAllByFilters(@Param("name") String name);
 
-    Optional<Subject> findByIdAndSchoolId(Long subjectId, Long id);
-
-    Page<Subject> findAllBySchoolIdAndNameContaining(Long id, String s, Pageable pageable);
+    Page<Subject> findAllByNameContaining(String s, Pageable pageable);
 
     @Query("SELECT COUNT(cs) > 0 FROM ClassSubject cs WHERE cs.subject.id = :subjectId")
     boolean hasDependencies(Long subjectId);
 
-    boolean existsBySchoolIdAndName(Long id, String trim);
+    boolean existsByName(String trim);
 }

@@ -90,7 +90,7 @@ public class HostelServiceImpl implements HostelService {
 
         Hostel newHostel = Hostel.builder()
                 .hostelName(hostelRequest.getHostelName())
-                .hostelType(HostelType.valueOf(hostelRequest.getHostelType()))
+                .hostelType(HostelType.valueOf(hostelRequest.getHostelType().toUpperCase()))
                 .numberOfBed(hostelRequest.getNumberOfBed())
                 .description(hostelRequest.getDescription())
                 .availabilityStatus(AvailabilityStatus.AVAILABLE)

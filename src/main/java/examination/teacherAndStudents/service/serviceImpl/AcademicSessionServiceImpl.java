@@ -3,6 +3,7 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.AcademicSessionRequest;
 import examination.teacherAndStudents.dto.AcademicSessionResponse;
+import examination.teacherAndStudents.dto.SessionNameResponse;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.entity.StudentTerm;
 import examination.teacherAndStudents.error_handler.AuthenticationFailedException;
@@ -11,6 +12,7 @@ import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
+import examination.teacherAndStudents.repository.SessionNameRepository;
 import examination.teacherAndStudents.repository.StudentTermRepository;
 import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.AcademicSessionService;
@@ -26,9 +28,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 
 @Service
 @RequiredArgsConstructor
@@ -40,17 +39,20 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
     private final EntityFetcher entityFetcher;
     private final UserRepository userRepository;
 
-    public AcademicSessionResponse  createAcademicSession(AcademicSessionRequest request) {
-
+    public AcademicSessionResponse createAcademicSession(AcademicSessionRequest request) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         User admin = entityFetcher.fetchLoggedInAdmin(email);
         if (admin == null) {
             throw new AuthenticationFailedException("Please login as an Admin");
         }
 
-        // Check if the subscription has expired
+        SessionName sessionName = null;
+        if (request.getSessionNameId() != null) {
+            sessionName = entityFetcher.fetchSessionName(request.getSessionNameId());
+        }
+
         AcademicSession session = AcademicSession.builder()
-                .name(request.getName())
+                .sessionName(sessionName)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .status(SessionStatus.ACTIVE)
@@ -58,15 +60,20 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
                 .school(admin.getSchool())
                 .build();
         AcademicSession savedSession = academicSessionRepository.save(session);
-        createStudentTerms(request,savedSession);
+        createStudentTerms(request, savedSession);
         return mapToResponse(savedSession);
     }
 
     public AcademicSessionResponse updateAcademicSession(Long id, AcademicSessionRequest request) {
         AcademicSession session = entityFetcher.fetchAcademicSession(id);
-        session.setName(request.getName());
+
         session.setStartDate(request.getStartDate());
         session.setEndDate(request.getEndDate());
+        SessionName sessionName = null;
+        if (request.getSessionNameId() != null) {
+            sessionName = entityFetcher.fetchSessionName(request.getSessionNameId());
+        }
+        session.setSessionName(sessionName);
         AcademicSession updatedSession = academicSessionRepository.save(session);
         return mapToResponse(updatedSession);
     }
@@ -91,11 +98,9 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
             User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                     .orElseThrow(() -> new CustomNotFoundException("Admin not found"));
 
-            // Create Pageable object
             Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
             Pageable pageable = PageRequest.of(page, size, sort);
 
-            // Fetch filtered academic sessions
             Page<AcademicSession> sessionsPage = academicSessionRepository.findAllWithFilters(
                     admin.getSchool().getId(),
                     name,
@@ -104,7 +109,6 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
                     id,
                     pageable);
 
-            // Map to response DTO
             return sessionsPage.map(this::mapToResponse);
         } catch (CustomNotFoundException e) {
             throw e;
@@ -119,22 +123,18 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
 
     @Transactional
     public void graduateStudentsForSession(Long academicSessionId, List<Long> classBlockIds) {
-        // Fetch and validate the academic session
         AcademicSession session = academicSessionRepository.findById(academicSessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + academicSessionId));
 
-        // Get authenticated admin user and school
         String email = SecurityConfig.getAuthenticatedUserEmail();
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         School school = admin.getSchool();
 
-        // Validate session end date
         if (session.getEndDate().isAfter(LocalDate.now())) {
             throw new IllegalStateException("Academic session has not ended yet");
         }
 
-        // Fetch all active profiles in the specified class blocks for this session and school
         List<Profile> profilesToGraduate = profileRepository.findByClassBlockIdInAndClassBlockClassLevelAcademicYearAndClassBlockClassLevelSchoolAndProfileStatus(
                 classBlockIds,
                 session,
@@ -146,12 +146,10 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
             return;
         }
 
-        // Update status to GRADUATED
         profilesToGraduate.forEach(profile -> {
             profile.setProfileStatus(ProfileStatus.GRADUATED);
         });
 
-        // Batch save all updated profiles
         profileRepository.saveAll(profilesToGraduate);
 
         session.setSessionPromotion(SessionPromotion.SUCCESS);
@@ -159,16 +157,24 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
     }
 
     private AcademicSessionResponse mapToResponse(AcademicSession session) {
+        SessionNameResponse sessionNameResponse = null;
+        if (session.getSessionName() != null) {
+            sessionNameResponse = SessionNameResponse.builder()
+                    .id(session.getSessionName().getId())
+                    .name(session.getSessionName().getName())
+                    .build();
+        }
+
+        assert sessionNameResponse != null;
         return AcademicSessionResponse.builder()
                 .id(session.getId())
-                .name(session.getName())
                 .startDate(session.getStartDate())
                 .endDate(session.getEndDate())
+                .sessionName(sessionNameResponse.getName())
                 .build();
     }
 
     private void createStudentTerms(AcademicSessionRequest academicSessionRequest, AcademicSession session) {
-
         List<StudentTerm> terms = Arrays.asList(
                 StudentTerm.builder().name("First Term")
                         .startDate(academicSessionRequest.getFirstTermStartDate())
@@ -193,5 +199,4 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
         );
         studentTermRepository.saveAll(terms);
     }
-
 }

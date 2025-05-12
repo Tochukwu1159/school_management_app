@@ -10,13 +10,6 @@ import java.util.Optional;
 
 @Repository
 public interface HostelAllocationRepository extends JpaRepository<HostelAllocation, Long> {
-    HostelAllocation findByHostelAndBedNumberAndAcademicYear(Hostel hostel, int bedNumber, AcademicSession academicYear);
-
-    HostelAllocation findByHostelAndProfileAndAcademicYearAndAllocationStatus(Hostel hostel, Profile userProfile, AcademicSession academicYear, AllocationStatus allocationStatus);
-
-    HostelAllocation findByFeeIdAndProfile(Long feeId, Profile profile);
-
-    HostelAllocation findByIdAndAcademicYearAndProfile(Long allocationId, AcademicSession academicYear, Profile userProfile);
 
     boolean existsByHostel(Hostel hostel);
 
