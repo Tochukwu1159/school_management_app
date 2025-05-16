@@ -247,8 +247,7 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
                         classSubject.getClassBlock().getId(),
                         classSubject.getClassBlock().getName(),
                         new ClassLevelResponse(
-                                classSubject.getClassBlock().getClassLevel().getId(),
-                                classSubject.getClassBlock().getClassLevel().getClassName().getName()
+                                classSubject.getClassBlock().getClassLevel().getId()
                         )
                 ))
                 .academicYear(new AcademicSessionResponse(

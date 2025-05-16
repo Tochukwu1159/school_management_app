@@ -51,6 +51,10 @@ public class StudentTransportAllocation {
     private AllocationStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "session_id", nullable = false)
     private AcademicSession academicSession;
 

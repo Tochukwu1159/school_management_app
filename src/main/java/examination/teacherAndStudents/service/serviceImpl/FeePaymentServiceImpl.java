@@ -201,7 +201,7 @@ public class FeePaymentServiceImpl implements FeePaymentService {
 
     private Transaction createTransactionForFeesWithoutIds(Profile profile, PaymentWithoutFeeIdRequest due) {
 
-        StudentTerm studentTerm  = studentTermRepository.findCurrentTerm(LocalDate.now())
+        StudentTerm studentTerm  = studentTermRepository.findCurrentTerm(LocalDate.now(), profile.getUser().getSchool().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student term not found"));
 
         return Transaction.builder()

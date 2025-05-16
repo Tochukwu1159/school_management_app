@@ -351,7 +351,7 @@ public class TransportServiceImpl implements TransportService {
                         transport,
                         academicSessionRepository.findCurrentSession(admin.getSchool().getId())
                                 .orElseThrow(() -> new CustomNotFoundException("No active academic session")),
-                        studentTermRepository.findCurrentTerm(LocalDate.now())
+                        studentTermRepository.findCurrentTerm(LocalDate.now(), admin.getSchool().getId())
                                 .orElseThrow(() -> new CustomNotFoundException("No active term")))
                 .orElseThrow(() -> new CustomNotFoundException("Transport Tracker not found"));
 
@@ -388,7 +388,7 @@ public class TransportServiceImpl implements TransportService {
                     .status(AllocationStatus.SUCCESS)
                     .academicSession(academicSessionRepository.findCurrentSession(admin.getSchool().getId())
                             .orElseThrow(() -> new CustomNotFoundException("No active academic session")))
-                    .term(studentTermRepository.findCurrentTerm(LocalDate.now())
+                    .term(studentTermRepository.findCurrentTerm(LocalDate.now(), admin.getSchool().getId())
                             .orElseThrow(() -> new CustomNotFoundException("No active term")))
                     .build();
 
@@ -484,7 +484,7 @@ public class TransportServiceImpl implements TransportService {
         // Initialize TransportTracker for the bus
         AcademicSession currentSession = academicSessionRepository.findCurrentSession(bus.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("No active academic session"));
-        StudentTerm currentTerm = studentTermRepository.findCurrentTerm(LocalDate.now())
+        StudentTerm currentTerm = studentTermRepository.findCurrentTerm(LocalDate.now(), bus.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("No active term"));
 
         TransportTracker transportTracker = TransportTracker.builder()
@@ -517,7 +517,7 @@ public class TransportServiceImpl implements TransportService {
         // Validate inputs
         Profile driver = profileRepository.findById(driverId)
                 .orElseThrow(() -> new CustomNotFoundException("Driver not found with ID: " + driverId));
-        StudentTerm term = studentTermRepository.findCurrentTerm(LocalDate.now())
+        StudentTerm term = studentTermRepository.findCurrentTerm(LocalDate.now(), driver.getUser().getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Term not found " ));
 
         // Create pageable
