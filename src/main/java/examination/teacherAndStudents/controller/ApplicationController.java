@@ -1,7 +1,6 @@
 package examination.teacherAndStudents.controller;
 
 import examination.teacherAndStudents.dto.*;
-import examination.teacherAndStudents.error_handler.BadRequestException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.PaymentProcessingException;
 import examination.teacherAndStudents.service.ApplicationService;

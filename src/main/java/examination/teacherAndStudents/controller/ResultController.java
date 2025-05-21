@@ -9,6 +9,7 @@ import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.AcademicSessionRepository;
 import examination.teacherAndStudents.repository.ClassBlockRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
+import examination.teacherAndStudents.repository.SessionClassRepository;
 import examination.teacherAndStudents.service.PositionService;
 import examination.teacherAndStudents.service.ResultService;
 import examination.teacherAndStudents.utils.StudentTerm;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestController
@@ -35,6 +37,8 @@ public class ResultController {
     private AcademicSessionRepository academicSessionRepository;
     @Autowired
     private ProfileRepository profileRepository;
+    @Autowired
+    private SessionClassRepository sessionClassRepository;
 
     @GetMapping("/calculate/{classLevelId}/{studentId}/{term}/{subjectName}")
     public ResponseEntity<ApiResponse<Result>> calculateResult(@PathVariable Long classLevelId,@PathVariable Long studentId, @PathVariable String subjectName,@PathVariable Long sessionId,  @PathVariable Long term) {
@@ -85,22 +89,19 @@ public class ResultController {
     @PostMapping("/session-average/update")
     public ResponseEntity<ApiResponse<String>> updateSessionAverage(@RequestParam Long classBlockId,
                                                                     @RequestParam Long academicYearId) {
-        // Fetch the class block and academic year
-        ClassBlock classBlock = classBlockRepository.findById(classBlockId)
-                .orElseThrow(() -> new NotFoundException("Class block not found"));
+        SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(academicYearId, classBlockId )
+                .orElseThrow(() -> new NotFoundException("Session class not found"));
 
-        AcademicSession academicYear = academicSessionRepository.findById(academicYearId)
-                .orElseThrow(() -> new NotFoundException("Academic year not found"));
 
         // Fetch all student profiles in the class block
-        List<Profile> studentProfiles = profileRepository.findAllByClassBlock(classBlock);
+        Set<Profile> studentProfiles = sessionClass.getProfiles();
 
         if (studentProfiles.isEmpty()) {
             throw new NotFoundException("No students found in the specified class block");
         }
 
         // Update session averages
-        resultService.updateSessionAverage(studentProfiles, classBlock, academicYear);
+        resultService.updateSessionAverage(studentProfiles, sessionClass);
 
         return ResponseEntity.ok(new ApiResponse<>("Session averages updated successfully", true, null));
     }
@@ -110,13 +111,8 @@ public class ResultController {
     public ResponseEntity<ApiResponse<List<SessionAverageResponse>>> getTop5StudentsPerClass(
             @PathVariable Long classBlockId, @PathVariable Long academicSessionId) {
 
-        ClassBlock classBlock = classBlockRepository.findById(classBlockId)
-                .orElseThrow(() -> new CustomNotFoundException("Class block not found"));
 
-        AcademicSession academicSession = academicSessionRepository.findById(academicSessionId)
-                .orElseThrow(() -> new CustomNotFoundException("Academic session not found"));
-
-        List<SessionAverage> top5Students = resultService.getTop5StudentsPerClass(classBlock, academicSession);
+        List<SessionAverage> top5Students = resultService.getTop5StudentsPerClass(classBlockId, academicSessionId);
 
         List<SessionAverageResponse> response = top5Students.stream()
                 .map(SessionAverageResponse::fromEntity)
@@ -131,11 +127,8 @@ public class ResultController {
     public ResponseEntity<ApiResponse<Map<String, List<SessionAverageResponse>>>> getTop5StudentsForAllClasses(
             @PathVariable Long academicSessionId) {
 
-        AcademicSession academicSession = academicSessionRepository.findById(academicSessionId)
-                .orElseThrow(() -> new CustomNotFoundException("Academic session not found"));
-
         Map<ClassBlock, List<SessionAverage>> top5Students =
-                resultService.getTop5StudentsForAllClasses(academicSession);
+                resultService.getTop5StudentsForAllClasses(academicSessionId);
 
         Map<String, List<SessionAverageResponse>> response = top5Students.entrySet().stream()
                 .collect(Collectors.toMap(

@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = "stores")
 @EqualsAndHashCode(of = "id")
 public class Category {
 

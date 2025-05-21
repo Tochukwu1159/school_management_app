@@ -29,8 +29,8 @@ public class SessionAverage {
     private AcademicSession academicYear;
 
     @ManyToOne
-    @JoinColumn(name = "classblock_id", nullable = false)
-    private ClassBlock classBlock;
+    @JoinColumn(name = "session_class_id", nullable = false)
+    private SessionClass sessionClass;
 
     @Column(nullable = false)
     private double averageScore;  // The average score of the three terms

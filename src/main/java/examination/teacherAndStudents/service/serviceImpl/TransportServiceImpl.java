@@ -278,7 +278,9 @@ public class TransportServiceImpl implements TransportService {
                 .paymentStatus(PaymentStatus.SUCCESS)
                 .route(route)
                 .stop(stop)
+                .sessionClass(profile.getSessionClass())
                 .academicSession(academicSession)
+                .school(student.getSchool())
                 .term(term)
                 .status(AllocationStatus.PENDING)
                 .build();
@@ -390,6 +392,8 @@ public class TransportServiceImpl implements TransportService {
                             .orElseThrow(() -> new CustomNotFoundException("No active academic session")))
                     .term(studentTermRepository.findCurrentTerm(LocalDate.now(), admin.getSchool().getId())
                             .orElseThrow(() -> new CustomNotFoundException("No active term")))
+                    .school(admin.getSchool())
+                    .sessionClass(student.getSessionClass())
                     .build();
 
             studentTransportTrackerRepository.save(allocation);

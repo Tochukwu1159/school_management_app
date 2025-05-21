@@ -2,7 +2,6 @@ package examination.teacherAndStudents.repository;
 
 import examination.teacherAndStudents.entity.Attendance;
 import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.utils.AttendanceStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,11 +11,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import examination.teacherAndStudents.entity.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
@@ -27,7 +24,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             "(:profileId IS NULL OR a.userProfile.id = :profileId) AND " +
             "(:academicYearId IS NULL OR a.academicYear.id = :academicYearId) AND " +
             "(:studentTermId IS NULL OR a.studentTerm.id = :studentTermId) AND " +
-            "(:classBlockId IS NULL OR a.classBlock.id = :classBlockId) AND " +
+            "(:classBlockId IS NULL OR a.sessionClass.id = :sessionId) AND " +
             "(:startDate IS NULL OR a.date >= :startDate) AND " +
             "(:endDate IS NULL OR a.date <= :endDate) AND " +
             "(:createdAt IS NULL OR a.createdAt >= :createdAt)")
@@ -35,7 +32,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
             @Param("profileId") Long profileId,
             @Param("academicYearId") Long academicYearId,
             @Param("studentTermId") Long studentTermId,
-            @Param("classBlockId") Long classBlockId,
+            @Param("sessionId") Long sessionId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             @Param("createdAt") LocalDateTime createdAt,
@@ -53,7 +50,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     @Query("SELECT a FROM Attendance a WHERE " +
             "(:userProfileId IS NULL OR a.userProfile.id = :userProfileId) AND " +
-            "(:classBlockId IS NULL OR a.classBlock.id = :classBlockId) AND " +
+            "(:classBlockId IS NULL OR a.sessionClass.id = :classBlockId) AND " +
             "(:academicYearId IS NULL OR a.academicYear.id = :academicYearId) AND " +
             "(:studentTermId IS NULL OR a.studentTerm.id = :studentTermId) AND " +
             "(:status IS NULL OR a.status = :status) AND " +

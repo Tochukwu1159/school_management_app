@@ -14,6 +14,7 @@ import examination.teacherAndStudents.service.funding.PaymentProvider;
 import examination.teacherAndStudents.service.funding.PaymentProviderFactory;
 import examination.teacherAndStudents.utils.*;
         import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,9 +22,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 @Service
+@Slf4j
 public class ApplicationServiceImpl implements ApplicationService {
 
     @Autowired
@@ -53,6 +56,10 @@ public class ApplicationServiceImpl implements ApplicationService {
     private SchoolRepository schoolRepository;
     @Autowired
     private ClassBlockRepository classBlockRepository;
+    @Autowired
+    private AcademicSessionRepository academicSessionRepository;
+    @Autowired
+    private SessionClassRepository sessionClassRepository;
 
     @Transactional
     @Override
@@ -220,11 +227,33 @@ public class ApplicationServiceImpl implements ApplicationService {
             userPointsRepository.save(userPoints);
         }
 
-        // Update class block
-        ClassBlock classBlock = applicant.getUserProfile().getClassBlock();
+        // Update SessionClass
+        Profile profile = application.getProfile();
+        ClassBlock classBlock = profile.getSessionClass().getClassBlock();
         if (classBlock != null) {
-            classBlock.setNumberOfStudents(classBlock.getNumberOfStudents() + 1);
-            classBlockRepository.save(classBlock);
+            // Find the current active AcademicSession
+            AcademicSession currentSession = academicSessionRepository.findByStatusAndSchoolId(
+                            SessionStatus.ACTIVE, applicant.getSchool().getId())
+                    .orElseThrow(() -> new CustomNotFoundException("No active academic session found for school ID: " + applicant.getSchool().getId()));
+
+            // Find or create SessionClass for the session and class block
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(
+                            currentSession.getId(), classBlock.getId())
+                    .orElseGet(() -> {
+                        SessionClass newSessionClass = SessionClass.builder()
+                                .academicSession(currentSession)
+                                .classBlock(classBlock)
+                                .profiles(new HashSet<>())
+                                .numberOfProfiles(0)
+                                .build();
+                        return sessionClassRepository.save(newSessionClass);
+                    });
+
+            // Add profile and update numberOfProfiles
+            sessionClass.addProfile(profile);
+            sessionClassRepository.save(sessionClass);
+        } else {
+            log.warn("No ClassBlock assigned to profile ID: {}", profile.getId());
         }
 
         // Update school

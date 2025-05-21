@@ -15,7 +15,6 @@ public class ClassSubjectResponse {
     private Long id;
     private SubjectResponse subject;
     private ClassBlockResponses classBlock;
-    private AcademicSessionResponse academicYear;
     private SubjectUserResponse teacher;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

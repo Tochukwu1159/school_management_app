@@ -13,6 +13,8 @@ public class ExamScheduleResponse {
     private Long teacherId;
     private String teacherName;
     private Long classBlockId;
+    private Long sessionClassId;
+    private String sessionClassName;
     private String classBlockName;
     private Long termId;
     private String termName;

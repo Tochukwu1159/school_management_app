@@ -7,6 +7,7 @@ import examination.teacherAndStudents.templateService.ReportCardService;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.PositionService;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class PositionServiceImpl implements PositionService {
 
 
@@ -40,6 +42,8 @@ public class PositionServiceImpl implements PositionService {
 
     @Autowired
     private ReportCardService reportCardService;
+    @Autowired
+    private SessionClassRepository sessionClassRepository;
 
 
     @Transactional
@@ -57,15 +61,17 @@ public class PositionServiceImpl implements PositionService {
         ClassBlock classBlock = classBlockRepository.findById(classBlockId)
                 .orElseThrow(() -> new ResourceNotFoundException("Class block not found with ID: " + classBlockId));
 
+        SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classBlockId).orElseThrow(()->new ResourceNotFoundException("Session class not found"));
+
         // Fetch all students in the class block
-        List<Profile> students = classBlock.getStudentList();
+        Set<Profile> students = sessionClass.getProfiles();
         if (students.isEmpty()) {
             throw new IllegalStateException("No students found in the specified class block.");
         }
 
         // Fetch positions for the class block, academic session, and student term
-        List<Position> existingPositions = positionRepository.findAllByClassBlockAndAcademicYearAndStudentTerm(
-                classBlock, academicSession, studentTerm
+        List<Position> existingPositions = positionRepository.findAllBySessionClassAndAcademicYearAndStudentTerm(
+                sessionClass, academicSession, studentTerm
         );
 
         // Map positions by user profile for quick lookup
@@ -83,7 +89,7 @@ public class PositionServiceImpl implements PositionService {
         List<Position> updatedPositions = new ArrayList<>();
         for (Profile student : sortedStudents) {
             Position position = positionMap.getOrDefault(student, new Position());
-            position.setClassBlock(classBlock);
+            position.setSessionClass(sessionClass);
             position.setUserProfile(student);
             position.setAcademicYear(academicSession);
             position.setStudentTerm(studentTerm);
@@ -97,7 +103,7 @@ public class PositionServiceImpl implements PositionService {
 
 
     @Transactional
-    public void updatePositionsForSessionForJob(Long sessionId, Long termId) {
+    public void updatePositionForSessionClassForJob(Long classBlockId, Long sessionId, Long termId) {
         // Fetch academic session
         AcademicSession academicSession = academicSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + sessionId));
@@ -106,47 +112,47 @@ public class PositionServiceImpl implements PositionService {
         StudentTerm studentTerm = studentTermRepository.findById(termId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student term not found with ID: " + termId));
 
-        // Fetch all class blocks for the session
-        List<ClassBlock> classBlocks = classBlockRepository.findByClassLevelAcademicYear(academicSession);
+        // Fetch the session class for the given class block and academic session
+        SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classBlockId)
+                .orElseThrow(() -> new ResourceNotFoundException("SessionClass not found for Academic Session ID: " + sessionId + " and Class Block ID: " + classBlockId));
 
-        for (ClassBlock classBlock : classBlocks) {
-            // Fetch all students in the class block
-            List<Profile> students = classBlock.getStudentList();
-            if (students.isEmpty()) {
-                continue;
-            }
-
-            // Fetch positions for the class block, academic session, and student term
-            List<Position> existingPositions = positionRepository.findAllByClassBlockAndAcademicYearAndStudentTerm(
-                    classBlock, academicSession, studentTerm
-            );
-
-            // Map positions by user profile for quick lookup
-            Map<Profile, Position> positionMap = existingPositions.stream()
-                    .collect(Collectors.toMap(Position::getUserProfile, Function.identity()));
-
-            // Sort students by average score in descending order
-            List<Profile> sortedStudents = students.stream()
-                    .sorted(Comparator.comparingDouble(student ->
-                            positionMap.getOrDefault(student, new Position()).getAverageScore()).reversed())
-                    .toList();
-
-            // Update or create positions based on the sorted order
-            int rank = 1;
-            List<Position> updatedPositions = new ArrayList<>();
-            for (Profile student : sortedStudents) {
-                Position position = positionMap.getOrDefault(student, new Position());
-                position.setClassBlock(classBlock);
-                position.setUserProfile(student);
-                position.setAcademicYear(academicSession);
-                position.setStudentTerm(studentTerm);
-                position.setPositionRank(rank++);
-                updatedPositions.add(position);
-            }
-
-            // Save all updated positions in bulk
-            positionRepository.saveAll(updatedPositions);
+        // Fetch all students in the session class
+        Set<Profile> students = sessionClass.getProfiles();
+        if (students.isEmpty()) {
+            log.info("No students found for SessionClass ID: {}", sessionClass.getId());
+            return;
         }
+
+        // Fetch positions for the session class, academic session, and student term
+        List<Position> existingPositions = positionRepository.findAllBySessionClassAndAcademicYearAndStudentTerm(
+                sessionClass, academicSession, studentTerm
+        );
+
+        // Map positions by user profile for quick lookup
+        Map<Profile, Position> positionMap = existingPositions.stream()
+                .collect(Collectors.toMap(Position::getUserProfile, Function.identity()));
+
+        // Sort students by average score in descending order
+        List<Profile> sortedStudents = students.stream()
+                .sorted(Comparator.comparingDouble(student ->
+                        positionMap.getOrDefault(student, new Position()).getAverageScore()).reversed())
+                .toList();
+
+        // Update or create positions based on the sorted order
+        int rank = 1;
+        List<Position> updatedPositions = new ArrayList<>();
+        for (Profile student : sortedStudents) {
+            Position position = positionMap.getOrDefault(student, new Position());
+            position.setSessionClass(sessionClass);
+            position.setUserProfile(student);
+            position.setAcademicYear(academicSession);
+            position.setStudentTerm(studentTerm);
+            position.setPositionRank(rank++);
+            updatedPositions.add(position);
+        }
+
+        // Save all updated positions in bulk
+        positionRepository.saveAll(updatedPositions);
     }
 
 
@@ -168,14 +174,18 @@ public class PositionServiceImpl implements PositionService {
             Profile userProfile = profileRepository.findByUser(user)
                     .orElseThrow(() -> new ResourceNotFoundException("Student profile not found with ID: " + user.getId()));
 
-            List<Score> scores = scoreRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                    userProfile, userClass, session, studentTerm);
+            // Fetch the session class for the given class block and academic session
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, userClass.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("SessionClass not found for Academic Session "));
 
-            List<Result> results = resultRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                   userProfile, userClass, session, studentTerm);
+            List<Score> scores = scoreRepository.findAllByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                    userProfile, sessionClass, session, studentTerm);
 
-            Position position = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                    userProfile, userClass, session, studentTerm);
+            List<Result> results = resultRepository.findAllByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                   userProfile, sessionClass, session, studentTerm);
+
+            Position position = positionRepository.findByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                    userProfile, sessionClass, session, studentTerm).orElseThrow(()->new ResourceNotFoundException("Position not found"));
 
             // Map scores to a subject -> score map
             Map<String, Map<String, Object>> scoreMap = scores.stream()
@@ -220,20 +230,35 @@ public class PositionServiceImpl implements PositionService {
                     .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + sessionId));
 
             List<StudentTerm> studentTerms = studentTermRepository.findByAcademicSession(session);
-            List<ClassBlock> classBlocks = classBlockRepository.findByClassLevelAcademicYear(session);
+            if (studentTerms.isEmpty()) {
+                log.warn("No student terms found for Academic Session ID: {}", sessionId);
+                return;
+            }
+
+            List<SessionClass> sessionClasses = sessionClassRepository.findByAcademicSessionId(sessionId);
+            if (sessionClasses.isEmpty()) {
+                log.warn("No session classes found for Academic Session ID: {}", sessionId);
+                return;
+            }
 
             for (StudentTerm studentTerm : studentTerms) {
-                for (ClassBlock userClass : classBlocks) {
-                    List<Profile> students = userClass.getStudentList();
+                for (SessionClass sessionClass : sessionClasses) {
+                    Set<Profile> students = sessionClass.getProfiles();
+                    if (students.isEmpty()) {
+                        log.info("No students found for SessionClass ID: {}", sessionClass.getId());
+                        continue;
+                    }
+
                     for (Profile userProfile : students) {
-                        List<Score> scores = scoreRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                                userProfile, userClass, session, studentTerm);
+                        List<Score> scores = scoreRepository.findAllByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                                userProfile, sessionClass, session, studentTerm);
 
-                        List<Result> results = resultRepository.findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                                userProfile, userClass, session, studentTerm);
+                        List<Result> results = resultRepository.findAllByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                                userProfile, sessionClass, session, studentTerm);
 
-                        Position position = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                                userProfile, userClass, session, studentTerm);
+                        Position position = positionRepository.findByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                                        userProfile, sessionClass, session, studentTerm)
+                                .orElse(new Position()); // Default to new Position if not found
 
                         // Map scores to a subject -> score map
                         Map<String, Map<String, Object>> scoreMap = scores.stream()
@@ -248,10 +273,10 @@ public class PositionServiceImpl implements PositionService {
                                         }
                                 ));
 
-                        // Create a Result object
+                        // Create a ResultSummary object
                         ResultSummary result = new ResultSummary();
                         result.setStudentId(userProfile.getUser().getId());
-                        result.setClassLevelId(userClass.getId());
+                        result.setSessionId(sessionClass.getId());
                         result.setSessionId(sessionId);
                         result.setTerm(studentTerm.getId());
                         result.setScores(scoreMap);
@@ -272,6 +297,5 @@ public class PositionServiceImpl implements PositionService {
             throw new RuntimeException("Error generating report: " + e.getMessage(), e);
         }
     }
-
 
 }

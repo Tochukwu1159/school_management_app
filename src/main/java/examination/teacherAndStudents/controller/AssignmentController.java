@@ -18,7 +18,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 
 @RestController
 @RequestMapping("/api/v1/assignments")

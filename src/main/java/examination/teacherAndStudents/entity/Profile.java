@@ -81,8 +81,8 @@ public class Profile implements Serializable {
     private String classOfDegree;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_level_id")
-    private ClassBlock classBlock;
+    @JoinColumn(name = "class_id")
+    private SessionClass sessionClass;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "form_class_id")

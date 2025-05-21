@@ -27,6 +27,11 @@ public class AuditLog {
     private Profile performedBy;
 
     @NotNull
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
+    @NotNull
     private LocalDateTime timestamp;
 
     private String details;

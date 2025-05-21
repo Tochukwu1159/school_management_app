@@ -15,16 +15,13 @@ import java.util.Optional;
 @Repository
 public interface  ClassBlockRepository extends JpaRepository<ClassBlock, Long> {
 
-    List<ClassBlock> findByClassLevelAcademicYear(AcademicSession academicYear);
 
     @Query("SELECT cb FROM ClassBlock cb WHERE " +
             "(:classLevelId IS NULL OR cb.classLevel.id = :classLevelId) AND " +
-            "(:classBlockId IS NULL OR cb.id = :classBlockId) AND " +
-            "(:academicYearId IS NULL OR cb.classLevel.academicYear.id = :academicYearId)")
+            "(:classBlockId IS NULL OR cb.id= :classBlockId)")
     List<ClassBlock> findAllWithFilters(
             @Param("classLevelId") Long classLevelId,
-            @Param("classBlockId") Long classBlockId,
-            @Param("academicYearId") Long academicYearId);
+            @Param("classBlockId") Long classBlockId);
 
     Collection<ClassBlock> findByClassLevelId(Long id);
 

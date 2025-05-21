@@ -135,7 +135,7 @@ public class AcademicSessionServiceImpl implements AcademicSessionService {
             throw new IllegalStateException("Academic session has not ended yet");
         }
 
-        List<Profile> profilesToGraduate = profileRepository.findByClassBlockIdInAndClassBlockClassLevelAcademicYearAndClassBlockClassLevelSchoolAndProfileStatus(
+        List<Profile> profilesToGraduate = profileRepository.findBySessionClassIdInAndSessionClassAcademicSessionAndSessionClassClassBlockClassLevelSchoolAndProfileStatus(
                 classBlockIds,
                 session,
                 school,

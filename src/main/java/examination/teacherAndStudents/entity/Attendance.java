@@ -16,9 +16,6 @@ import java.time.LocalDateTime;
 @Table(name = "attendance")
 @Entity
 @Builder
-//@Table(name = "attendance", indexes = {
-//        @Index(name = "idx_user_class_date", columnList = "user_id, class_level_id, attendance_date")
-//})
 public class Attendance {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,8 +26,8 @@ public class Attendance {
     private Profile userProfile;
 
     @ManyToOne
-    @JoinColumn(name = "classblock_id", nullable = false)
-    private ClassBlock classBlock;
+    @JoinColumn(name = "session_id", nullable = false)
+    private SessionClass sessionClass;
 
     @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)

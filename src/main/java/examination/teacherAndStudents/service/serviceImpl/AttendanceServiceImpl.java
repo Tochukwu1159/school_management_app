@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
@@ -44,21 +45,22 @@ public class AttendanceServiceImpl implements AttendanceService {
     private StudentTermRepository studentTermRepository;
     @Autowired
     private AcademicSessionRepository academicSessionRepository;
+    @Autowired
+    private SessionClassRepository sessionClassRepository;
 
 
     public void takeBulkAttendance(BulkAttendanceRequest request) {
         try {
 
-            // Validate session exists
-            ClassLevel classLevel = classLevelRepository.findByIdAndAcademicYearId(request.getClassLevelId(), request.getSessionId())
+          classLevelRepository.findById(request.getClassLevelId())
                     .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
-            // Validate the class block exists
-            ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
-                    .orElseThrow(() -> new CustomNotFoundException("Class block not found"));
 
             // Validate the student term exists
             StudentTerm studentTerm = studentTermRepository.findById(request.getStudentTermId())
                     .orElseThrow(() -> new CustomNotFoundException("Student term not found"));
+
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(request.getSessionId(), request.getClassBlockId())
+                    .orElseThrow(() -> new CustomNotFoundException("SessionClass not found for Academic Session "));
 
             // Validate the date is within the term period
             LocalDate attendanceDate = request.getDate().toLocalDate();
@@ -76,7 +78,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 Profile studentProfile = profileRepository.findById(sa.getStudentId())
                         .orElseThrow(() -> new CustomNotFoundException("Student not found: " + sa.getStudentId()));
 
-                if (!studentProfile.getClassBlock().getId().equals(request.getClassBlockId())) {
+                if (!studentProfile.getSessionClass().getClassBlock().getId().equals(request.getClassBlockId())) {
                     throw new IllegalArgumentException("Student doesn't belong to this class");
                 }
 
@@ -90,7 +92,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 if (!exists) {
                     Attendance attendance = Attendance.builder()
                             .userProfile(studentProfile)
-                            .classBlock(classBlock)
+                            .sessionClass(sessionClass)
                             .academicYear(studentTerm.getAcademicSession())
                             .studentTerm(studentTerm)
                             .date(request.getDate())
@@ -134,10 +136,13 @@ public class AttendanceServiceImpl implements AttendanceService {
             Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
             Pageable pageable = PageRequest.of(page, size, sort);
 
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(academicYearId, classBlockId)
+                    .orElseThrow(() -> new CustomNotFoundException("Session class not found" ));
+
             // Fetch filtered attendance records
             Page<Attendance> attendancePage = attendanceRepository.findAllWithFilters(
                     userProfileId,
-                    classBlockId,
+                    sessionClass.getId(),
                     academicYearId,
                     studentTermId,
                     status,
@@ -174,8 +179,8 @@ public class AttendanceServiceImpl implements AttendanceService {
                         .studentId(attendance.getUserProfile().getId())
                         .studentName(attendance.getUserProfile().getUser().getFirstName() + " " +
                                 attendance.getUserProfile().getUser().getLastName())
-                        .classBlockId(attendance.getClassBlock().getId())
-                        .classBlockName(attendance.getClassBlock().getName())
+                        .classSessionId(attendance.getSessionClass().getId())
+                        .classBlockName(attendance.getSessionClass().getClassBlock().getName())
                         .academicYearId(attendance.getAcademicYear().getId())
                         .academicYearName(attendance.getAcademicYear().getSessionName().getName())
                         .studentTermId(attendance.getStudentTerm().getId())
@@ -205,7 +210,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             Long studentId,
             Long academicYearId,
             Long studentTermId,
-            Long classBlockId,
+            Long sessionId,
             LocalDateTime startDate,
             LocalDateTime endDate,
             LocalDateTime createdAt,
@@ -226,13 +231,12 @@ public class AttendanceServiceImpl implements AttendanceService {
             // Create Pageable object
             Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
             Pageable pageable = PageRequest.of(page, size, sort);
-
             // Fetch filtered and paginated results
             Page<Attendance> attendances = attendanceRepository.findAllWithFilters(
                     studentId,
                     academicYearId,
                     studentTermId,
-                    classBlockId,
+                    sessionId,
                     startDate,
                     endDate,
                     createdAt,
@@ -249,7 +253,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     public List<Attendance> getStudentAttendanceByClass(Long classId, LocalDateTime startDate, LocalDateTime endDate) {
         try {
-            List<Profile> studentsInClass = profileRepository.findByClassBlockId(classId);
+            List<Profile> studentsInClass = profileRepository.findBySessionClassId(classId);
             return attendanceRepository.findByUserProfileInAndDateBetween(studentsInClass, startDate, endDate);
         } catch (Exception e) {
             // Handle exceptions
@@ -270,10 +274,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 throw new CustomNotFoundException("Profile not found for student with ID: " + userId);
             }
 
-            AcademicSession session = academicSessionRepository.findById(sessionId)
-                    .orElseThrow(() -> new CustomNotFoundException("Session not found with ID: " + sessionId));
-
-            ClassBlock classLevel = classBlockRepository.findById(classLevelId)
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classLevelId)
                     .orElseThrow(() -> new CustomNotFoundException("Class Level not found with ID: " + classLevelId));
 
             Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(studentTermId);
@@ -292,7 +293,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX); // End of the day (23:59:59.999)
 
             // Check if the attendance percentage already exists
-            Optional<AttendancePercent> existingAttendancePercent = attendancePercentRepository.findByUserAndStudentTerm(studentProfile.get(), studentTerm.get());
+            Optional<AttendancePercent> existingAttendancePercent = attendancePercentRepository.findByUserAndSessionClassIdAndStudentTermId(studentProfile.get(),sessionClass.getId(), studentTerm.get().getId());
 
             // Get the total number of attendance records for the user within the term's date range
             long totalAttendanceRecords = attendanceRepository.countByUserProfileIdAndStudentTermAndDateRange(
@@ -321,8 +322,8 @@ public class AttendanceServiceImpl implements AttendanceService {
             attendancePercent.setAttendancePercentage(roundedPercentage);
             attendancePercent.setStudentTerm(studentTerm.get());
             attendancePercent.setUser(studentProfile.get());
-            attendancePercent.setAcademicYear(session);
-            attendancePercent.setClassBlock(classLevel);
+            attendancePercent.setAcademicYear(sessionClass.getAcademicSession());
+            attendancePercent.setSessionClass(sessionClass);
 
             attendancePercentRepository.save(attendancePercent);
 
@@ -347,11 +348,8 @@ public class AttendanceServiceImpl implements AttendanceService {
         List<StudentAttendanceResponse> attendanceResponses = new ArrayList<>();
 
         try {
-            AcademicSession session = academicSessionRepository.findById(sessionId)
-                    .orElseThrow(() -> new CustomNotFoundException("Session not found with ID: " + sessionId));
-
-            ClassBlock classLevel = classBlockRepository.findById(classLevelId)
-                    .orElseThrow(() -> new CustomNotFoundException("Class Level not found with ID: " + classLevelId));
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId,classLevelId)
+                    .orElseThrow(() -> new CustomNotFoundException("Class Level not found"));
 
             examination.teacherAndStudents.entity.StudentTerm studentTerm = studentTermRepository.findById(termId)
                     .orElseThrow(() -> new CustomNotFoundException("Student Term not found with ID: " + termId));
@@ -365,7 +363,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             LocalDateTime startDateTime = startDate.atStartOfDay();
             LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
-            List<Profile> students = profileRepository.findByClassBlock(classLevel);
+            Set<Profile> students = sessionClass.getProfiles();
 
             for (Profile studentProfile : students) {
                 // Get total attendance records within the term's date range
@@ -386,14 +384,14 @@ public class AttendanceServiceImpl implements AttendanceService {
 
                 double roundedPercentage = Math.round(attendancePercentage);
 
-                AttendancePercent attendancePercent = attendancePercentRepository.findByUserAndStudentTerm(studentProfile, studentTerm)
+                AttendancePercent attendancePercent = attendancePercentRepository.findByUserAndSessionClassIdAndStudentTermId(studentProfile,sessionClass.getId(), studentTerm.getId())
                         .orElse(new AttendancePercent());
 
                 attendancePercent.setAttendancePercentage(roundedPercentage);
                 attendancePercent.setStudentTerm(studentTerm);
                 attendancePercent.setUser(studentProfile);
-                attendancePercent.setAcademicYear(session);
-                attendancePercent.setClassBlock(classLevel);
+                attendancePercent.setAcademicYear(sessionClass.getAcademicSession());
+                attendancePercent.setSessionClass(sessionClass);
 
                 attendancePercentRepository.save(attendancePercent);
 
@@ -426,8 +424,8 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .id(attendance.getId())
                 .studentId(attendance.getUserProfile().getId())
                 .studentName(attendance.getUserProfile().getUser().getFirstName() + " " + attendance.getUserProfile().getUser().getLastName())
-                .classBlockId(attendance.getClassBlock().getId())
-                .classBlockName(attendance.getClassBlock().getName())
+                .classSessionId(attendance.getSessionClass().getId())
+                .classBlockName(attendance.getSessionClass().getClassBlock().getName())
                 .academicYearId(attendance.getAcademicYear().getId())
                 .academicYearName(attendance.getAcademicYear().getSessionName().getName())
                 .studentTermId(attendance.getStudentTerm().getId())

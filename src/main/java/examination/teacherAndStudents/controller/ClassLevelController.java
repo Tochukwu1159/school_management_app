@@ -31,7 +31,6 @@ public class ClassLevelController {
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ClassLevel>>> getAllClassLevels(
             @RequestParam(required = false) Long classLevelId,
-            @RequestParam(required = false) Long academicYearId,
             @RequestParam(required = false) String className,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -39,7 +38,7 @@ public class ClassLevelController {
             @RequestParam(defaultValue = "asc") String sortDirection) {
 
         Page<ClassLevel> classLevels = classLevelService.getAllClassLevels(
-                classLevelId, academicYearId, className, page, size, sortBy, sortDirection);
+                classLevelId, className, page, size, sortBy, sortDirection);
         ApiResponse<Page<ClassLevel>> response = new ApiResponse<>("Class levels retrieved successfully", true, classLevels);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -65,7 +64,6 @@ public class ClassLevelController {
                         .id(createdClassLevel.getClassName().getId())
                         .name(createdClassLevel.getClassName().getName())
                         .build())
-                .academicSessionId(createdClassLevel.getAcademicYear().getId())
                 .classBlocks(blockNames)
                 .build();
 
@@ -125,7 +123,7 @@ public class ClassLevelController {
                 .classLevelId(classBlock.getClassLevel().getId())
                 .classLevelName(classBlock.getClassLevel().getClassName().getName())
                 .classUniqueUrl(classBlock.getClassUniqueUrl())
-                .numberOfStudents(classBlock.getNumberOfStudents())
+//                .numberOfStudents(classBlock.getNumberOfStudents())
                 .formTeacherId(formTeacherId)
                 .formTeacherName(formTeacherName)
                 .build();

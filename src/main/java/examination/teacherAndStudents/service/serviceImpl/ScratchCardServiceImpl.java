@@ -90,6 +90,7 @@ public class ScratchCardServiceImpl implements ScratchCardService {
         ScratchCardUsage usage = ScratchCardUsage.builder()
                 .scratchCard(card)
                 .student(profile)
+                .school(profile.getUser().getSchool())
                 .build();
         usageRepository.save(usage);
 

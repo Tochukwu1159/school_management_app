@@ -16,6 +16,7 @@ import examination.teacherAndStudents.templateService.IdCardService;
 import examination.teacherAndStudents.utils.*;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final EmailService emailService;
@@ -75,6 +77,7 @@ public class UserServiceImpl implements UserService {
     private final AdmissionApplicationRepository admissionApplicationRepository;
     private final DocumentRepository documentRepository;
     private final ReferralRepository referralRepository;
+    private final SessionClassRepository sessionClassRepository;
 
 
     @Override
@@ -84,26 +87,43 @@ public class UserServiceImpl implements UserService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-
         School school = admin.getSchool();
-
         validateUserRequest(userRequest);
 
-        ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
-                .orElseThrow(() -> new BadRequestException("Error: Class block not found"));
+        // Validate class assignment (optional)
+        SessionClass sessionClass = null;
+        if (userRequest.getClassAssignedId() != null) {
+            ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
+                    .orElseThrow(() -> new BadRequestException("Class block not found with ID: " + userRequest.getClassAssignedId()));
 
-//        Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap());
-//        // Get the secure URL of the uploaded image from Cloudinary
-//        String imageUrl = (String) uploadResult.get("secure_url");
+            // Find the current active AcademicSession
+            AcademicSession currentSession = academicSessionRepository.findByStatusAndSchoolId(
+                            SessionStatus.ACTIVE, school.getId())
+                    .orElseThrow(() -> new CustomNotFoundException("No active academic session found for school ID: " + school.getId()));
+
+            // Find or create SessionClass
+            sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(
+                            currentSession.getId(), classBlock.getId())
+                    .orElseGet(() -> {
+                        SessionClass newSessionClass = SessionClass.builder()
+                                .academicSession(currentSession)
+                                .classBlock(classBlock)
+                                .profiles(new HashSet<>())
+                                .numberOfProfiles(0)
+                                .build();
+                        return sessionClassRepository.save(newSessionClass);
+                    });
+        } else {
+            log.info("No class assigned to student during creation");
+        }
+
+        // Generate credentials and referral
         String generatedPassword = passwordGenerator.generateRandomPassword();
         String encodedPassword = passwordEncoder.encode(generatedPassword);
-
-        String referralCode = generateReferralCode(
-                userRequest.getFirstName(),
-                userRequest.getLastName()
-        );
+        String referralCode = generateReferralCode(userRequest.getFirstName(), userRequest.getLastName());
         String referralLink = generateReferralLink(referralCode);
 
+        // Create and save User
         User newUser = User.builder()
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
@@ -113,62 +133,62 @@ public class UserServiceImpl implements UserService {
                 .roles(Collections.singleton(Roles.STUDENT))
                 .profileStatus(ProfileStatus.ACTIVE)
                 .isVerified(true)
-                .school(admin.getSchool())
                 .password(encodedPassword)
-//                .profilePicture(imageUrl)
                 .build();
         User savedUser = userRepository.save(newUser);
 
-        Set<EmergencyContact> emergencyContact = buildEmergencyContacts(userRequest.getEmergencyContacts());
+        // Build Profile
+        Set<EmergencyContact> emergencyContacts = buildEmergencyContacts(userRequest.getEmergencyContacts());
         Set<Address> addresses = buildAddressesFromDto(userRequest.getAddresses());
-
         Profile userProfile = Profile.builder()
                 .gender(userRequest.getGender())
                 .religion(userRequest.getReligion())
                 .addresses(addresses)
-                .emergencyContacts(emergencyContact)
+                .emergencyContacts(emergencyContacts)
                 .referralLink(referralLink)
                 .referralCode(referralCode)
-                .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
                 .studentGuardianOccupation(userRequest.getStudentGuardianOccupation())
                 .studentGuardianName(userRequest.getStudentGuardianName())
                 .studentGuardianPhoneNumber(userRequest.getStudentGuardianPhoneNumber())
                 .uniqueRegistrationNumber(AccountUtils.generateStudentId(school.getSchoolCode()))
                 .user(savedUser)
+                .sessionClass(sessionClass)
                 .isVerified(true)
                 .profileStatus(ProfileStatus.ACTIVE)
                 .maritalStatus(userRequest.getMaritalStatus())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .admissionDate(userRequest.getAdmissionDate())
-                .classBlock(classBlock)
-//                .profilePicture(imageUrl)
                 .phoneNumber(userRequest.getPhoneNumber())
                 .build();
-        Profile saveUserProfile = profileRepository.save(userProfile);
 
-        // Increment class block and school student counts
-        classBlock.setNumberOfStudents(classBlock.getNumberOfStudents() + 1);
-        classBlockRepository.save(classBlock);
+        // Save Profile and update SessionClass
+        Profile savedUserProfile = profileRepository.save(userProfile);
+        if (sessionClass != null) {
+            sessionClass.addProfile(savedUserProfile);
+            sessionClass.setNumberOfProfiles(sessionClass.getProfiles().size());
+            sessionClassRepository.save(sessionClass);
+        }
 
-        //update the school population
+        // Update school population
         school.incrementActualNumberOfStudents();
         schoolRepository.save(school);
 
-        if (userRequest.getDocuments() != null) {
-            handleDocumentUploads(userRequest.getDocuments(), school, saveUserProfile);
+        // Handle documents and referrals
+        if (userRequest.getDocuments() != null && !userRequest.getDocuments().isEmpty()) {
+            handleDocumentUploads(userRequest.getDocuments(), school, savedUserProfile);
         }
-        if (userRequest.getReferralCode() != null) {
-            processReferral(userRequest.getReferralCode(), saveUserProfile);
+        if (userRequest.getReferralCode() != null && !userRequest.getReferralCode().isEmpty()) {
+            processReferral(userRequest.getReferralCode(), savedUserProfile);
         }
-        //create wallet
-        createWallet(saveUserProfile);
 
-        sendRegistrationEmail(generatedPassword, savedUser, userProfile.getUniqueRegistrationNumber());
+        // Create wallet
+        createWallet(savedUserProfile);
 
+        // Send registration email
+        sendRegistrationEmail(generatedPassword, savedUser, savedUserProfile.getUniqueRegistrationNumber());
 
-        return buildUserResponse(savedUser, userProfile);
+        return buildUserResponse(savedUser, savedUserProfile);
     }
-
 
 
 //    private Map<String, Object> createModelWithData(UserRequestDto user) {
@@ -194,6 +214,9 @@ public class UserServiceImpl implements UserService {
 
         // Validate class exists
         ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
+                .orElseThrow(() -> new BadRequestException("Invalid class ID"));
+
+        SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(userRequest.getAcademicSessionId(), userRequest.getClassAssignedId())
                 .orElseThrow(() -> new BadRequestException("Invalid class ID"));
 
         // Check if email already exists
@@ -260,7 +283,7 @@ public class UserServiceImpl implements UserService {
                 .maritalStatus(userRequest.getMaritalStatus())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .admissionDate(userRequest.getAdmissionDate())
-                .classBlock(classBlock)
+                .sessionClass(sessionClass)
 //                .profilePicture(imageUrl)
                 .phoneNumber(userRequest.getPhoneNumber())
                 // ... other profile fields
@@ -343,6 +366,7 @@ public class UserServiceImpl implements UserService {
                 .contractType(userRequest.getContractType())
                 .academicQualification(userRequest.getAcademicQualification())
                 .admissionDate(userRequest.getAdmissionDate())
+
                 .uniqueRegistrationNumber(AccountUtils.generateAdminId())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .user(savedUser)
@@ -471,7 +495,7 @@ public class UserServiceImpl implements UserService {
                     .lastName(userDetails.get().getLastName())
                     .email(userDetails.get().getEmail())
                     .phoneNumber(user.getPhoneNumber())
-                    .classAssigned(user.getClassBlock().getName())
+                    .classAssigned(user.getSessionClass().getClassBlock().getName())
                     .studentGuardianName(user.getStudentGuardianName())
                     .studentGuardianPhoneNumber(user.getStudentGuardianPhoneNumber())
                     .uniqueRegistrationNumber(user.getUniqueRegistrationNumber())
@@ -840,9 +864,9 @@ public class UserServiceImpl implements UserService {
 
 
     public Page<UserResponse> getAllStudentsFilteredAndPaginated(
-            Long classId,
-            Long subClassId,
-            Long academicYearId,
+            Long classLevelId,
+            Long classBlockId,
+            Long sessionId,
             String uniqueRegistrationNumber,
             String firstName,
             String lastName,
@@ -854,26 +878,26 @@ public class UserServiceImpl implements UserService {
         Pageable paging = PageRequest.of(page, size, Sort.by(sortBy).ascending());
 
         // Resolve optional filters
-        ClassBlock subClass = subClassId != null ?
-                classBlockRepository.findById(subClassId)
-                        .orElseThrow(() -> new CustomNotFoundException("Subclass not found")) :
+        SessionClass sessionClass = (sessionId != null && classBlockId != null) ?
+                sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classBlockId)
+                        .orElseThrow(() -> new CustomNotFoundException("SessionClass not found for Session ID: " + sessionId + " and ClassBlock ID: " + classBlockId)) :
                 null;
 
-        ClassLevel classLevel = classId != null ?
-                classLevelRepository.findById(classId)
-                        .orElseThrow(() -> new CustomNotFoundException("Class not found")) :
+        ClassLevel classLevel = classLevelId != null ?
+                classLevelRepository.findById(classLevelId)
+                        .orElseThrow(() -> new CustomNotFoundException("ClassLevel not found with ID: " + classLevelId)) :
                 null;
 
-        AcademicSession academicYear = academicYearId != null ?
-                academicSessionRepository.findById(academicYearId)
-                        .orElseThrow(() -> new CustomNotFoundException("Academic year not found")) :
+        AcademicSession academicSession = sessionId != null ?
+                academicSessionRepository.findById(sessionId)
+                        .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + sessionId)) :
                 null;
 
         // Fetch students with optional filters
         Page<Profile> students = profileRepository.findAllWithFilters(
-                subClass,
+                sessionClass,
                 classLevel,
-                academicYear,
+                academicSession,
                 uniqueRegistrationNumber,
                 firstName,
                 lastName,

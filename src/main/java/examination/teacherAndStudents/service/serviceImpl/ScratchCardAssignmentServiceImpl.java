@@ -45,21 +45,25 @@ public class ScratchCardAssignmentServiceImpl implements ScratchCardAssignmentSe
                 .orElseThrow(() -> new CustomNotFoundException("Term not found"));
 
         // Validate subclass (ClassBlock)
-        ClassBlock classBlock = profile.getClassBlock();
+        SessionClass sessionClass = profile.getSessionClass();
 
         // Ensure the class block belongs to the student's school
-        if (!classBlock.getClassLevel().getSchool().getId().equals(school.getId())) {
+        if (!sessionClass.getClassBlock().getClassLevel().getSchool().getId().equals(school.getId())) {
             throw new BadRequestException("Selected subclass does not belong to your school");
         }
 
         // Ensure the student is enrolled in the class block
-        if (!classBlock.getStudentList().contains(profile)) {
+        if (!sessionClass.getProfiles().contains(profile)) {
             throw new BadRequestException("You are not enrolled in the selected subclass");
         }
 
         // Validate student wallet
         Wallet studentWallet = walletRepository.findWalletByUserProfile(profile)
                 .orElseThrow(() -> new BadRequestException("Student wallet not found"));
+
+        if(!school.getSupportsScratchCard()){
+            throw new BadRequestException("School does not support scratch card");
+        }
 
         // Check if the student has enough balance
         if (studentWallet.getBalance().compareTo(school.getScratchCardPrice()) < 0) {
