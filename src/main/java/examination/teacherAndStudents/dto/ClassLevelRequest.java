@@ -12,7 +12,5 @@ import java.util.List;
 public class ClassLevelRequest {
     @NotNull(message = "Class name ID is required")
     private Long classNameId;
-
-    @NotEmpty(message = "At least one class block is required")
     private List<@NotBlank(message = "Block name cannot be blank") @Pattern(regexp = "^[a-zA-Z0-9-]{1,50}$", message = "Invalid block name format") String> classBlocks;
 }

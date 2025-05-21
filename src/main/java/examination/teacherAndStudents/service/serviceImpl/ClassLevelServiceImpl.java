@@ -85,8 +85,8 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     @Override
     public ClassLevel createClassLevel(ClassLevelRequest classLevelRequest) {
         User admin = verifyAdminAccess();
-        logger.info("Admin {} creating class level with classNameId: {} and block range: {}", admin.getEmail(),
-                classLevelRequest.getClassNameId(), classLevelRequest.getClassBlocks());
+        logger.info("Admin {} creating class level with classNameId: {} and block range: {}",
+                admin.getEmail(), classLevelRequest.getClassNameId(), classLevelRequest.getClassBlocks());
 
         ClassName className = entityFetcher.fetchClassName(classLevelRequest.getClassNameId());
 
@@ -117,8 +117,17 @@ public class ClassLevelServiceImpl implements ClassLevelService {
                 classBlockRepository.save(classBlock);
                 logger.debug("Created class block: {} for class level ID: {}", classBlock.getName(), savedClassLevel.getId());
             }
-        } else if (classLevelRequest.getClassBlocks() != null && !classLevelRequest.getClassBlocks().isEmpty()) {
-            throw new IllegalArgumentException("Class blocks must be a range specified as exactly two letters (e.g., ['A','E'])");
+        } else if (classLevelRequest.getClassBlocks() != null && classLevelRequest.getClassBlocks().isEmpty()) {
+            // If classBlocks is empty, use the className as the block name
+            ClassBlock classBlock = ClassBlock.builder()
+                    .classLevel(savedClassLevel)
+                    .name(className.getName())
+                    .school(savedClassLevel.getSchool())
+                    .build();
+            classBlockRepository.save(classBlock);
+            logger.debug("Created class block: {} for class level ID: {}", classBlock.getName(), savedClassLevel.getId());
+        } else {
+            throw new IllegalArgumentException("Class blocks must be either empty or a range specified as exactly two letters (e.g., ['A','E'])");
         }
 
         return savedClassLevel;
