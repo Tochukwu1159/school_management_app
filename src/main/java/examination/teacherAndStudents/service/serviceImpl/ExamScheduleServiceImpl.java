@@ -28,6 +28,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     private final ClassBlockRepository classBlockRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
+    private final SessionClassRepository sessionClassRepository;
 
     @Override
     @Transactional
@@ -48,18 +49,21 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         }
 
         // Fetch shared entities
-        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+           classBlockRepository.findById(request.getClassBlockId())
                 .orElseThrow(() -> new CustomNotFoundException("Class block not found with ID: " + request.getClassBlockId()));
         AcademicSession session = academicSessionRepository.findById(request.getYearId())
                 .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + request.getYearId()));
         StudentTerm term = studentTermRepository.findById(request.getTermId())
                 .orElseThrow(() -> new CustomNotFoundException("Term not found with ID: " + request.getTermId()));
 
+        SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(request.getYearId(), request.getClassBlockId())
+                .orElseThrow(() -> new CustomNotFoundException("SessionClass not found for Academic Session "));
+
         // Process each schedule
         List<ExamSchedule> schedules = request.getSubjectSchedules().stream()
                 .map(scheduleRequest -> {
                     // Validate individual schedule
-                    validateRequest(scheduleRequest, request.getClassBlockId());
+                    validateRequest(scheduleRequest, sessionClass.getId());
 
                     // Build ExamSchedule entity
                     Subject subject = subjectRepository.findById(scheduleRequest.getSubjectId())
@@ -70,7 +74,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
                     return ExamSchedule.builder()
                             .subject(subject)
                             .teacher(teacher)
-                            .classBlock(classBlock)
+                            .sessionClass(sessionClass)
                             .academicSession(session)
                             .studentTerm(term)
                             .examDate(scheduleRequest.getExamDate())
@@ -92,7 +96,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     @Override
     @Transactional
     public ExamScheduleResponse updateExamSchedule(Long id, ExamScheduleRequest request) {
-        validateRequest(request, request.getClassBlockId());
+        validateRequest(request, null);
         ExamSchedule schedule = examScheduleRepository.findById(id)
                 .orElseThrow(() -> new CustomNotFoundException("Exam schedule not found with ID: " + id));
         updateScheduleFromRequest(schedule, request);
@@ -115,15 +119,16 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     }
 
 
-    private void validateRequest(ExamScheduleRequest request, Long classBlockId) {
+    private void validateRequest(ExamScheduleRequest request, Long classSessionId) {
         if (request.getStartTime().isAfter(request.getEndTime()) || request.getStartTime().equals(request.getEndTime())) {
             throw new CustomInternalServerException("Start time must be before end time");
         }
-
-        boolean hasOverlap = examScheduleRepository.existsOverlappingSchedule(
-                classBlockId, request.getExamDate(), request.getStartTime(), request.getEndTime());
-        if (hasOverlap) {
-            throw new CustomInternalServerException("Schedule overlaps with an existing schedule for the same class block and date");
+        if (classSessionId != null) {
+            boolean hasOverlap = examScheduleRepository.existsOverlappingSchedule(
+                    classSessionId, request.getExamDate(), request.getStartTime(), request.getEndTime());
+            if (hasOverlap) {
+                throw new CustomInternalServerException("Schedule overlaps with an existing schedule for the same session class and date");
+            }
         }
     }
 
@@ -147,12 +152,13 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         response.setSubjectName(schedule.getSubject().getName());
         response.setTeacherId(schedule.getTeacher().getId());
         response.setTeacherName(schedule.getTeacher().getFirstName() + " " + schedule.getTeacher().getLastName());
-        response.setClassBlockId(schedule.getClassBlock().getId());
-        response.setClassBlockName(schedule.getClassBlock().getName());
+        response.setSessionClassId(schedule.getSessionClass().getId());
+        response.setSessionClassName(schedule.getSessionClass().getClassBlock().getName() + " (" +
+                schedule.getSessionClass().getAcademicSession().getSessionName() + ")");
         response.setTermId(schedule.getStudentTerm().getId());
         response.setTermName(schedule.getStudentTerm().getName());
-        response.setYearId(schedule.getAcademicSession().getId());
-        response.setYearName(schedule.getAcademicSession().getSessionName().getName());
+        response.setYearId(schedule.getSessionClass().getAcademicSession().getId());
+        response.setYearName(schedule.getSessionClass().getAcademicSession().getSessionName().getName());
         response.setExamDate(schedule.getExamDate());
         response.setStartTime(schedule.getStartTime());
         response.setEndTime(schedule.getEndTime());

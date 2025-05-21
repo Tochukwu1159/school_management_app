@@ -20,16 +20,11 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
 
 
     Optional<Profile> findByUser(User user);
-    List<Profile> findByClassBlockId(Long classId);
+    List<Profile> findBySessionClassId(Long classId);
     Optional<Profile> findByUniqueRegistrationNumber(String uniqueRegistrationNumber);
     Optional<Profile> findByUserId(Long studentId);
     Boolean existsByUniqueRegistrationNumber(String studentReg);
 
-    Page<Profile> findAllByClassBlock(ClassBlock subClass,Pageable paging);
-
-    List<Profile> findAllByClassBlock(ClassBlock subClass);
-
-    List<Profile> findByClassBlock(ClassBlock classLevel);
 
     @Query("""
            SELECT p
@@ -42,15 +37,14 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
                                                           Pageable pageable);
 
     @Query("SELECT p FROM Profile p WHERE " +
-            "(:classBlock IS NULL OR p.classBlock = :classBlock) AND " +
-            "(:classLevel IS NULL OR p.classBlock.classLevel = :classLevel) AND " +
-            "(:academicYear IS NULL OR p.classBlock.classLevel.academicYear = :academicYear) AND " +
+            "(:sessionClass IS NULL OR p.sessionClass = :sessionClass) AND " +
+            "(:classLevel IS NULL OR p.sessionClass.classBlock.classLevel = :classLevel) AND " +
+            "(:academicYear IS NULL OR p.sessionClass.academicSession = :academicYear) AND " +
             "(:uniqueRegistrationNumber IS NULL OR p.uniqueRegistrationNumber LIKE %:uniqueRegistrationNumber%) AND " +
             "(:firstName IS NULL OR p.user.firstName LIKE %:firstName%) AND " +
             "(:lastName IS NULL OR p.user.lastName LIKE %:lastName%)")
-
     Page<Profile> findAllWithFilters(
-            @Param("classBlock") ClassBlock classBlock,
+            @Param("sessionClass") SessionClass sessionClass,
             @Param("classLevel") ClassLevel classLevel,
             @Param("academicYear") AcademicSession academicYear,
             @Param("uniqueRegistrationNumber") String uniqueRegistrationNumber,
@@ -62,11 +56,15 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
 
     Optional<Profile> findByUserEmail(String email);
 
-    List<Profile> findByClassBlockAndClassBlock_ClassLevel_AcademicYear(ClassBlock classBlock, AcademicSession academicYear);
-
-
-    List<Profile> findByClassBlockIdInAndClassBlockClassLevelAcademicYearAndClassBlockClassLevelSchoolAndProfileStatus(List<Long> classBlockIds, AcademicSession session, School school, ProfileStatus profileStatus);
-
+    @Query("SELECT p FROM Profile p WHERE p.sessionClass.id IN :sessionClassIds AND " +
+            "p.sessionClass.academicSession = :academicSession AND " +
+            "p.sessionClass.classBlock.classLevel.school = :school AND " +
+            "p.profileStatus = :profileStatus")
+    List<Profile> findBySessionClassIdInAndSessionClassAcademicSessionAndSessionClassClassBlockClassLevelSchoolAndProfileStatus(
+            @Param("sessionClassIds") List<Long> sessionClassIds,
+            @Param("academicSession") AcademicSession academicSession,
+            @Param("school") School school,
+            @Param("profileStatus") ProfileStatus profileStatus);
     boolean existsByReferralCode(String code);
 
     Optional<Profile> findByReferralCode(String referralCode);

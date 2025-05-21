@@ -149,61 +149,6 @@ public User fetchLoggedInAdmin(String email) {
                 .orElseThrow(() -> new ResourceNotFoundException("Subject not found"));
     }
 
-    public Book fetchBook(Long bookId) {
-        return bookRepository.findById(bookId).orElseThrow(() -> new ResourceNotFoundException("Book not found"));
-    }
-
-    public ClassBlock fetchNewClassBlockByClass(Long classLevelId) {
-   return classBlockRepository.findById(classLevelId)
-           .orElseThrow(() -> new BadRequestException("Class block not found with ID: " + classLevelId));
-}
-
-
-
-public  Map<Profile, Position>  fetchExistingPositions(ClassBlock classBlock, AcademicSession academicSession, StudentTerm studentTerm) {
-        return positionRepository.findByClassBlockAndAcademicYearAndStudentTerm(
-                        classBlock, academicSession, studentTerm).stream()
-                .collect(Collectors.toMap(Position::getUserProfile, Function.identity()));
-
-}
-
-public Position fetchSecondTermPosition(Profile profile, ClassBlock classBlock, AcademicSession academicSession) {
-        return positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                profile, classBlock, academicSession,
-                studentTermRepository.findByNameAndAcademicSession("Second Term", academicSession));
-}
-
-    public Position fetchFirstTermPosition(Profile profile, ClassBlock classBlock, AcademicSession academicSession) {
-        return positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                profile, classBlock, academicSession,
-                studentTermRepository.findByNameAndAcademicSession("First Term", academicSession));
-    }
-
-    public SessionAverage fetchSessionAverage(Profile profile, AcademicSession academicSession, ClassBlock classBlock) {
-        return sessionAverageRepository.findByUserProfileAndAcademicYearAndClassBlock(
-                profile, academicSession, classBlock);
-    }
-
-    public Position fetchThirdTermPosition(Profile profile, ClassBlock classBlock, AcademicSession academicSession) {
-        return positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                profile, classBlock, academicSession,
-                studentTermRepository.findByNameAndAcademicSession("Third Term", academicSession));
-    }
-
-public List<SessionAverage> fetchSessionAverage(ClassBlock classBlock, AcademicSession academicSession) {
-        return sessionAverageRepository.findAllByClassBlockAndAcademicYear(classBlock, academicSession);
-}
-
-public Timetable fetchTimetable(Long timetableId) {
-        return timetableRepository.findById(timetableId)
-                .orElseThrow(() -> new CustomNotFoundException("Timetable not found with ID: " + timetableId));
-}
-
-public List<Result> FetchResults(ClassBlock classBlock, AcademicSession academicSession, StudentTerm studentTerm) {
-        return resultRepository.findAllByClassBlockAndAcademicYearAndStudentTerm(
-                classBlock, academicSession, studentTerm);
-}
-
     public SessionName fetchSessionName(Long sessionNameId) {
         return sessionNameRepository.findById(sessionNameId).orElseThrow(()-> new CustomNotFoundException("Session name not found"));
     }

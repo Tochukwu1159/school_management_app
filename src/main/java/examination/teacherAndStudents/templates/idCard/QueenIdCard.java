@@ -16,7 +16,7 @@ public class QueenIdCard implements IdCard {
         idCard.append("========================================\n");
         idCard.append("Student ID: ").append(student.getId()).append("\n");
         idCard.append("Name: ").append(student.getFirstName()).append(" ").append(student.getLastName()).append("\n");
-        idCard.append("Class: ").append(profile.getClassBlock()).append("\n");
+        idCard.append("Class: ").append(profile.getSessionClass().getClassBlock()).append("\n");
 //        idCard.append("Session: ").append(student.getSession()).append("\n");
         idCard.append("========================================\n");
         idCard.append("School Logo: [Queen Academy Logo]\n");

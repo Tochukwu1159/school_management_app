@@ -49,16 +49,16 @@ public class ClassLevelServiceImpl implements ClassLevelService {
     @Transactional(readOnly = true)
     @Override
     public Page<ClassLevel> getAllClassLevels(
-            Long classLevelId, Long academicYearId, String className, int page, int size, String sortBy, String sortDirection) {
+            Long classLevelId, String className, int page, int size, String sortBy, String sortDirection) {
         User admin = verifyAdminAccess();
-        logger.info("Admin {} fetching class levels, classLevelId: {}, academicYearId: {}, className: {}",
-                admin.getEmail(), classLevelId, academicYearId, className);
+        logger.info("Admin {} fetching class levels, classLevelId: {}, className: {}",
+                admin.getEmail(), classLevelId, className);
 
         Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<ClassLevel> classLevels = classLevelRepository.findAllWithFilters(
-                classLevelId, academicYearId, className, admin.getSchool().getId(), pageable);
+                classLevelId, className, admin.getSchool().getId(), pageable);
         logger.debug("Retrieved {} class levels for school ID: {}", classLevels.getTotalElements(), admin.getSchool().getId());
         return classLevels;
     }
@@ -88,20 +88,10 @@ public class ClassLevelServiceImpl implements ClassLevelService {
         logger.info("Admin {} creating class level with classNameId: {} and block range: {}", admin.getEmail(),
                 classLevelRequest.getClassNameId(), classLevelRequest.getClassBlocks());
 
-        AcademicSession academicSession = academicSessionRepository.findById(classLevelRequest.getAcademicSessionId())
-                .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + classLevelRequest.getAcademicSessionId()));
-
-        if (!academicSession.getSchool().equals(admin.getSchool())) {
-            logger.warn("Admin {} attempted to use academic session ID: {} from another school",
-                    admin.getEmail(), classLevelRequest.getAcademicSessionId());
-            throw new UnauthorizedException("Academic session must belong to the same school");
-        }
-
         ClassName className = entityFetcher.fetchClassName(classLevelRequest.getClassNameId());
 
         ClassLevel classLevel = ClassLevel.builder()
                 .className(className)
-                .academicYear(academicSession)
                 .school(admin.getSchool())
                 .build();
 
@@ -123,7 +113,6 @@ public class ClassLevelServiceImpl implements ClassLevelService {
                         .classLevel(savedClassLevel)
                         .name(className.getName() + "-" + block)
                         .school(savedClassLevel.getSchool())
-                        .numberOfStudents(0)
                         .build();
                 classBlockRepository.save(classBlock);
                 logger.debug("Created class block: {} for class level ID: {}", classBlock.getName(), savedClassLevel.getId());
@@ -169,13 +158,9 @@ public class ClassLevelServiceImpl implements ClassLevelService {
             throw new UnauthorizedException("Cannot update class level from another school");
         }
 
-        AcademicSession academicSession = academicSessionRepository.findById(classLevelRequest.getAcademicSessionId())
-                .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + classLevelRequest.getAcademicSessionId()));
-
         ClassName className = entityFetcher.fetchClassName(classLevelRequest.getClassNameId());
 
         classLevel.setClassName(className);
-        classLevel.setAcademicYear(academicSession);
 
         // Update class blocks
         if (classLevelRequest.getClassBlocks() != null && !classLevelRequest.getClassBlocks().isEmpty()) {
@@ -189,7 +174,6 @@ public class ClassLevelServiceImpl implements ClassLevelService {
                 ClassBlock classBlock = existingBlockMap.getOrDefault(blockName, ClassBlock.builder()
                         .classLevel(classLevel)
                         .name(blockName)
-                        .numberOfStudents(0)
                         .build());
                 classBlockRepository.save(classBlock);
                 logger.debug("Updated/Created class block: {} for class level ID: {}", blockName, id);

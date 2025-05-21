@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,37 +33,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
     private final ProfileRepository profileRepository;
     private final UserRepository userRepository;
     private final AcademicSessionRepository academicSessionRepository;
-
-    public ClassBlockResponse createClassBlock(ClassBlockRequest request) {
-        try {
-            // Fetch the class level by ID
-            ClassLevel classLevel = classLevelRepository.findById(request.getClassLevelId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Class Level not found with ID: " + request.getClassLevelId()));
-
-
-
-            // Build the ClassBlock entity
-            ClassBlock classBlock = ClassBlock.builder()
-                    .classLevel(classLevel)
-                    .name(request.getSubClassName())
-                    .classUniqueUrl(request.getClassUniqueUrl())
-                    .numberOfStudents(0)
-                    .build();
-
-            // Save the ClassBlock entity
-            classBlockRepository.save(classBlock);
-
-            // Map and return the response DTO
-            return mapToResponse(classBlock);
-        } catch (ResourceNotFoundException e) {
-            // Rethrow custom exceptions for clarity
-            throw e;
-        } catch (Exception e) {
-            // Handle unexpected exceptions
-            throw new RuntimeException("An error occurred while creating the class block: " + e.getMessage());
-        }
-    }
-
+    private final SessionClassRepository sessionClassRepository;
 
     public ClassBlockResponse getClassBlockById(Long id) {
         try {
@@ -90,8 +61,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             // Fetch filtered class blocks from the repository
             List<ClassBlock> classBlocks = classBlockRepository.findAllWithFilters(
                     classId,
-                    subClassId,
-                    academicYearId);
+                    subClassId);
 
             // Map each class block to its response DTO
             return classBlocks.stream()
@@ -182,9 +152,8 @@ public class ClassBlockServiceImpl implements ClassBlockService {
         AcademicSession session = academicSessionRepository.findById(request.getSessionId())
                 .orElseThrow(() -> new CustomNotFoundException("Academic Session not found with ID: " + request.getSessionId()));
 
-        // Validate ClassLevel
-        ClassLevel classLevel = classLevelRepository.findByIdAndAcademicYearId(request.getClassLevelId(), request.getSessionId())
-                .orElseThrow(() -> new CustomNotFoundException("Class Level not found with ID: " + request.getClassLevelId() + " for session ID: " + request.getSessionId()));
+       classLevelRepository.findById(request.getClassLevelId())
+                .orElseThrow(() -> new CustomNotFoundException("Class Level not found "));
 
         // Validate assignments list
         if (request.getAssignments() == null || request.getAssignments().isEmpty()) {
@@ -225,50 +194,74 @@ public class ClassBlockServiceImpl implements ClassBlockService {
         }
     }
 
-
     public ClassBlockResponse changeStudentClass(Long studentId, ClassBlockRequest request) {
         try {
+            // Validate request
+            if (request.getSessionId() == null || request.getCurrentClassBlockId() == null || request.getNewClassBlockId() == null) {
+                throw new IllegalArgumentException("Session ID, current ClassBlock ID, and new ClassBlock ID are required");
+            }
+
             // Fetch the student user entity
             User student = userRepository.findById(studentId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + studentId));
 
             // Fetch the student's profile
             Profile studentProfile = profileRepository.findByUser(student)
-                    .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Student profile not found for user ID: " + studentId));
 
-            // Fetch the current class block (the student's existing class)
-            ClassBlock currentClass = studentProfile.getClassBlock();
-            if (currentClass == null || !currentClass.getId().equals(request.getClassLevelId())) {
-                throw new IllegalArgumentException("Student is not currently in the specified class block.");
+            // Fetch the academic session
+            AcademicSession academicSession = academicSessionRepository.findById(request.getSessionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Academic session not found with ID: " + request.getSessionId()));
+
+            // Fetch the current class block
+            ClassBlock currentClassBlock = classBlockRepository.findById(request.getCurrentClassBlockId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Current ClassBlock not found with ID: " + request.getCurrentClassBlockId()));
+
+            // Fetch or create the current session class
+            SessionClass currentSessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(request.getSessionId(), request.getCurrentClassBlockId()).orElseThrow(()->new ResourceNotFoundException("Current ClassBlock not found with ID: " + request.getCurrentClassBlockId()));
+
+            // Verify the student is in the current session class
+            if (studentProfile.getSessionClass() == null || !studentProfile.getSessionClass().getId().equals(currentSessionClass.getId())) {
+                throw new IllegalArgumentException("Student is not currently in the specified session class (ID: " + currentSessionClass.getId() + ")");
             }
 
-            // Fetch the new class block (the destination class)
-            ClassBlock newClass = classBlockRepository.findById(request.getNextClassId())
-                    .orElseThrow(() -> new ResourceNotFoundException("New class block not found"));
+            // Fetch the new class block
+            ClassBlock newClassBlock = classBlockRepository.findById(request.getNewClassBlockId())
+                    .orElseThrow(() -> new ResourceNotFoundException("New ClassBlock not found with ID: " + request.getNewClassBlockId()));
 
-            // Update the student counts for the classes
+            // Fetch or create the new session class
+
+            SessionClass newSessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(request.getSessionId(), request.getNewClassBlockId())
+                    .orElseGet(() -> sessionClassRepository.save(SessionClass.builder()
+                            .academicSession(academicSession)
+                            .classBlock(newClassBlock)
+                            .profiles(new HashSet<>())
+                            .numberOfProfiles(0)
+                            .build()));
+
+
+            // Update the student counts and profiles for the session classes
             synchronized (this) {
-                currentClass.setNumberOfStudents(currentClass.getNumberOfStudents() - 1);
-                newClass.setNumberOfStudents(newClass.getNumberOfStudents() + 1);
-                classBlockRepository.save(currentClass);
-                classBlockRepository.save(newClass);
+                currentSessionClass.setNumberOfProfiles(currentSessionClass.getNumberOfProfiles() - 1);
+                currentSessionClass.getProfiles().remove(studentProfile);
+                newSessionClass.setNumberOfProfiles(newSessionClass.getNumberOfProfiles() + 1);
+                newSessionClass.getProfiles().add(studentProfile);
+                sessionClassRepository.save(currentSessionClass);
+                sessionClassRepository.save(newSessionClass);
             }
 
-            // Update the student's class block
-            studentProfile.setClassBlock(newClass);
+            // Update the student's session class
+            studentProfile.setSessionClass(newSessionClass);
             profileRepository.save(studentProfile);
 
             // Return the response
-            return mapToResponse(newClass);
+            return mapToResponse(newSessionClass.getClassBlock());
         } catch (ResourceNotFoundException e) {
-            // Handle specific not found exceptions
-            throw new RuntimeException("Resource not found: " + e.getMessage());
+            throw new RuntimeException("Resource not found: " + e.getMessage(), e);
         } catch (IllegalArgumentException e) {
-            // Handle validation errors
-            throw new RuntimeException("Validation error: " + e.getMessage());
+            throw new RuntimeException("Validation error: " + e.getMessage(), e);
         } catch (Exception e) {
-            // Handle any other unexpected exceptions
-            throw new RuntimeException("An unexpected error occurred: " + e.getMessage());
+            throw new RuntimeException("An unexpected error occurred: " + e.getMessage(), e);
         }
     }
 
@@ -278,7 +271,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
                 .name(classBlock.getName())
                 .classLevelId(classBlock.getClassLevel().getId())
                 .classUniqueUrl(classBlock.getClassUniqueUrl())
-                .numberOfStudents(classBlock.getNumberOfStudents())
+//                .numberOfStudents(classBlock.getNumberOfStudents())
                 .build();
     }
 

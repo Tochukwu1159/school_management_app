@@ -11,9 +11,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class ClassBlockRequest {
-    private Long classLevelId;
+    private Long sessionId;
+    private Long currentClassBlockId;
+    private Long newClassBlockId;
     private Long formTeacherId;
-    private Long nextClassId;
     private String subClassName;
     private String classUniqueUrl;
 }

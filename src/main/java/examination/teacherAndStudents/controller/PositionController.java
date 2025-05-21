@@ -14,13 +14,13 @@ public class PositionController {
     @Autowired
     private PositionService positionService;
 
-    @PostMapping("/update/{sessionId}/{term}/{classLevelId}")
+    @PostMapping("/update/{sessionId}/{term}/{classBlockId}")
     public ResponseEntity<ApiResponse<String>> updateAllPositionsForAClass(
-            @PathVariable Long classLevelId,
+            @PathVariable Long classBlockId,
             @PathVariable Long sessionId,
             @PathVariable Long term) {
         try {
-            positionService.updatePositionsForClass(classLevelId, sessionId, term);
+            positionService.updatePositionForSessionClassForJob(classBlockId, sessionId, term);
             ApiResponse<String> response = new ApiResponse<>("Positions updated successfully", true, null);
             return ResponseEntity.ok(response);
         } catch (Exception e) {

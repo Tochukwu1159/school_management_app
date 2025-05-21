@@ -77,6 +77,7 @@ public class LibraryServiceImpl implements LibraryService {
                         .action("ADD_BOOK")
                         .performedBy(profile)
                         .timestamp(LocalDateTime.now())
+                        .school(profile.getUser().getSchool())
                         .details("Book: " + newBook.getTitle())
                         .build()
         );

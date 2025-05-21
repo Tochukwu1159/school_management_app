@@ -40,4 +40,5 @@ public interface AcademicSessionRepository extends JpaRepository<AcademicSession
                 "AND CURRENT_DATE BETWEEN t.startDate AND t.endDate")
         Optional<AcademicSession> findCurrentSession(@Param("schoolId") Long schoolId);
 
+    Optional<AcademicSession> findByStatusAndSchoolId(SessionStatus sessionStatus, Long id);
 }

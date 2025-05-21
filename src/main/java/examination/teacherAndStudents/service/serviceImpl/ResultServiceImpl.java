@@ -9,6 +9,7 @@ import examination.teacherAndStudents.error_handler.NotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.*;
 import examination.teacherAndStudents.utils.SessionStatus;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class ResultServiceImpl implements ResultService {
 
 
@@ -34,13 +36,14 @@ public class ResultServiceImpl implements ResultService {
     private final StudentTermRepository studentTermRepository;
     private final SessionAverageRepository sessionAverageRepository;
     private final GradeRatingService gradeRatingService;
+    private final SessionClassRepository sessionClassRepository;
 
 
     @Autowired
     public ResultServiceImpl(ScoreService scoreService, UserRepository userRepository, ScoreRepository scoreRepository,
                              ResultRepository resultRepository,
                              PositionRepository positionRepository,
-                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository,  GradeRatingService gradeRatingService) {
+                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository, GradeRatingService gradeRatingService, SessionClassRepository sessionClassRepository) {
         this.scoreService = scoreService;
         this.userRepository = userRepository;
         this.scoreRepository = scoreRepository;
@@ -53,6 +56,7 @@ public class ResultServiceImpl implements ResultService {
         this.studentTermRepository = studentTermRepository;
         this.sessionAverageRepository = sessionAverageRepository;
         this.gradeRatingService = gradeRatingService;
+        this.sessionClassRepository = sessionClassRepository;
     }
 
 
@@ -65,10 +69,7 @@ public class ResultServiceImpl implements ResultService {
             Profile userProfile = profileRepository.findByUser(student)
                     .orElseThrow(() -> new NotFoundException("Student profile not found"));
 
-            ClassBlock studentClass = classBlockRepository.findById(classLevelId)
-                    .orElseThrow(() -> new NotFoundException("Student class not found"));
-
-            AcademicSession academicSession = academicSessionRepository.findById(sessionId)
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classLevelId)
                     .orElseThrow(() -> new NotFoundException("Student academic session not found"));
 
             StudentTerm studentTerm = studentTermRepository.findById(termId)
@@ -76,7 +77,7 @@ public class ResultServiceImpl implements ResultService {
 
 
             // Retrieve the score for the student and subject
-            Score score = scoreRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, studentClass.getId(), subjectName, academicSession, studentTerm);
+            Score score = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, sessionClass.getId(), subjectName, sessionClass.getAcademicSession(), studentTerm).orElseThrow(() -> new NotFoundException("Student score not found"));
 
             if (score == null) {
                 throw new NotFoundException("Score not found for the specified criteria");
@@ -98,7 +99,7 @@ public class ResultServiceImpl implements ResultService {
 
 
             // Check if a result already exists for the student and subject
-            Result existingResult = resultRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, studentClass.getId() ,subjectName,academicSession, studentTerm);
+            Result existingResult = resultRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, sessionClass.getId() ,subjectName,sessionClass.getAcademicSession(), studentTerm).orElseThrow(() -> new NotFoundException("Result not found"));
 
             if (existingResult != null) {
                 // Update the existing result
@@ -112,8 +113,8 @@ public class ResultServiceImpl implements ResultService {
             Result result = new Result();
             result.setTotalMarks(totalMarks);
             result.setUserProfile(userProfile);
-            result.setClassBlock(studentClass);
-            result.setAcademicYear(academicSession);
+            result.setSessionClass(sessionClass);
+            result.setAcademicYear(sessionClass.getAcademicSession());
             result.setStudentTerm(studentTerm);
             result.setSubjectName(subjectName);
             result.setGrade(grade);
@@ -141,12 +142,15 @@ public class ResultServiceImpl implements ResultService {
         ClassBlock classBlock = classBlockRepository.findById(classLevelId)
                 .orElseThrow(() -> new NotFoundException("Class level not found"));
 
+    SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId,classBlock.getId())
+            .orElseThrow(() -> new NotFoundException("Session Class not found"));
+
         StudentTerm studentTerm = studentTermRepository.findById(termId)
                 .orElseThrow(() -> new NotFoundException("Term not found"));
 
         // Fetch all results for the specified session, class level, and term
-        List<Result> results = resultRepository.findAllByClassBlockAndAcademicYearAndStudentTerm(
-                classBlock, academicYear, studentTerm);
+        List<Result> results = resultRepository.findAllBySessionClassAndAcademicYearAndStudentTerm(
+                sessionClass, academicYear, studentTerm);
 
         if (results.isEmpty()) {
             throw new NotFoundException("No results found for the specified criteria");
@@ -157,8 +161,8 @@ public class ResultServiceImpl implements ResultService {
                 .collect(Collectors.groupingBy(Result::getUserProfile));
 
         // Pre-fetch existing positions
-        Map<Profile, Position> existingPositions = positionRepository.findByClassBlockAndAcademicYearAndStudentTerm(
-                        classBlock, academicYear, studentTerm).stream()
+        Map<Profile, Position> existingPositions = positionRepository.findAllBySessionClassAndAcademicYearAndStudentTerm(
+                        sessionClass, academicYear, studentTerm).stream()
                 .collect(Collectors.toMap(Position::getUserProfile, Function.identity()));
 
         // Use a list to collect positions to batch save
@@ -173,7 +177,7 @@ public class ResultServiceImpl implements ResultService {
             // Fetch existing position or create a new one
             Position position = existingPositions.getOrDefault(studentProfile, new Position());
             position.setUserProfile(studentProfile);
-            position.setClassBlock(classBlock);
+            position.setSessionClass(sessionClass);
             position.setAcademicYear(academicYear);
             position.setStudentTerm(studentTerm);
             position.setAverageScore(averageScore);
@@ -189,36 +193,38 @@ public class ResultServiceImpl implements ResultService {
     public void calculateAverageResultJob(Long sessionId, Long termId) {
         // Fetch academic session
         AcademicSession academicYear = academicSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Session not found"));
+                .orElseThrow(() -> new NotFoundException("Session not found with ID: " + sessionId));
 
         // Fetch student term
         StudentTerm studentTerm = studentTermRepository.findById(termId)
-                .orElseThrow(() -> new NotFoundException("Term not found"));
+                .orElseThrow(() -> new NotFoundException("Term not found with ID: " + termId));
 
-        // Fetch all class blocks for the academic session
-        List<ClassBlock> classBlocks = classBlockRepository.findByClassLevelAcademicYear(academicYear);
-
-        if (classBlocks.isEmpty()) {
-            throw new NotFoundException("No class blocks found for the specified session");
+        // Fetch all session classes for the academic session
+        List<SessionClass> sessionClasses = sessionClassRepository.findByAcademicSessionId(sessionId);
+        if (sessionClasses.isEmpty()) {
+            log.warn("No session classes found for Academic Session ID: {}", sessionId);
+            throw new NotFoundException("No session classes found for the specified session ID: " + sessionId);
         }
 
-        // Process each class block
-        for (ClassBlock classBlock : classBlocks) {
-            // Fetch all results for the specified session, class block, and term
-            List<Result> results = resultRepository.findAllByClassBlockAndAcademicYearAndStudentTerm(
-                    classBlock, academicYear, studentTerm);
+        // Process each session class
+        for (SessionClass sessionClass : sessionClasses) {
+            // Fetch all results for the specified session class, academic year, and term
+            List<Result> results = resultRepository.findAllBySessionClassAndAcademicYearAndStudentTerm(
+                    sessionClass, academicYear, studentTerm);
 
             if (results.isEmpty()) {
-                continue; // Skip if no results for this class block
+                log.info("No results found for SessionClass ID: {}, Academic Session ID: {}, Term ID: {}",
+                        sessionClass.getId(), sessionId, termId);
+                continue; // Skip if no results for this session class
             }
 
             // Group results by student profile
             Map<Profile, List<Result>> resultsByStudent = results.stream()
                     .collect(Collectors.groupingBy(Result::getUserProfile));
 
-            // Pre-fetch existing positions for this class block
-            Map<Profile, Position> existingPositions = positionRepository.findByClassBlockAndAcademicYearAndStudentTerm(
-                            classBlock, academicYear, studentTerm).stream()
+            // Pre-fetch existing positions for this session class
+            Map<Profile, Position> existingPositions = positionRepository.findAllBySessionClassAndAcademicYearAndStudentTerm(
+                            sessionClass, academicYear, studentTerm).stream()
                     .collect(Collectors.toMap(Position::getUserProfile, Function.identity()));
 
             // Use a list to collect positions to batch save
@@ -233,7 +239,7 @@ public class ResultServiceImpl implements ResultService {
                 // Fetch existing position or create a new one
                 Position position = existingPositions.getOrDefault(studentProfile, new Position());
                 position.setUserProfile(studentProfile);
-                position.setClassBlock(classBlock);
+                position.setSessionClass(sessionClass);
                 position.setAcademicYear(academicYear);
                 position.setStudentTerm(studentTerm);
                 position.setAverageScore(averageScore);
@@ -241,11 +247,10 @@ public class ResultServiceImpl implements ResultService {
                 positionsToSave.add(position);
             });
 
-            // Batch save all positions for this class block
+            // Batch save all positions for this session class
             positionRepository.saveAll(positionsToSave);
         }
     }
-
 
 //    @Transactional
 //    public void calculateAverageResultJob(Long sessionId, Long termId) {
@@ -317,19 +322,17 @@ public class ResultServiceImpl implements ResultService {
     public void promoteStudents(Long sessionId, Long presentClassId, Long futureSessionId, Long futurePClassId, Long futureFClassId, int cutOff) {
         try {
             // Fetch the required entities
-            AcademicSession currentSession = academicSessionRepository.findById(sessionId)
-                    .orElseThrow(() -> new NotFoundException("Current session not found with ID: " + sessionId));
-            ClassBlock presentClass = classBlockRepository.findById(presentClassId)
-                    .orElseThrow(() -> new NotFoundException("Present class not found with ID: " + presentClassId));
-            AcademicSession futureSession = academicSessionRepository.findById(futureSessionId)
-                    .orElseThrow(() -> new NotFoundException("Future session not found with ID: " + futureSessionId));
-            ClassBlock futurePClass = classBlockRepository.findById(futurePClassId)
-                    .orElseThrow(() -> new NotFoundException("Promoted class not found with ID: " + futurePClassId));
-            ClassBlock futureFClass = classBlockRepository.findById(futureFClassId)
-                    .orElseThrow(() -> new NotFoundException("Demoted class not found with ID: " + futureFClassId));
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId,presentClassId)
+                    .orElseThrow(() -> new NotFoundException("Session class  not found"));
+            SessionClass futurePSessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(futureSessionId,futurePClassId)
+                    .orElseThrow(() -> new NotFoundException("Session class  not found"));
+
+            SessionClass futureFSessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(futureSessionId,futureFClassId)
+                    .orElseThrow(() -> new NotFoundException("Session class  not found"));
+
 
             // Fetch session averages for students in the current session and class
-            List<SessionAverage> sessionAverages = sessionAverageRepository.findAllByClassBlockAndAcademicYear(presentClass, currentSession);
+            List<SessionAverage> sessionAverages = sessionAverageRepository.findAllBySessionClassAndAcademicYear(sessionClass, sessionClass.getAcademicSession());
 
             if (sessionAverages.isEmpty()) {
                 throw new NotFoundException("No session averages found for present class ID: " + presentClassId + " in session ID: " + sessionId);
@@ -344,22 +347,22 @@ public class ResultServiceImpl implements ResultService {
 
                 if (averageScore >= cutOff) {
                     // Promote student
-                    studentProfile.setClassBlock(futurePClass);
+                    studentProfile.setSessionClass(futurePSessionClass);
                     profileRepository.save(studentProfile);
                     promotedCount++;
                 } else {
                     // Demote student
-                    studentProfile.setClassBlock(futureFClass);
+                    studentProfile.setSessionClass(futureFSessionClass);
                     profileRepository.save(studentProfile);
                     demotedCount++;
                 }
             }
 
             // Update class student counts in bulk
-            futurePClass.setNumberOfStudents(futurePClass.getNumberOfStudents() + promotedCount);
-            futureFClass.setNumberOfStudents(futureFClass.getNumberOfStudents() + demotedCount);
-            classBlockRepository.save(futurePClass);
-            classBlockRepository.save(futureFClass);
+            futurePSessionClass.setNumberOfProfiles(futurePSessionClass.getNumberOfProfiles() + promotedCount);
+            futureFSessionClass.setNumberOfProfiles(futureFSessionClass.getNumberOfProfiles() + demotedCount);
+            sessionClassRepository.save(futurePSessionClass);
+            sessionClassRepository.save(futureFSessionClass);
 
         } catch (NotFoundException e) {
             // Re-throw custom exceptions for clarity
@@ -373,23 +376,23 @@ public class ResultServiceImpl implements ResultService {
 
 
     @Override
-    public void updateSessionAverage(List<Profile> studentProfiles, ClassBlock classBlock, AcademicSession academicYear) {
+    public void updateSessionAverage(Set<Profile> studentProfiles, SessionClass sessionClass) {
         for (Profile studentProfile : studentProfiles) {
             // Fetch the positions for all three terms (first, second, third)
-            Position firstTermPosition = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                    studentProfile, classBlock, academicYear,
-                    studentTermRepository.findByNameAndAcademicSession("First Term", academicYear)
-            );
+            Position firstTermPosition = positionRepository.findByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                    studentProfile, sessionClass, sessionClass.getAcademicSession(),
+                    studentTermRepository.findByNameAndAcademicSession("First Term", sessionClass.getAcademicSession())
+            ).orElseThrow(() -> new NotFoundException("Student profile not found "));
 
-            Position secondTermPosition = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                    studentProfile, classBlock, academicYear,
-                    studentTermRepository.findByNameAndAcademicSession("Second Term", academicYear)
-            );
+            Position secondTermPosition = positionRepository.findByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                    studentProfile, sessionClass, sessionClass.getAcademicSession(),
+                    studentTermRepository.findByNameAndAcademicSession("Second Term", sessionClass.getAcademicSession())
+            ).orElseThrow(() -> new NotFoundException("Student profile not found "));
 
-            Position thirdTermPosition = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                    studentProfile, classBlock, academicYear,
-                    studentTermRepository.findByNameAndAcademicSession("Third Term", academicYear)
-            );
+            Position thirdTermPosition = positionRepository.findByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                    studentProfile, sessionClass, sessionClass.getAcademicSession(),
+                    studentTermRepository.findByNameAndAcademicSession("Third Term", sessionClass.getAcademicSession())
+            ).orElseThrow(() -> new NotFoundException("Student profile not found "));
 
             if (firstTermPosition != null && secondTermPosition != null && thirdTermPosition != null) {
                 // Calculate the average score of the three terms
@@ -398,16 +401,16 @@ public class ResultServiceImpl implements ResultService {
                         thirdTermPosition.getAverageScore()) / 3;
 
                 // Check if the SessionAverage already exists for the student, class, and academic year
-                SessionAverage sessionAverage = sessionAverageRepository.findByUserProfileAndAcademicYearAndClassBlock(
-                        studentProfile, academicYear, classBlock
+                SessionAverage sessionAverage = sessionAverageRepository.findByUserProfileAndAcademicYearAndSessionClass(
+                        studentProfile, sessionClass.getAcademicSession(), sessionClass
                 );
 
                 if (sessionAverage == null) {
                     // Create a new SessionAverage record if it doesn't exist
                     sessionAverage = new SessionAverage();
                     sessionAverage.setUserProfile(studentProfile);
-                    sessionAverage.setAcademicYear(academicYear);
-                    sessionAverage.setClassBlock(classBlock);
+                    sessionAverage.setAcademicYear(sessionClass.getAcademicSession());
+                    sessionAverage.setSessionClass(sessionClass);
                     sessionAverage.setFirstTermPosition(firstTermPosition);
                     sessionAverage.setSecondTermPosition(secondTermPosition);
                     sessionAverage.setThirdTermPosition(thirdTermPosition);
@@ -426,61 +429,77 @@ public class ResultServiceImpl implements ResultService {
     }
 
     @Override
+    @Transactional
     public void updateSessionAverageForJob(AcademicSession academicYear) {
-        // Get all unique class blocks in the academic session
-        List<ClassBlock> classBlocks = classBlockRepository.findByClassLevelAcademicYear(academicYear);
+        // Get all session classes in the academic session
+        List<SessionClass> sessionClasses = sessionClassRepository.findByAcademicSessionId(academicYear.getId());
+        if (sessionClasses.isEmpty()) {
+            log.warn("No session classes found for Academic Session ID: {}", academicYear.getId());
+            return;
+        }
 
-        for (ClassBlock classBlock : classBlocks) {
-            // Get all student profiles in the class block
-            List<Profile> studentProfiles = profileRepository.findByClassBlockAndClassBlock_ClassLevel_AcademicYear(classBlock, academicYear);
+        for (SessionClass sessionClass : sessionClasses) {
+            // Get all student profiles in the session class
+            Set<Profile> studentProfiles = sessionClass.getProfiles();
+            if (studentProfiles.isEmpty()) {
+                log.info("No student profiles found for SessionClass ID: {}", sessionClass.getId());
+                continue;
+            }
 
             for (Profile studentProfile : studentProfiles) {
+                // Fetch the student terms
+                StudentTerm firstTerm = studentTermRepository.findByNameAndAcademicSession("First Term", academicYear);
+                StudentTerm secondTerm = studentTermRepository.findByNameAndAcademicSession("Second Term", academicYear);
+                StudentTerm thirdTerm = studentTermRepository.findByNameAndAcademicSession("Third Term", academicYear);
+
+                if (firstTerm == null || secondTerm == null || thirdTerm == null) {
+                    log.warn("One or more terms (First, Second, Third) not found for Academic Session ID: {}", academicYear.getId());
+                    continue;
+                }
+
                 // Fetch the positions for all three terms
-                Position firstTermPosition = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                        studentProfile, classBlock, academicYear,
-                        studentTermRepository.findByNameAndAcademicSession("First Term", academicYear)
-                );
+                Optional<Position> firstTermPosition = positionRepository.findByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                        studentProfile, sessionClass, academicYear, firstTerm);
 
-                Position secondTermPosition = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                        studentProfile, classBlock, academicYear,
-                        studentTermRepository.findByNameAndAcademicSession("Second Term", academicYear)
-                );
+                Optional<Position> secondTermPosition = positionRepository.findByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                        studentProfile, sessionClass, academicYear, secondTerm);
 
-                Position thirdTermPosition = positionRepository.findByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(
-                        studentProfile, classBlock, academicYear,
-                        studentTermRepository.findByNameAndAcademicSession("Third Term", academicYear)
-                );
+                Optional<Position> thirdTermPosition = positionRepository.findByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+                        studentProfile, sessionClass, academicYear, thirdTerm);
 
-                if (firstTermPosition != null && secondTermPosition != null && thirdTermPosition != null) {
+                if (firstTermPosition.isPresent() && secondTermPosition.isPresent() && thirdTermPosition.isPresent()) {
                     // Calculate the average score of the three terms
-                    double averageScore = (firstTermPosition.getAverageScore() +
-                            secondTermPosition.getAverageScore() +
-                            thirdTermPosition.getAverageScore()) / 3;
+                    double averageScore = (firstTermPosition.get().getAverageScore() +
+                            secondTermPosition.get().getAverageScore() +
+                            thirdTermPosition.get().getAverageScore()) / 3.0;
+                    averageScore = Math.round(averageScore * 100.0) / 100.0; // Round to 2 decimal places
 
                     // Check if the SessionAverage already exists
-                    SessionAverage sessionAverage = sessionAverageRepository.findByUserProfileAndAcademicYearAndClassBlock(
-                            studentProfile, academicYear, classBlock
-                    );
+                    SessionAverage sessionAverage = sessionAverageRepository.findByUserProfileAndAcademicYearAndSessionClass(
+                            studentProfile, academicYear, sessionClass);
 
                     if (sessionAverage == null) {
                         // Create a new SessionAverage record
-                        sessionAverage = new SessionAverage();
-                        sessionAverage.setUserProfile(studentProfile);
-                        sessionAverage.setAcademicYear(academicYear);
-                        sessionAverage.setClassBlock(classBlock);
-                        sessionAverage.setFirstTermPosition(firstTermPosition);
-                        sessionAverage.setSecondTermPosition(secondTermPosition);
-                        sessionAverage.setThirdTermPosition(thirdTermPosition);
-                        sessionAverage.setAverageScore(averageScore);
-                        sessionAverageRepository.save(sessionAverage);
+                        sessionAverage = SessionAverage.builder()
+                                .userProfile(studentProfile)
+                                .academicYear(academicYear)
+                                .sessionClass(sessionClass)
+                                .firstTermPosition(firstTermPosition.get())
+                                .secondTermPosition(secondTermPosition.get())
+                                .thirdTermPosition(thirdTermPosition.get())
+                                .averageScore(averageScore)
+                                .build();
                     } else {
                         // Update existing SessionAverage record
-                        sessionAverage.setFirstTermPosition(firstTermPosition);
-                        sessionAverage.setSecondTermPosition(secondTermPosition);
-                        sessionAverage.setThirdTermPosition(thirdTermPosition);
+                        sessionAverage.setFirstTermPosition(firstTermPosition.get());
+                        sessionAverage.setSecondTermPosition(secondTermPosition.get());
+                        sessionAverage.setThirdTermPosition(thirdTermPosition.get());
                         sessionAverage.setAverageScore(averageScore);
-                        sessionAverageRepository.save(sessionAverage);
                     }
+                    sessionAverageRepository.save(sessionAverage);
+                } else {
+                    log.info("Skipping SessionAverage for Profile ID: {} in SessionClass ID: {} due to missing position(s)",
+                            studentProfile.getId(), sessionClass.getId());
                 }
             }
         }
@@ -490,14 +509,11 @@ public class ResultServiceImpl implements ResultService {
 
     @Transactional(readOnly = true)
     public StatisticsReport calculateSessionStatistics(Long sessionId, Long classLevelId) {
-        // Fetch session and class block to validate
-        AcademicSession academicSession = academicSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Academic session not found"));
-        ClassBlock classBlock = classBlockRepository.findById(classLevelId)
-                .orElseThrow(() -> new NotFoundException("Class level not found"));
+        SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId,classLevelId)
+                .orElseThrow(() -> new NotFoundException("Session class  not found"));
 
         // Fetch all session averages for the given session and class
-        List<SessionAverage> sessionAverages = sessionAverageRepository.findAllByAcademicYearAndClassBlock(academicSession, classBlock);
+        List<SessionAverage> sessionAverages = sessionAverageRepository.findAllByAcademicYearAndSessionClass(sessionClass.getAcademicSession(), sessionClass);
 
         if (sessionAverages.isEmpty()) {
             throw new NotFoundException("No average scores found for the specified session and class");
@@ -545,8 +561,8 @@ public class ResultServiceImpl implements ResultService {
 
         // Build and return the statistics report
         return new StatisticsReport(
-                academicSession.getSessionName().getName(),
-                classBlock.getName(),
+                sessionClass.getAcademicSession().getSessionName().getName(),
+                sessionClass.getClassBlock().getName(),
                 scoreDistribution,
                 meanScore,
                 medianScore,
@@ -558,15 +574,13 @@ public class ResultServiceImpl implements ResultService {
     @Transactional(readOnly = true)
     public TermStatisticsReport calculateTermStatistics(Long sessionId, Long classLevelId, Long termId) {
         // Fetch session, class block, and term to validate
-        AcademicSession academicSession = academicSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Academic session not found"));
-        ClassBlock classBlock = classBlockRepository.findById(classLevelId)
-                .orElseThrow(() -> new NotFoundException("Class level not found"));
+        SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId,classLevelId)
+                .orElseThrow(() -> new NotFoundException("Session class  not found"));
         StudentTerm studentTerm = studentTermRepository.findById(termId)
                 .orElseThrow(() -> new NotFoundException("Term not found"));
 
         // Fetch all positions for the given session, class, and term
-        Collection<Position> positions = positionRepository.findByClassBlockAndAcademicYearAndStudentTerm(classBlock, academicSession, studentTerm);
+        Collection<Position> positions = positionRepository.findAllBySessionClassAndAcademicYearAndStudentTerm(sessionClass, sessionClass.getAcademicSession(), studentTerm);
 
         if (positions.isEmpty()) {
             throw new NotFoundException("No average scores found for the specified term, session, and class");
@@ -614,8 +628,8 @@ public class ResultServiceImpl implements ResultService {
 
         // Build and return the statistics report
         return new TermStatisticsReport(
-                academicSession.getSessionName().getName(),
-                classBlock.getName(),
+                sessionClass.getAcademicSession().getSessionName().getName(),
+                sessionClass.getClassBlock().getName(),
                 studentTerm.getName(),
                 scoreDistribution,
                 meanScore,
@@ -640,18 +654,22 @@ public class ResultServiceImpl implements ResultService {
 
 
     @Override
-    public List<SessionAverage> getTop5StudentsPerClass(ClassBlock classBlock, AcademicSession academicYear) {
-        return sessionAverageRepository.findTop5ByClassBlockAndAcademicYearOrderByAverageScoreDesc(classBlock, academicYear);
+    public List<SessionAverage> getTop5StudentsPerClass(Long classBlockId, Long academicYearId) {
+        SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(classBlockId,academicYearId)
+                .orElseThrow(() -> new NotFoundException("Session class  not found"));
+        return sessionAverageRepository.findAllBySessionClassAndAcademicYear(sessionClass, sessionClass.getAcademicSession());
     }
 
     @Override
-    public Map<ClassBlock, List<SessionAverage>> getTop5StudentsForAllClasses(AcademicSession academicYear) {
-        List<SessionAverage> allStudents = sessionAverageRepository.findTop5ByAcademicYear(academicYear);
+    public Map<ClassBlock, List<SessionAverage>> getTop5StudentsForAllClasses(Long academicYearId) {
 
-        return allStudents.stream()
-                .collect(Collectors.groupingBy(SessionAverage::getClassBlock,
-                        Collectors.collectingAndThen(Collectors.toList(),
-                                list -> list.stream().limit(5).toList())));
+        List<SessionAverage> allStudents = sessionAverageRepository.findTop5ByAcademicYearId(academicYearId);
+
+//        return allStudents.stream()
+//                .collect(Collectors.groupingBy(SessionAverage::getSessionClass,
+//                        Collectors.collectingAndThen(Collectors.toList(),
+//                                list -> list.stream().limit(5).toList())));
+        return  null;
     }
 
 

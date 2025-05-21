@@ -51,13 +51,6 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
             throw new IllegalArgumentException("ClassBlock does not belong to the user's school");
         }
 
-        // Validate AcademicSession
-        AcademicSession academicSession = academicSessionRepository.findById(request.getAcademicYearId())
-                .orElseThrow(() -> new NotFoundException("AcademicSession with id " + request.getAcademicYearId() + " not found"));
-        if (!academicSession.getSchool().getId().equals(userSchool.getId())) {
-            throw new IllegalArgumentException("AcademicSession does not belong to the user's school");
-        }
-
         List<ClassSubject> classSubjectsToSave = new ArrayList<>();
         List<ClassSubjectResponse> responses = new ArrayList<>();
 
@@ -68,8 +61,8 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
                     .orElseThrow(() -> new NotFoundException("Subject with id " + subjectId + " not found"));
 
             // Check for existing ClassSubject
-            boolean exists = classSubjectRepository.existsBySubjectAndClassBlockAndAcademicYear(
-                    subject, classBlock, academicSession
+            boolean exists = classSubjectRepository.existsBySubjectAndClassBlock(
+                    subject, classBlock
             );
             if (exists) {
                 continue; // Skip if already exists to avoid duplicate entries
@@ -80,7 +73,6 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
                     .subject(subject)
                     .classBlock(classBlock)
                     .school(userSchool)
-                    .academicYear(academicSession)
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .build();
@@ -117,7 +109,7 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<ClassSubject> classSubjects = classSubjectRepository.findAllWithFilters(
-                academicYearId, subjectId, classSubjectId, subjectName, subClassId, pageable);
+               subjectId, classSubjectId, subjectName, subClassId, pageable);
 
         return classSubjects.map(this::toResponse);
     }
@@ -137,7 +129,7 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     public void assignClassSubjectToTeacher(TeacherAssignmentRequest request) {
         validateAdminUser();
 
-        ClassLevel classLevel = classLevelRepository.findByIdAndAcademicYearId(request.getClassLevelId(), request.getSessionId())
+        ClassLevel classLevel = classLevelRepository.findById(request.getClassLevelId())
                 .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
 
         ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
@@ -181,7 +173,7 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     public void updateClassSubjectTeacherAssignment(TeacherAssignmentRequest request) {
         validateAdminUser();
 
-        ClassLevel classLevel = classLevelRepository.findByIdAndAcademicYearId(request.getClassLevelId(), request.getSessionId())
+        ClassLevel classLevel = classLevelRepository.findById(request.getClassLevelId())
                 .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
 
         ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
@@ -249,10 +241,6 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
                         new ClassLevelResponse(
                                 classSubject.getClassBlock().getClassLevel().getId()
                         )
-                ))
-                .academicYear(new AcademicSessionResponse(
-                        classSubject.getAcademicYear().getId(),
-                        classSubject.getAcademicYear().getSessionName().getName()
                 ))
                 .teacher(classSubject.getTeacher() != null ? new SubjectUserResponse(
                         classSubject.getTeacher().getId(),

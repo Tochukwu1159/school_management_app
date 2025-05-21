@@ -51,15 +51,6 @@ public class ClassBlock {
     @Column(unique = true, length = 255)
     private String classUniqueUrl;
 
-    @Min(0)
-    @Column(columnDefinition = "int default 0")
-    private int numberOfStudents;
-
-    @OneToMany(mappedBy = "classBlock", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
-    @Builder.Default
-    @ToString.Exclude
-    private List<Profile> studentList = new ArrayList<>();
-
     @OneToMany(mappedBy = "classBlock", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude

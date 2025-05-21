@@ -28,10 +28,6 @@ public class ClassLevel {
     private LocalDateTime updatedAt;
 
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "academic_year_id", nullable = false)
-    private AcademicSession academicYear;
-
     @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)

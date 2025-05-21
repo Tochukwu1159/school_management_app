@@ -65,7 +65,7 @@ public class UserRequestDto {
     // Institution Information
 //    @NotNull(message = "School ID is required")
     private Long schoolId;
-
+    private Long academicSessionId;
     private String referralCode;
 
 

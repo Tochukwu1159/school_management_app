@@ -444,14 +444,7 @@ public class WalletServiceImpl implements WalletService {
                     .totalStudentMoneySent(totalMoneySent)
                     .build();
         } catch (Exception e) {
-            throw new CustomInternalServerException("Error fetching school wallet balance" + e);
+            throw new CustomInternalServerException(e.getMessage());
         }
-    }
-
-    private Map<String, Object> createDefaultMetadata() {
-        return Map.of(
-                "userId", profileId(),
-                "timestamp", LocalDateTime.now().toString()
-        );
     }
 }

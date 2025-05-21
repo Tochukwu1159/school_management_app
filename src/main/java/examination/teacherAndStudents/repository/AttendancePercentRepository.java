@@ -11,4 +11,6 @@ import java.util.Optional;
 @Repository
 public interface AttendancePercentRepository extends JpaRepository<AttendancePercent, Long> {
     Optional<AttendancePercent> findByUserAndStudentTerm(Profile teacher, StudentTerm term);
+
+    Optional<AttendancePercent> findByUserAndSessionClassIdAndStudentTermId(Profile profile, Long id, Long id1);
 }

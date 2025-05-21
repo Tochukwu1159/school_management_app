@@ -30,12 +30,13 @@ public class ExamSchedule {
     private User teacher;
 
     @ManyToOne
-    @JoinColumn(name = "classblock_id", nullable = false)
-    private ClassBlock classBlock;
+    @JoinColumn(name = "session_class_id", nullable = false)
+    private SessionClass sessionClass;
 
     @ManyToOne
-    @JoinColumn(name = "academic_session_id", nullable = false)
+    @JoinColumn(name = "session_id", nullable = false)
     private AcademicSession academicSession;
+
 
     @ManyToOne
     @JoinColumn(name = "term_id", nullable = false)

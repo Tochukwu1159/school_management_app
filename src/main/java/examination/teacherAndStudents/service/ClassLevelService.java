@@ -12,7 +12,6 @@ import java.util.List;
 public interface ClassLevelService {
     Page<ClassLevel> getAllClassLevels(
             Long classLevelId,
-            Long academicYearId,
             String className,
             int page,
             int size,

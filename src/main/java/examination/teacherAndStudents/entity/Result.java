@@ -41,9 +41,10 @@ public class Result {
     @JoinColumn(name = "user_id")
     private Profile userProfile;
 
-    @ManyToOne
-    @JoinColumn(name = "classblock_id", nullable = false)
-    private ClassBlock classBlock;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_class_id", nullable = false)
+    private SessionClass sessionClass;
+
 
     @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)

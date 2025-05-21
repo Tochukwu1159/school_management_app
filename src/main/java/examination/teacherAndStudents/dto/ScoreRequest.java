@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ScoreRequest {
     private long classLevelId;
+    private long classBlockId;
     private  Long studentId;
     private Long sessionId;
     private Long subjectId;
