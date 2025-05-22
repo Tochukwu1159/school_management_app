@@ -87,4 +87,5 @@ public interface SchoolService {
     School renewSubscription(SubscriptionType subscriptionType) throws Exception;
 
     School getSchoolById(Long schoolId);
+    WalletResponse walletBalance();
 }

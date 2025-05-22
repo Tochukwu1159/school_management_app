@@ -4,6 +4,7 @@ import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.ClassLevelRequest;
 import examination.teacherAndStudents.dto.ClassLevelRequestUrl;
 import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.error_handler.BadRequestException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.SubscriptionExpiredException;
 import examination.teacherAndStudents.error_handler.UnauthorizedException;
@@ -29,6 +30,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -89,6 +91,13 @@ public class ClassLevelServiceImpl implements ClassLevelService {
                 admin.getEmail(), classLevelRequest.getClassNameId(), classLevelRequest.getClassBlocks());
 
         ClassName className = entityFetcher.fetchClassName(classLevelRequest.getClassNameId());
+
+
+        Optional<ClassLevel> existingClassLevel = classLevelRepository.findByClassNameIdAndSchoolId(className.getId(), admin.getSchool().getId());
+        if (existingClassLevel.isPresent()) {
+            throw new BadRequestException("Class level already exists in this school");
+        }
+
 
         ClassLevel classLevel = ClassLevel.builder()
                 .className(className)

@@ -10,6 +10,7 @@ import examination.teacherAndStudents.service.SchoolService;
 import examination.teacherAndStudents.utils.AccountUtils;
 import examination.teacherAndStudents.utils.Roles;
 import examination.teacherAndStudents.utils.SubscriptionType;
+import examination.teacherAndStudents.utils.WalletStatus;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -42,6 +43,7 @@ public class SchoolServiceImpl implements SchoolService {
     private final ProfileRepository profileRepository;
     private final PayStackPaymentService paymentService;
     private final EmailTemplateService emailTemplateService;
+    private final WalletRepository walletRepository;
 
     @Value("${amount_charged_per_student}")
     private BigDecimal amountChargedPerStudent;
@@ -58,6 +60,17 @@ public class SchoolServiceImpl implements SchoolService {
 
         School school = createSchoolEntity(schoolRequest);
         School savedSchool = schoolRepository.save(school);
+
+        Wallet schoolWallet = Wallet.builder()
+                .balance(BigDecimal.ZERO)
+                .totalMoneySent(BigDecimal.ZERO)
+                .totalMoneyReceived(BigDecimal.ZERO)
+                .walletStatus(WalletStatus.ACTIVE)
+                .school(school)
+                .lastTransactionTime(LocalDateTime.now())
+                .build();
+        walletRepository.save(schoolWallet);
+        school.setWallet(schoolWallet);
 
         associateAdminWithSchool(admin, savedSchool);
         emailTemplateService.sendOnboardingNotifications(savedSchool, admin);
@@ -339,6 +352,30 @@ public class SchoolServiceImpl implements SchoolService {
     public School getSchoolById(Long schoolId) {
         return schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceNotFoundException("School not found with ID: " + schoolId));
+    }
+
+    @Override
+    public WalletResponse walletBalance() {
+        // Verify authenticated admin
+        User admin = getAuthenticatedAdmin();
+
+        // Fetch school and verify admin access
+        School school = schoolRepository.findById(admin.getSchool().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("School not found "));
+
+        // Fetch wallet
+        Wallet wallet = school.getWallet();
+        if (wallet == null) {
+            throw new ResourceNotFoundException("No wallet found for this school" );
+        }
+
+        // Log and return response
+        logger.info("Retrieved wallet balance for school ID {}: {}", admin.getSchool().getId(), wallet.getBalance());
+        return WalletResponse.builder()
+                .walletId(wallet.getId())
+                .balance(wallet.getBalance())
+                .walletStatus(wallet.getWalletStatus())
+                .build();
     }
 
     @Override

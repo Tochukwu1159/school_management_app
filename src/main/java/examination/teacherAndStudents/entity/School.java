@@ -46,9 +46,7 @@ public class School {
     private String city;
 
     @Column(nullable = false)
-    private String
-
-            schoolMotto;
+    private String schoolMotto;
 
     @Column(nullable = false)
     private Integer establishedYear;
@@ -91,7 +89,7 @@ public class School {
     private Boolean supportsReferral = false;
 
     @Column(name = "supports_entry_exam", columnDefinition = "boolean default false")
-    private Boolean supportsEntryExam = false; // New field for entry exam support
+    private Boolean supportsEntryExam = false;
 
     private BigDecimal applicationFeeAmount;
 
@@ -108,9 +106,9 @@ public class School {
     private BigDecimal referralAmountPerPoint;
 
     @Column(columnDefinition = "int default 5")
-    private Integer scratchCardMaxUsageCount = 5; // New field for max usage count
+    private Integer scratchCardMaxUsageCount = 5;
 
-    private BigDecimal scratchCardPrice; // New field for scratch card price
+    private BigDecimal scratchCardPrice;
 
     @ManyToMany
     @JoinTable(
@@ -130,9 +128,9 @@ public class School {
     @OneToMany(mappedBy = "school", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<User> users;
 
-//    @OneToOne(mappedBy = "school", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-//    private Wallet wallet;
-
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "wallet_id")
+    private Wallet wallet;
 
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "payment_account_id")

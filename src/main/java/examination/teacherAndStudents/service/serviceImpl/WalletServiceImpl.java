@@ -65,7 +65,7 @@ public class WalletServiceImpl implements WalletService {
                 .orElseThrow(() -> new ResourceNotFoundException("Wallet not found or phone number missing"));
 
 
-        return new WalletResponse(wallet.getBalance(), wallet.getTotalMoneySent());
+        return new WalletResponse(wallet.getId(),wallet.getBalance(), wallet.getTotalMoneySent(), wallet.getWalletStatus());
 
     }
 

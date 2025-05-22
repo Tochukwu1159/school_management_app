@@ -22,4 +22,8 @@ public interface ClassLevelRepository extends JpaRepository<ClassLevel, Long> {
             @Param("className") String className,
             @Param("schoolId") Long schoolId,
             Pageable pageable);
+
+    Optional<ClassLevel> findByClassNameId(Long classNameId);
+
+    Optional<ClassLevel> findByClassNameIdAndSchoolId(Long id, Long id1);
 }
