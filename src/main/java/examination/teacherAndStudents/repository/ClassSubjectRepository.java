@@ -32,4 +32,6 @@ public interface ClassSubjectRepository extends JpaRepository<ClassSubject, Long
             Pageable pageable);
 
     boolean existsBySubjectAndClassBlock(Subject subject, ClassBlock classBlock);
+
+    Optional<ClassSubject> findByIdAndClassBlockIdAndSchoolId(Long subjectId, Long classBlockId, Long schoolId);
 }

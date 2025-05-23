@@ -34,4 +34,6 @@ public interface TransportService {
 
     TransportAllocationResponse removeStudentFromTransport(Long transportId, Long studentId);
     TransportResponse addBusToRoute(AddBusToRouteRequest request);
+
+    TransportResponse assignDriverToBus(Long busId, Long driverId);
 }

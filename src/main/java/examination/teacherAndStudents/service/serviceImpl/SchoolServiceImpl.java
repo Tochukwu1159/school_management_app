@@ -86,17 +86,21 @@ public class SchoolServiceImpl implements SchoolService {
     }
 
     private void validateSchoolUniqueness(SchoolRequest request) {
-        if (schoolRepository.existsByEmail(request.getEmail())) {
-            throw new UserAlreadyExistException("Email already exists: " + request.getEmail());
+        if (request.getPhoneNumber() != null && schoolRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            logger.warn("School with phone number {} already exists", request.getPhoneNumber());
+            throw new EntityAlreadyExistException("A school with phone number " + request.getPhoneNumber() + " already exists");
         }
-        if (schoolRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new UserAlreadyExistException("Phone number already exists: " + request.getPhoneNumber());
+        if (request.getAlternatePhoneNumber() != null && schoolRepository.existsByAlternatePhoneNumber(request.getAlternatePhoneNumber())) {
+            logger.warn("School with alternate phone number {} already exists", request.getAlternatePhoneNumber());
+            throw new EntityAlreadyExistException("A school with alternate phone number " + request.getAlternatePhoneNumber() + " already exists");
         }
-        if (schoolRepository.existsBySchoolName(request.getSchoolName())) {
-            throw new UserAlreadyExistException("School name already exists: " + request.getSchoolName());
+        if (request.getEmail() != null && schoolRepository.existsByEmail(request.getEmail())) {
+            logger.warn("School with email {} already exists", request.getEmail());
+            throw new EntityAlreadyExistException("A school with email " + request.getEmail() + " already exists");
         }
-        if (schoolRepository.existsBySchoolIdentificationNumber(request.getSchoolIdentificationNumber())) {
-            throw new UserAlreadyExistException("School identification number already exists: " + request.getSchoolIdentificationNumber());
+        if (request.getSchoolIdentificationNumber() != null && schoolRepository.existsBySchoolIdentificationNumber(request.getSchoolIdentificationNumber())) {
+            logger.warn("School with identification number {} already exists", request.getSchoolIdentificationNumber());
+            throw new EntityAlreadyExistException("A school with identification number " + request.getSchoolIdentificationNumber() + " already exists");
         }
     }
 
@@ -124,6 +128,8 @@ public class SchoolServiceImpl implements SchoolService {
 
         return school;
     }
+
+
 
     private void associateAdminWithSchool(User admin, School school) {
         admin.setSchool(school);
@@ -437,5 +443,4 @@ public class SchoolServiceImpl implements SchoolService {
                         profile.getUniqueRegistrationNumber()
                 ))
                 .toList();
-    }
-}
+    }}

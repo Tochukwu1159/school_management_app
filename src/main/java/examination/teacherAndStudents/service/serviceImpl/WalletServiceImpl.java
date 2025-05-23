@@ -199,7 +199,7 @@ public class WalletServiceImpl implements WalletService {
 
         } catch (Exception e) {
             logger.error("Failed to credit wallet via webhook. Reference: {}, Error: {}", reference, e.getMessage());
-            throw new PaymentProcessingException("Failed to process webhook credit "+e);
+            throw new PaymentProcessingException(e.getMessage());
         }
     }
 

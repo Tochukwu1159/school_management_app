@@ -30,8 +30,20 @@ public class BusRouteServiceImpl implements BusRouteService {
 
     @Override
     public Page<RouteResponse> getAllRoutes(int pageNo, int pageSize, String sortBy) {
+
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+
+        // Find admin by email and role
+        User admin = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomNotFoundException("User not found "));
+
+        if (admin.getSchool() == null) {
+            throw new CustomNotFoundException("School not found");
+        }
+        Long schoolId = admin.getSchool().getId();
+
         Pageable paging = PageRequest.of(pageNo, pageSize, Sort.by(sortBy).ascending());
-        Page<BusRoute> busRoutes = busRouteRepository.findAll(paging);
+        Page<BusRoute> busRoutes = busRouteRepository.findBySchoolId(schoolId, paging);
         return busRoutes.map(this::mapToRouteResponse);
     }
 

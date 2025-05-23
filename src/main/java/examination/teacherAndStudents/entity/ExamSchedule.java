@@ -23,7 +23,7 @@ public class ExamSchedule {
 
     @ManyToOne
     @JoinColumn(name = "subject_id", nullable = false)
-    private Subject subject;
+    private ClassSubject subject;
 
     @ManyToOne
     @JoinColumn(name = "teacher_id", nullable = false)

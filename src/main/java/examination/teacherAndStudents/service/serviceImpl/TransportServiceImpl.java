@@ -49,12 +49,12 @@ public class TransportServiceImpl implements TransportService {
     @Transactional
     public TransportResponse createTransport(TransportRequest transportRequest) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        userRepository.findByEmailAndRole(email, Roles.ADMIN)
+    User admin =    userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         checkForDuplicateBus(transportRequest.getVehicleNumber(),transportRequest.getLicenceNumber());
 
         // Validate route
-        BusRoute busRoute = busRouteRepository.findById(transportRequest.getBusRouteId())
+        BusRoute busRoute = busRouteRepository.findByIdAndSchoolId(transportRequest.getBusRouteId(), admin.getSchool().getId() )
                 .orElseThrow(() -> new CustomNotFoundException("BusRoute not found with ID: " + transportRequest.getBusRouteId()));
 
         Profile driver = null;
@@ -530,6 +530,33 @@ public class TransportServiceImpl implements TransportService {
 
         // Map to response
         return allocations.map(this::mapToAllocationResponse);
+    }
+
+    @Override
+    @Transactional
+    public TransportResponse assignDriverToBus(Long busId, Long driverId) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
+
+        // Find the bus
+        Bus bus = transportRepository.findByBusIdAndSchoolId(busId, admin.getSchool().getId())
+                .orElseThrow(() -> new CustomNotFoundException("Bus not found with ID: " + busId));
+
+        // Find the driver
+        Profile driver = profileRepository.findById(driverId)
+                .orElseThrow(() -> new CustomNotFoundException("Driver not found with ID: " + driverId));
+
+        // Ensure driver belongs to the same school
+        if (!driver.getUser().getSchool().getId().equals(admin.getSchool().getId())) {
+            throw new CustomInternalServerException("Driver does not belong to the same school as the bus");
+        }
+
+        // Assign driver to bus
+        bus.setDriver(driver);
+        transportRepository.save(bus);
+
+        return mapToTransportResponse(bus);
     }
 
 

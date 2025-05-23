@@ -33,7 +33,7 @@ public class AttendanceController {
             return ResponseEntity.ok(new ApiResponse<>("Attendance taken successfully", true, null));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error taking attendance: " + e.getMessage(), false, null));
+                    .body(new ApiResponse<>( e.getMessage(), false, null));
         }
     }
 
@@ -72,7 +72,7 @@ public class AttendanceController {
         try {
             StudentAttendanceResponse attendancePercentage = attendanceService.calculateAttendancePercentage(
                     attendancePercentageRequest.getUserId(),
-                    attendancePercentageRequest.getClassLevelId(),
+                    attendancePercentageRequest.getClassBlockId(),
                     attendancePercentageRequest.getSessionId(),
                     attendancePercentageRequest.getStudentTermId());
             return ResponseEntity.ok(new ApiResponse<>("Attendance percentage calculated successfully", true, attendancePercentage));

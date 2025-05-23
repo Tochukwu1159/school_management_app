@@ -52,7 +52,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             throw e;
         } catch (Exception e) {
             // Handle unexpected exceptions
-            throw new RuntimeException("An error occurred while retrieving the class block: " + e.getMessage());
+            throw new RuntimeException(  e.getMessage());
         }
     }
 
@@ -98,10 +98,10 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             return mapToResponse(classBlock);
         } catch (ResourceNotFoundException e) {
             // Handle the specific exception if the class block is not found
-            throw new RuntimeException("Resource not found: " + e.getMessage());
+            throw new RuntimeException( e.getMessage());
         } catch (Exception e) {
             // Handle other unexpected exceptions
-            throw new RuntimeException("An unexpected error occurred while updating the class block: " + e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
     }
 
@@ -117,10 +117,10 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             classBlockRepository.delete(classBlock);
         } catch (ResourceNotFoundException e) {
             // Handle not found exceptions
-            throw new RuntimeException("Resource not found: " + e.getMessage());
+            throw new RuntimeException( e.getMessage());
         } catch (Exception e) {
             // Handle other unexpected exceptions
-            throw new RuntimeException("An unexpected error occurred while deleting the class block: " + e.getMessage());
+            throw new RuntimeException(  e.getMessage());
         }
     }
 
@@ -265,12 +265,8 @@ public class ClassBlockServiceImpl implements ClassBlockService {
 
             // Return the response
             return mapToResponse(newSessionClass.getClassBlock());
-        } catch (ResourceNotFoundException e) {
-            throw new RuntimeException("Resource not found: " + e.getMessage(), e);
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Validation error: " + e.getMessage(), e);
         } catch (Exception e) {
-            throw new RuntimeException("An unexpected error occurred: " + e.getMessage(), e);
+            throw new RuntimeException( e.getMessage());
         }
     }
 

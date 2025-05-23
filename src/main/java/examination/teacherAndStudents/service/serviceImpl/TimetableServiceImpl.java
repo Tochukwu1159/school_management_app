@@ -121,7 +121,7 @@ public class TimetableServiceImpl implements TimetableService {
             classLevelRepository.findById(classBlock.getClassLevel().getId())
                     .orElseThrow(() -> new CustomNotFoundException("Class level not found with ID: " + classBlock.getClassLevel().getId()));
 
-            StudentTerm studentTerm = studentTermRepository.findByIdAndAcademicSessionId(termId, school.getId())
+            StudentTerm studentTerm = studentTermRepository.findByIdAndAcademicSessionId(termId, sessionId)
                     .orElseThrow(() -> new CustomNotFoundException("Student term not found with ID: " + termId));
 
             if (timetableRepository.existsByClassBlockIdAndTermIdAndDayOfWeek(classBlockId, termId, dayOfWeek)) {
@@ -142,7 +142,7 @@ public class TimetableServiceImpl implements TimetableService {
 
             timetable = timetableRepository.save(timetable);
 
-            List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek, classBlock.getId() );
+            List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek, classBlock.getId(), school.getId() );
             timetable.getSubjectSchedules().clear();
             timetable.getSubjectSchedules().addAll(schedules);
 
@@ -202,7 +202,7 @@ public class TimetableServiceImpl implements TimetableService {
         }
     }
 
-    private List<SubjectSchedule> createSubjectSchedules(List<SubjectScheduleRequest> subjectSchedules, Timetable timetable, DayOfWeek dayOfWeek, Long classBlockId) {
+    private List<SubjectSchedule> createSubjectSchedules(List<SubjectScheduleRequest> subjectSchedules, Timetable timetable, DayOfWeek dayOfWeek, Long classBlockId, Long schoolId) {
         List<SubjectSchedule> schedules = new ArrayList<>();
 
         for (SubjectScheduleRequest request : subjectSchedules) {
@@ -231,20 +231,17 @@ public class TimetableServiceImpl implements TimetableService {
                     .isBreak(request.isBreakTime());
 
             if (!request.isBreakTime()) {
-                if (request.getSubjectId() == null || request.getTeacherId() == null) {
+                if ( request.getTeacherId() == null) {
                     throw new IllegalArgumentException("Subject ID and teacher ID must not be null for non-break schedules");
                 }
-                if (request.getSubjectId() != null && request.getTeacherId() != null && request.isBreakTime()) {
-                    throw new IllegalArgumentException("Break schedules must not include subject ID or teacher ID");
-                }
 
-                ClassSubject classSubject = classSubjectRepository.findByIdAndClassBlockId(request.getSubjectId(), classBlockId)
+                ClassSubject classSubject = classSubjectRepository.findByIdAndClassBlockIdAndSchoolId(request.getSubjectId(), classBlockId, schoolId )
                         .orElseThrow(() -> new CustomNotFoundException("Class subject not found with ID: " + request.getSubjectId()));
 
                 subjectRepository.findById(classSubject.getSubject().getId())
                         .orElseThrow(() -> new CustomNotFoundException("Subject not found with ID: " + classSubject.getSubject().getId()));
 
-                Profile teacherProfile = profileRepository.findById(request.getTeacherId())
+                Profile teacherProfile = profileRepository.findByIdAndSchoolId(request.getTeacherId(),schoolId)
                         .orElseThrow(() -> new CustomNotFoundException("Teacher profile not found with ID: " + request.getTeacherId()));
 
                 if (hasTeacherTimeOverlap(timetable.getSchool().getId(), teacherProfile, normalizedStartTime, normalizedEndTime, dayOfWeek)) {
@@ -335,7 +332,7 @@ public class TimetableServiceImpl implements TimetableService {
             timetable.setTerm(studentTerm);
             timetable.setAcademicYear(studentTerm.getAcademicSession());
 
-            List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek, timetable.getClassBlock().getId());
+            List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek, timetable.getClassBlock().getId(), school.getId());
             timetable.getSubjectSchedules().clear();
             timetable.getSubjectSchedules().addAll(schedules);
 

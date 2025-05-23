@@ -4,16 +4,24 @@ import examination.teacherAndStudents.dto.ApiResponse;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingPathVariableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -33,6 +41,25 @@ public class ExceptionController {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.toList());
         return new ResponseEntity<>(new ApiResponse<>("Validation errors", false, errors), HttpStatus.BAD_REQUEST);
+    }
+
+
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<List<String>>> handleConstraintViolationException(
+            ConstraintViolationException ex, HttpServletRequest request) {
+        List<String> errors = ex.getConstraintViolations().stream()
+                .map(violation -> String.format("%s: %s", violation.getPropertyPath(), violation.getMessage()))
+                .collect(Collectors.toList());
+        String message = "Validation failed for " + request.getRequestURI();
+        logger.warn("Validation error: {} - {}", message, errors);
+        ApiResponse<List<String>> response = ApiResponse.<List<String>>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(errors)
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
 
@@ -142,6 +169,105 @@ public class ExceptionController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
+    @ExceptionHandler({MissingServletRequestParameterException.class, MissingPathVariableException.class})
+    public ResponseEntity<ApiResponse<Void>> handleMissingRequestDataException(
+            Exception ex, HttpServletRequest request) {
+        String message;
+        if (ex instanceof MissingServletRequestParameterException) {
+            MissingServletRequestParameterException msrpe = (MissingServletRequestParameterException) ex;
+            message = String.format("Missing required query parameter '%s' for %s",
+                    msrpe.getParameterName(), request.getRequestURI());
+        } else if (ex instanceof MissingPathVariableException) {
+            MissingPathVariableException mpve = (MissingPathVariableException) ex;
+            message = String.format("Missing required path variable '%s' for %s",
+                    mpve.getVariableName(), request.getRequestURI());
+        } else {
+            message = String.format("Missing or invalid request body for %s", request.getRequestURI());
+        }
+        logger.warn("Request error: {}", message);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolationException(
+            DataIntegrityViolationException ex, HttpServletRequest request) {
+        String message = "Invalid reference ID provided for " + request.getRequestURI() + ". Ensure all IDs exist.";
+        logger.error("Data integrity violation: {}", ex.getMessage());
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+        String message = "Invalid request body for " + request.getRequestURI();
+        if (ex.getCause() != null && ex.getCause().getMessage().contains("Cannot deserialize value of type")) {
+            message = "Invalid enum value provided. Check the allowed values for the field.";
+        }
+        logger.warn("Request error: {}", message);
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ApiResponse<Void>> handleOptimisticLockingFailureException(
+            ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
+        String message = "Record was modified by another user for " + request.getRequestURI() + ". Please refresh and try again.";
+        logger.warn("Optimistic locking failure: {}", ex.getMessage());
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(AuthenticationCredentialsNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthenticationCredentialsNotFoundException(
+            AuthenticationCredentialsNotFoundException ex, HttpServletRequest request) {
+        String message = "Authentication credentials are required for " + request.getRequestURI();
+        logger.warn("Authentication error: {}", message);
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(RestClientException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRestClientException(
+            RestClientException ex, HttpServletRequest request) {
+        String message = "External service is unavailable for " + request.getRequestURI() + ". Please try again later.";
+        logger.error("External service error: {}", ex.getMessage());
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
 
 
     @ExceptionHandler(AuthenticationFailedException.class)

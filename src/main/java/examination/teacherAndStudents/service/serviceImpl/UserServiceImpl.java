@@ -92,7 +92,7 @@ public class UserServiceImpl implements UserService {
         // Validate class assignment (optional)
         SessionClass sessionClass = null;
         if (userRequest.getClassAssignedId() != null) {
-            ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
+            ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(userRequest.getClassAssignedId(), admin.getSchool().getId())
                     .orElseThrow(() -> new BadRequestException("Class block not found with ID: " + userRequest.getClassAssignedId()));
 
             // Find the current active AcademicSession
@@ -385,9 +385,11 @@ public class UserServiceImpl implements UserService {
     public UserResponse createStaff(UserRequestDto userRequest) throws MessagingException {
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
+
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
-        StaffLevel staffLevel = staffLevelRepository.findById(userRequest.getStaffLevelId())
+
+        StaffLevel staffLevel = staffLevelRepository.findByIdAndSchoolId(userRequest.getStaffLevelId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Staff level not found"));
 
          School school = admin.getSchool();
@@ -1061,7 +1063,7 @@ public class UserServiceImpl implements UserService {
                 .user(savedUser);
 
         if (userRequest.getClassFormTeacherId() != null) {
-            ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassFormTeacherId())
+            ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(userRequest.getClassFormTeacherId(), savedUser.getSchool().getId())
                     .orElseThrow(() -> new NotFoundException("Class not found with ID: " + userRequest.getClassFormTeacherId()));
             profileBuilder.classFormTeacher(classBlock);
         }

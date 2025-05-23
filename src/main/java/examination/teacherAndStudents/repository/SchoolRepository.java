@@ -30,4 +30,6 @@ public interface SchoolRepository extends JpaRepository<School, Long> {
     Iterable<School> findBySubscriptionExpiryDateBefore(LocalDateTime now);
 
     boolean existsBySchoolCode(String schoolCode);
+
+    boolean existsByAlternatePhoneNumber(String alternatePhoneNumber);
 }

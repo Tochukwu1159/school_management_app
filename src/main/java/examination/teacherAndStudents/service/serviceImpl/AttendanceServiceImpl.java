@@ -30,8 +30,7 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     @Autowired
     private AttendanceRepository attendanceRepository;
-    @Autowired
-    private ClassLevelRepository classLevelRepository;
+
     @Autowired
     private AttendancePercentRepository attendancePercentRepository;
     @Autowired
@@ -40,6 +39,8 @@ public class AttendanceServiceImpl implements AttendanceService {
     private StudentTermRepository studentTermRepository;
     @Autowired
     private SessionClassRepository sessionClassRepository;
+    @Autowired
+    private ClassBlockRepository classBlockRepository;
 
 
     public void takeBulkAttendance(BulkAttendanceRequest request) {
@@ -48,7 +49,7 @@ public class AttendanceServiceImpl implements AttendanceService {
             User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                     .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-          classLevelRepository.findByIdAndSchoolId(request.getClassLevelId(), admin.getSchool().getId())
+          classBlockRepository.findByIdAndClassLevelIdAndSchoolId(request.getClassBlockId(),request.getClassLevelId(), admin.getSchool().getId())
                     .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
 
             // Validate the student term exists
@@ -106,7 +107,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         } catch (CustomNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            throw new CustomInternalServerException("Error taking attendance: " + e.getMessage());
+            throw new CustomInternalServerException( e.getMessage());
         }
     }
 
@@ -257,7 +258,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         }
     }
 
-    public StudentAttendanceResponse calculateAttendancePercentage(Long userId, Long classLevelId, Long sessionId, Long studentTermId) {
+    public StudentAttendanceResponse calculateAttendancePercentage(Long userId, Long classBlockId, Long sessionId, Long studentTermId) {
         try {
             Optional<User> optionalStudent = userRepository.findById(userId);
             if (optionalStudent.isEmpty()) {
@@ -270,8 +271,8 @@ public class AttendanceServiceImpl implements AttendanceService {
                 throw new CustomNotFoundException("Profile not found for student with ID: " + userId);
             }
 
-            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classLevelId)
-                    .orElseThrow(() -> new CustomNotFoundException("Class Level not found with ID: " + classLevelId));
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classBlockId)
+                    .orElseThrow(() -> new CustomNotFoundException("Section class not found"));
 
             Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(studentTermId);
             if (studentTerm.isEmpty()) {

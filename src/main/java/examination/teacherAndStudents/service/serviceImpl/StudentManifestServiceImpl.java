@@ -43,7 +43,6 @@ public class StudentManifestServiceImpl implements StudentManifestService {
 
         Profile driver = profileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("driver not found "));
-
         Bus bus = busRepository.findByDriver(driver)
                 .orElseThrow(() -> new CustomNotFoundException("Bus not found "));
 

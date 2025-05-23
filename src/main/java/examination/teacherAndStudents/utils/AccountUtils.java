@@ -283,7 +283,7 @@ public class AccountUtils {
                     result.getGeometry().getLocation().getLng()
             );
         } catch (Exception e) {
-            throw new BadRequestException("Geocoding error for address " + address + ": " + e.getMessage());
+            throw new BadRequestException( e.getMessage());
         }
     }
 

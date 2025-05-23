@@ -28,10 +28,9 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     private final SubjectRepository subjectRepository;
     private final UserRepository userRepository;
     private final ClassBlockRepository classBlockRepository;
-    private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final SessionClassRepository sessionClassRepository;
-    private final ProfileRepository profileRepository;
+    private final ClassSubjectRepository classSubjectRepository;
 
     @Override
     @Transactional
@@ -72,7 +71,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
                     validateRequest(scheduleRequest, sessionClass.getId());
 
                     // Build ExamSchedule entity
-                    Subject subject = subjectRepository.findById(scheduleRequest.getSubjectId())
+                    ClassSubject subject = classSubjectRepository.findByIdAndClassBlockId(scheduleRequest.getSubjectId(), sessionClass.getClassBlock().getId())
                             .orElseThrow(() -> new CustomNotFoundException("Subject not found with ID: " ));
                     User teacher = userRepository.findById(scheduleRequest.getTeacherId())
                             .orElseThrow(() -> new CustomNotFoundException("Teacher not found with ID: " + scheduleRequest.getTeacherId()));
@@ -139,7 +138,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     }
 
     private void updateScheduleFromRequest(ExamSchedule schedule, ExamScheduleRequest request) {
-        Subject subject = subjectRepository.findById(request.getSubjectId())
+        ClassSubject subject = classSubjectRepository.findById(request.getSubjectId())
                 .orElseThrow(() -> new CustomNotFoundException("Subject not found with ID: " + request.getSubjectId()));
         User teacher = userRepository.findById(request.getTeacherId())
                 .orElseThrow(() -> new CustomNotFoundException("Teacher not found with ID: " + request.getTeacherId()));
@@ -155,7 +154,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         ExamScheduleResponse response = new ExamScheduleResponse();
         response.setId(schedule.getId());
         response.setSubjectId(schedule.getSubject().getId());
-        response.setSubjectName(schedule.getSubject().getName());
+        response.setSubjectName(schedule.getSubject().getSubject().getName());
         response.setTeacherId(schedule.getTeacher().getId());
         response.setTeacherName(schedule.getTeacher().getFirstName() + " " + schedule.getTeacher().getLastName());
         response.setSessionClassId(schedule.getSessionClass().getId());

@@ -1,7 +1,6 @@
 package examination.teacherAndStudents.repository;
 
 import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.TeacherAttendance;
 import examination.teacherAndStudents.entity.TeacherAttendancePercent;
 import examination.teacherAndStudents.entity.*;
 import org.springframework.data.jpa.repository.JpaRepository;

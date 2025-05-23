@@ -25,7 +25,7 @@ public interface ScoreRepository extends JpaRepository<Score, Long> {
     List<Score> findScoreByUserProfile(@Param("userProfile") Profile userProfile);
 
     @Query("SELECT s FROM Score s WHERE s.userProfile = :userProfile AND s.sessionClass.id = :sessionClassId AND s.subjectName = :subjectName AND s.academicYear = :academicYear AND s.studentTerm = :studentTerm")
-    Optional<Score> findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(
+    Score findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(
             @Param("userProfile") Profile userProfile,
             @Param("sessionClassId") Long sessionClassId,
             @Param("subjectName") @NotBlank String subjectName,

@@ -29,4 +29,6 @@ public interface  ClassBlockRepository extends JpaRepository<ClassBlock, Long> {
     Optional<ClassBlock> findByIdAndClassLevelId(Long id, Long classLevelId);
 
     Optional<ClassBlock> findByIdAndSchoolId(Long classBlockId, Long id);
+
+    Optional<ClassBlock> findByIdAndClassLevelIdAndSchoolId(Long classBlockId, Long classLevelId, Long id);
 }

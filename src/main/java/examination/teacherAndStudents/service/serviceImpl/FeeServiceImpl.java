@@ -57,20 +57,20 @@ public class FeeServiceImpl implements FeeService {
 
         fee.setSchool(admin.getUser().getSchool());
 
-        AcademicSession academicSession = academicSessionRepository.findById(feeDTO.getSessionId())
+        AcademicSession academicSession = academicSessionRepository.findByIdAndSchoolId(feeDTO.getSessionId(), admin.getUser().getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Academic Session not found with ID: " + feeDTO.getSessionId()));
         fee.setSession(academicSession);
 
         ClassLevel classLevel = null;
         if (feeDTO.getClassLevelId() != null) {
-            classLevel = classLevelRepository.findById(feeDTO.getClassLevelId())
+            classLevel = classLevelRepository.findByIdAndSchoolId(feeDTO.getClassLevelId(), admin.getUser().getSchool().getId())
                     .orElseThrow(() -> new CustomNotFoundException("Class Level not found with ID: " + feeDTO.getClassLevelId()));
             fee.setClassLevel(classLevel);
         }
 
         ClassBlock classBlock = null;
         if (feeDTO.getSubClassId() != null) {
-            classBlock = classBlockRepository.findById(feeDTO.getSubClassId())
+            classBlock = classBlockRepository.findByIdAndClassLevelId(feeDTO.getSubClassId(), classLevel.getId())
                     .orElseThrow(() -> new CustomNotFoundException("Student Class not found with ID: " + feeDTO.getSubClassId()));
             fee.setSubClass(classBlock);
         }

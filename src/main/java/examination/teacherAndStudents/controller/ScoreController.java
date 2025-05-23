@@ -31,7 +31,7 @@ public class ScoreController {
             ApiResponse<String> response = new ApiResponse<>("Score added successfully", true, null);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            ApiResponse<String> response = new ApiResponse<>("Error adding score: " + e.getMessage(), false, null);
+            ApiResponse<String> response = new ApiResponse<>( e.getMessage(), false, null);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
