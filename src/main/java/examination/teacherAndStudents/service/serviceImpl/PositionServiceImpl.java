@@ -156,7 +156,7 @@ public class PositionServiceImpl implements PositionService {
     }
 
 
-    public void generateResultSummaryPdf(Long studentId, Long classLevelId, Long sessionId, Long term) {
+    public void generateResultSummaryPdf(Long studentId, Long classBlockId, Long sessionId, Long term) {
         try {
             // Fetch required data
             AcademicSession session = academicSessionRepository.findById(sessionId)
@@ -165,8 +165,8 @@ public class PositionServiceImpl implements PositionService {
             StudentTerm studentTerm = studentTermRepository.findById(term)
                     .orElseThrow(() -> new ResourceNotFoundException("Student term not found with ID: " + term));
 
-            ClassBlock userClass = classBlockRepository.findById(classLevelId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Student class not found with ID: " + classLevelId));
+            ClassBlock userClass = classBlockRepository.findById(classBlockId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Student class not found with ID: " + classBlockId));
 
             User user = userRepository.findById(studentId)
                     .orElseThrow(() -> new ResourceNotFoundException("Student not found with ID: " + studentId));
@@ -203,7 +203,7 @@ public class PositionServiceImpl implements PositionService {
             // Create a Result object
             ResultSummary result = new ResultSummary();
             result.setStudentId(studentId);
-            result.setClassLevelId(classLevelId);
+            result.setClassLevelId(classBlockId);
             result.setSessionId(sessionId);
             result.setTerm(term);
             result.setScores(scoreMap);

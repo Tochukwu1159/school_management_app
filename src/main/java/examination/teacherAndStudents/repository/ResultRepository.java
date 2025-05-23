@@ -20,11 +20,11 @@ public interface ResultRepository extends JpaRepository<Result, Long> {
             @Param("studentTerm") StudentTerm studentTerm
     );
 
-    @Query("SELECT r FROM Result r WHERE r.userProfile = :userProfile AND r.sessionClass.id = :sessionClassId AND r.subjectName = :subjectName AND r.academicYear = :academicYear AND r.studentTerm = :studentTerm")
-    Optional<Result> findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(
+    @Query("SELECT r FROM Result r WHERE r.userProfile = :userProfile AND r.sessionClass.id = :sessionClassId AND r.id = :subjectId AND r.academicYear = :academicYear AND r.studentTerm = :studentTerm")
+    Result findByUserProfileAndSessionClassIdAndSubjectIdAndAcademicYearAndStudentTerm(
             @Param("userProfile") Profile userProfile,
             @Param("sessionClassId") Long sessionClassId,
-            @Param("subjectName") String subjectName,
+            @Param("subjectId") Long subjectId,
             @Param("academicYear") AcademicSession academicYear,
             @Param("studentTerm") StudentTerm studentTerm
     );

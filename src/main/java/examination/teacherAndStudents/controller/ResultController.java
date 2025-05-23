@@ -40,22 +40,22 @@ public class ResultController {
     @Autowired
     private SessionClassRepository sessionClassRepository;
 
-    @GetMapping("/calculate/{classLevelId}/{studentId}/{term}/{subjectName}")
-    public ResponseEntity<ApiResponse<Result>> calculateResult(@PathVariable Long classLevelId,@PathVariable Long studentId, @PathVariable String subjectName,@PathVariable Long sessionId,  @PathVariable Long term) {
+    @GetMapping("/calculate/{classLevelId}/{studentId}/{term}/{subjectId}")
+    public ResponseEntity<ApiResponse<Result>> calculateResult(@PathVariable Long classLevelId,@PathVariable Long studentId, @PathVariable Long subjectId,@PathVariable Long sessionId,  @PathVariable Long term) {
         try {
             // Assuming you have a method in the service to calculate the result
-            Result result = resultService.calculateResult(classLevelId, studentId, subjectName,sessionId, term);
+            Result result = resultService.calculateResult(classLevelId, studentId, subjectId, sessionId, term);
             return ResponseEntity.ok(new ApiResponse<>("Result calculated successfully", true, result));
         } catch (Exception e) {
            throw new RuntimeException("Error calculating result: " + e.getMessage());
         }
     }
 
-    @PostMapping("/update-average/{sessionId}/{classLevelId}/{termId}")
+    @PostMapping("/update-average")
     public ResponseEntity<ApiResponse<String>> calculateAverageResult(
-            @PathVariable Long sessionId,
-            @PathVariable Long classLevelId,
-            @PathVariable Long termId) {
+            @RequestParam Long sessionId,
+            @RequestParam Long classLevelId,
+            @RequestParam Long termId) {
         try {
             resultService.calculateAverageResult(sessionId, classLevelId, termId);
             ApiResponse<String> response = new ApiResponse<>("Average scores updated successfully.", true);
