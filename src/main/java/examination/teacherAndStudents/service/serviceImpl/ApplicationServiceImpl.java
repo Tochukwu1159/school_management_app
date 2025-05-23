@@ -55,8 +55,6 @@ public class ApplicationServiceImpl implements ApplicationService {
     @Autowired
     private SchoolRepository schoolRepository;
     @Autowired
-    private ClassBlockRepository classBlockRepository;
-    @Autowired
     private AcademicSessionRepository academicSessionRepository;
     @Autowired
     private SessionClassRepository sessionClassRepository;

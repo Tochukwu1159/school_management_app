@@ -49,7 +49,7 @@ public class TransportServiceImpl implements TransportService {
     @Transactional
     public TransportResponse createTransport(TransportRequest transportRequest) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+        userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
         checkForDuplicateBus(transportRequest.getVehicleNumber(),transportRequest.getLicenceNumber());
 
@@ -102,7 +102,7 @@ public class TransportServiceImpl implements TransportService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        Bus transport = transportRepository.findById(transportId)
+        Bus transport = transportRepository.findByBusIdAndSchoolId(transportId, admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
 
         if (updatedTransport.getVehicleNumber() != null) {
@@ -158,7 +158,7 @@ public class TransportServiceImpl implements TransportService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        Bus transport = transportRepository.findById(transportId)
+        Bus transport = transportRepository.findByBusIdAndSchoolId(transportId, admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
 
         if (studentTransportTrackerRepository.existsByTransport(transport)) {
@@ -293,7 +293,7 @@ public class TransportServiceImpl implements TransportService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        StudentTransportAllocation allocation = studentTransportTrackerRepository.findById(request.getTransportAllocationId())
+        StudentTransportAllocation allocation = studentTransportTrackerRepository.findByIdAndSchoolId(request.getTransportAllocationId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Transport allocation not found with ID: " + request.getTransportAllocationId()));
 
         if (allocation.getStatus() == AllocationStatus.SUCCESS) {

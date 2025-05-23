@@ -1,7 +1,6 @@
 package examination.teacherAndStudents.repository;
 
 import examination.teacherAndStudents.entity.AcademicSession;
-import examination.teacherAndStudents.entity.StaffPayroll;
 import examination.teacherAndStudents.entity.StudentTerm;
 import examination.teacherAndStudents.utils.TermStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,9 +20,7 @@ public interface StudentTermRepository extends JpaRepository<StudentTerm, Long> 
 
     List<StudentTerm> findByAcademicSession(AcademicSession academicSession);
 
-    List<StudentTerm> findByResultReadyDateAndTermStatus(LocalDate now, TermStatus termStatus);
 
-    List<StudentTerm> findByAcademicSessionOrderByStartDateAsc(AcademicSession academicSession);
 
     boolean existsByNameAndAcademicSession(String name, AcademicSession session);
 

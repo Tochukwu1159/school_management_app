@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -59,7 +58,6 @@ public class StudentManifestServiceImpl implements StudentManifestService {
 
         StudentTransportAllocation transportAllocation = studentTransportAllocationRepository.findByProfileIdAndTransportBusId(student.getId(), bus.getBusId())
                 .orElseThrow(() -> new CustomNotFoundException("Student not allocated to this bus"));
-        Long id = transportAllocation.getSchool().getId();
         LocalDate date = LocalDate.now();
 
         StudentTerm studentTerm = studentTermRepository.findCurrentTerm(date,transportAllocation.getSchool().getId()).orElseThrow(() -> new CustomNotFoundException("Student term not found"));

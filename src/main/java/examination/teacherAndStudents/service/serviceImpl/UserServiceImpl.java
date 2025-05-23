@@ -37,7 +37,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -370,7 +369,7 @@ public class UserServiceImpl implements UserService {
                 //                .profilePicture(imageUrl)
                 .phoneNumber(userRequest.getPhoneNumber())
                 .build();
-        Profile saveUserProfile = profileRepository.save(userProfile);
+       profileRepository.save(userProfile);
 
 
         //create wallet

@@ -7,7 +7,6 @@ import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.BusTrackingService;
-import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;

@@ -23,13 +23,13 @@ public class Wallet {
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @DecimalMin(value = "0.00", inclusive = true, message = "Balance cannot be negative.")
+    @DecimalMin(value = "0.00", message = "Balance cannot be negative.")
     @Digits(integer = 9, fraction = 2, message = "Invalid balance format.")
     @Column(name = "balance", nullable = false, columnDefinition = "NUMERIC(11,2) DEFAULT 0.0")
     private BigDecimal balance;
 
     @Column(name = "total_money_sent", nullable = false, columnDefinition = "NUMERIC(11,2) DEFAULT 0.0")
-    @DecimalMin(value = "0.00", inclusive = true, message = "Total money sent cannot be negative.")
+    @DecimalMin(value = "0.00",  message = "Total money sent cannot be negative.")
     @Digits(integer = 9, fraction = 2, message = "Invalid money sent format.")
     private BigDecimal totalMoneySent;
 

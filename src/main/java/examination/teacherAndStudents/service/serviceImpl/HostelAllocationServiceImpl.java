@@ -67,7 +67,7 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
         paymentService.processPayment(paymentRequest);
 
         // Verify payment
-        Payment payment = paymentRepository.findByStudentFeeAndProfileAndAcademicSession(fee, profile, academicSession)
+       paymentRepository.findByStudentFeeAndProfileAndAcademicSession(fee, profile, academicSession)
                 .orElseThrow(() -> new CustomInternalServerException("Payment processing failed"));
 
         // Create allocation

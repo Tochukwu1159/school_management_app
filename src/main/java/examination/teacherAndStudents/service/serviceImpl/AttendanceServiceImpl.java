@@ -3,10 +3,8 @@ package examination.teacherAndStudents.service.serviceImpl;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.AttendanceAlreadyTakenException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.error_handler.EntityNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.AttendanceService;
 import examination.teacherAndStudents.utils.AttendanceStatus;
@@ -16,14 +14,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -40,13 +35,9 @@ public class AttendanceServiceImpl implements AttendanceService {
     @Autowired
     private AttendancePercentRepository attendancePercentRepository;
     @Autowired
-    private ClassBlockRepository classBlockRepository;
-    @Autowired
     private ProfileRepository profileRepository;
     @Autowired
     private StudentTermRepository studentTermRepository;
-    @Autowired
-    private AcademicSessionRepository academicSessionRepository;
     @Autowired
     private SessionClassRepository sessionClassRepository;
 

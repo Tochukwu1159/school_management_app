@@ -8,7 +8,6 @@ import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.BlogLikeRepository;
 import examination.teacherAndStudents.repository.BlogRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
-import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.BlogLikeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

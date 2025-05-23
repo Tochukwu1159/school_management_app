@@ -132,10 +132,6 @@ public class SickLeaveServiceImpl implements SickLeaveService {
                 .orElseThrow(() -> new NotFoundException("Profile not found for user: " + email));
     }
 
-    private AcademicSession getAcademicSession(Long sessionId) {
-        return academicSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Academic session not found with ID: " + sessionId));
-    }
 
     private StudentTerm getStudentTerm(Long termId, Long sessionId) {
         return studentTermRepository.findByIdAndAcademicSessionId(termId, sessionId)

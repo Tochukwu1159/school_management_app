@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.repository;
 
-import examination.teacherAndStudents.entity.AcademicSession;
 import examination.teacherAndStudents.entity.ClassBlock;
 import examination.teacherAndStudents.entity.ClassSubject;
 import examination.teacherAndStudents.entity.Subject;

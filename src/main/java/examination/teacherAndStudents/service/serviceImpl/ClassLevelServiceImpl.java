@@ -43,9 +43,7 @@ public class ClassLevelServiceImpl implements ClassLevelService {
 
     private final ClassLevelRepository classLevelRepository;
     private final UserRepository userRepository;
-    private final AcademicSessionRepository academicSessionRepository;
     private final ClassBlockRepository classBlockRepository;
-    private final ClassNameRepository classNameRepository;
     private final EntityFetcher entityFetcher;
 
     @Transactional(readOnly = true)
@@ -246,12 +244,6 @@ public class ClassLevelServiceImpl implements ClassLevelService {
         logger.debug("Deleted class level ID: {}", id);
     }
 
-    private void validateSubscription(School school) {
-        if (school == null || !school.isSubscriptionValid()) {
-            logger.warn("Operation blocked for school due to expired subscription");
-            throw new SubscriptionExpiredException("Active school subscription required");
-        }
-    }
 
     private User verifyAdminAccess() {
         String email = SecurityConfig.getAuthenticatedUserEmail();

@@ -126,10 +126,10 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     public void assignClassSubjectToTeacher(TeacherAssignmentRequest request) {
         validateAdminUser();
 
-        ClassLevel classLevel = classLevelRepository.findById(request.getClassLevelId())
+       classLevelRepository.findById(request.getClassLevelId())
                 .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
 
-        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+       classBlockRepository.findById(request.getClassBlockId())
                 .orElseThrow(() -> new CustomNotFoundException("Student Class not found"));
 
         if (request.getAssignments() == null || request.getAssignments().isEmpty()) {
@@ -170,10 +170,10 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     public void updateClassSubjectTeacherAssignment(TeacherAssignmentRequest request) {
         validateAdminUser();
 
-        ClassLevel classLevel = classLevelRepository.findById(request.getClassLevelId())
+       classLevelRepository.findById(request.getClassLevelId())
                 .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
 
-        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+       classBlockRepository.findById(request.getClassBlockId())
                 .orElseThrow(() -> new CustomNotFoundException("Student Class not found"));
 
         if (request.getAssignments() == null || request.getAssignments().isEmpty()) {

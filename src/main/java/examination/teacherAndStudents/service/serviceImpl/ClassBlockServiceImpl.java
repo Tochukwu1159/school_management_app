@@ -127,7 +127,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
 
     public ClassBlockResponse updateFormTeacher(UpdateFormTeacherRequest request) {
         try {
-            AcademicSession session = academicSessionRepository.findById(request.getSessionId())
+            academicSessionRepository.findById(request.getSessionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
             // Fetch the class block
             ClassBlock classBlock = classBlockRepository.findByIdAndClassLevelId(request.getSubclassId(),request.getClassLevelId())
