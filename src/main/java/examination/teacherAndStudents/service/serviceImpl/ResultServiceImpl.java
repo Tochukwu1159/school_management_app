@@ -37,13 +37,14 @@ public class ResultServiceImpl implements ResultService {
     private final SessionAverageRepository sessionAverageRepository;
     private final GradeRatingService gradeRatingService;
     private final SessionClassRepository sessionClassRepository;
+    private final ClassSubjectRepository classSubjectRepository;
 
 
     @Autowired
     public ResultServiceImpl(ScoreService scoreService, UserRepository userRepository, ScoreRepository scoreRepository,
                              ResultRepository resultRepository,
                              PositionRepository positionRepository,
-                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository, GradeRatingService gradeRatingService, SessionClassRepository sessionClassRepository) {
+                             ClassLevelRepository classLevelRepository, ClassBlockRepository classBlockRepository, ProfileRepository profileRepository, AcademicSessionRepository academicSessionRepository, StudentTermRepository studentTermRepository, SessionAverageRepository sessionAverageRepository, GradeRatingService gradeRatingService, SessionClassRepository sessionClassRepository, ClassSubjectRepository classSubjectRepository) {
         this.scoreService = scoreService;
         this.userRepository = userRepository;
         this.scoreRepository = scoreRepository;
@@ -57,11 +58,12 @@ public class ResultServiceImpl implements ResultService {
         this.sessionAverageRepository = sessionAverageRepository;
         this.gradeRatingService = gradeRatingService;
         this.sessionClassRepository = sessionClassRepository;
+        this.classSubjectRepository = classSubjectRepository;
     }
 
 
     @Override
-    public Result calculateResult(Long classLevelId, Long studentId, String subjectName,Long sessionId, Long termId) {
+    public Result calculateResult(Long classLevelId, Long studentId, Long subjectId, Long sessionId, Long termId) {
         try {
             User student = userRepository.findById(studentId)
                     .orElseThrow(() -> new NotFoundException("Student not found"));
@@ -75,9 +77,11 @@ public class ResultServiceImpl implements ResultService {
             StudentTerm studentTerm = studentTermRepository.findById(termId)
                     .orElseThrow(() -> new NotFoundException("Student term not found"));
 
+            Long id = sessionClass.getAcademicSession().getId();
+            Long ic = sessionClass.getId();
 
             // Retrieve the score for the student and subject
-            Score score = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, sessionClass.getId(), subjectName, sessionClass.getAcademicSession(), studentTerm);
+            Score score = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectIdAndAcademicYearAndStudentTerm(userProfile, sessionClass.getId(), subjectId, sessionClass.getAcademicSession(), studentTerm);
 
             if (score == null) {
                 throw new NotFoundException("Score not found for the specified criteria");
@@ -99,7 +103,7 @@ public class ResultServiceImpl implements ResultService {
 
 
             // Check if a result already exists for the student and subject
-            Result existingResult = resultRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, sessionClass.getId() ,subjectName,sessionClass.getAcademicSession(), studentTerm).orElseThrow(() -> new NotFoundException("Result not found"));
+            Result existingResult = resultRepository.findByUserProfileAndSessionClassIdAndSubjectIdAndAcademicYearAndStudentTerm(userProfile, sessionClass.getId() ,subjectId,sessionClass.getAcademicSession(), studentTerm);
 
             if (existingResult != null) {
                 // Update the existing result
@@ -116,7 +120,7 @@ public class ResultServiceImpl implements ResultService {
             result.setSessionClass(sessionClass);
             result.setAcademicYear(sessionClass.getAcademicSession());
             result.setStudentTerm(studentTerm);
-            result.setSubjectName(subjectName);
+            result.setSubjectName(classSubjectRepository.findById(subjectId).get().getSubject().getName());
             result.setGrade(grade);
             result.setRating(rating);
             resultRepository.save(result);

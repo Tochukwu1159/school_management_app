@@ -14,11 +14,11 @@ public class PositionController {
     @Autowired
     private PositionService positionService;
 
-    @PostMapping("/update/{sessionId}/{term}/{classBlockId}")
+    @PostMapping("/update")
     public ResponseEntity<ApiResponse<String>> updateAllPositionsForAClass(
-            @PathVariable Long classBlockId,
-            @PathVariable Long sessionId,
-            @PathVariable Long term) {
+            @RequestParam Long classBlockId,
+            @RequestParam Long sessionId,
+            @RequestParam Long term) {
         try {
             positionService.updatePositionForSessionClassForJob(classBlockId, sessionId, term);
             ApiResponse<String> response = new ApiResponse<>("Positions updated successfully", true, null);
@@ -29,14 +29,14 @@ public class PositionController {
         }
     }
 
-    @PostMapping("/generate-result-summary/{studentId}/{classLevelId}/{sessionId}/{term}")
+    @PostMapping("/generate-result-summary")
     public ResponseEntity<ApiResponse<String>> generateResultSummaryPdf(
-            @PathVariable Long studentId,
-            @PathVariable Long classLevelId,
-            @PathVariable Long sessionId,
-            @PathVariable Long term) {
+            @RequestParam Long studentId,
+            @RequestParam Long classBlockId,
+            @RequestParam Long sessionId,
+            @RequestParam Long term) {
         try {
-            positionService.generateResultSummaryPdf(studentId, classLevelId, sessionId, term);
+            positionService.generateResultSummaryPdf(studentId, classBlockId, sessionId, term);
             ApiResponse<String> response = new ApiResponse<>("Result summary PDF generation initiated successfully.", true, null);
             return ResponseEntity.ok(response);
         } catch (Exception e) {

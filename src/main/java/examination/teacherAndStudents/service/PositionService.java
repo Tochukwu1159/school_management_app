@@ -11,7 +11,7 @@ public interface PositionService {
 //    void generateAndSaveRanks();
     void updatePositionsForClass(Long classBlockId, Long sessionId, Long termId);
 
-    void generateResultSummaryPdf(Long studentId, Long classLevelId, Long sessionId,Long term) throws IOException, DocumentException;
+    void generateResultSummaryPdf(Long studentId, Long classBlockId, Long sessionId,Long term) throws IOException, DocumentException;
 
     void updatePositionForSessionClassForJob(Long classBlockId, Long sessionId, Long termId);
 

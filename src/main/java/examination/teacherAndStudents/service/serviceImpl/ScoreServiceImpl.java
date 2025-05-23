@@ -122,11 +122,10 @@ public class ScoreServiceImpl implements ScoreService {
                     .orElseThrow(() -> new ResourceNotFoundException("Section class not found"));
 
 
+
             ClassSubject classSubject1 = classSubjectRepository.findByIdAndClassBlockId(scoreRequest.getSubjectId(), sessionClass.getClassBlock().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class Subject not found in the class")); //from the big subject
 
-
-        Subject subject = classSubject1.getSubject();
 
         StudentTerm studentTerm = studentTermRepository.findById(scoreRequest.getTermId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student term not found"));
@@ -154,9 +153,11 @@ public class ScoreServiceImpl implements ScoreService {
 
 
         // Check if a score already exists for the student and subject
-        Score existingScore = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(studentProfile, scoreRequest.getClassLevelId(), subject.getName(),sessionClass.getAcademicSession(), studentTerm);
+        Score existingScore = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectIdAndAcademicYearAndStudentTerm(studentProfile, sessionClass.getId(), classSubject1.getId(),sessionClass.getAcademicSession(), studentTerm);
 
-        if (existingScore != null) {
+
+
+            if (existingScore != null) {
             // Update the existing score
             existingScore.setExamScore(scoreRequest.getExamScore());
             existingScore.setAssessmentScore(scoreRequest.getAssessmentScore());
@@ -168,7 +169,7 @@ public class ScoreServiceImpl implements ScoreService {
             // Create a new Score object
             Score score = new Score();
             score.setUserProfile(studentProfile);
-            score.setSubjectName(subject.getName());
+            score.setSubjectName(classSubject1.getSubject().getName());
             score.setExamScore(scoreRequest.getExamScore());
             score.setSessionClass(sessionClass);
             score.setSubject(classSubject1);
@@ -180,7 +181,7 @@ public class ScoreServiceImpl implements ScoreService {
         }
 
         // After saving the score, calculate the result using a separate service method
-        resultService.calculateResult(scoreRequest.getClassLevelId(), student.get().getId(), subject.getName(),sessionClass.getId(), studentTerm.getId());
+        resultService.calculateResult(scoreRequest.getClassLevelId(), student.get().getId(), classSubject1.getId(),sessionClass.getId(), studentTerm.getId());
     }
 
 
