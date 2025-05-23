@@ -27,6 +27,10 @@ public class ScratchCardUsage {
     @JoinColumn(name = "profile_id", nullable = false)
     private Profile student;
 
+    @ManyToOne
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
     @Column(nullable = false)
     private LocalDateTime usedAt;
 

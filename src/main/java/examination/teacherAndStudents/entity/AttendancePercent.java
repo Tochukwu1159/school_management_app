@@ -37,8 +37,8 @@ public class AttendancePercent {
     private Profile user;
 
     @ManyToOne
-    @JoinColumn(name = "classblock_id", nullable = false)
-    private ClassBlock classBlock;
+    @JoinColumn(name = "class_id", nullable = false)
+    private SessionClass sessionClass;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

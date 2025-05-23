@@ -31,9 +31,9 @@ public interface StudentTermRepository extends JpaRepository<StudentTerm, Long> 
 
     @Query("SELECT t FROM StudentTerm t " +
             "WHERE t.academicSession.status = 'ACTIVE' " +
+            "AND t.academicSession.school.id = :schoolId " +
             "AND t.startDate <= :currentDate " +
-            "AND t.endDate >= :currentDate " +
-            "AND t.termStatus = 'ACTIVE' " +
-            "ORDER BY t.startDate ASC")
-    Optional<StudentTerm> findCurrentTerm(@Param("currentDate") LocalDate currentDate);
+            "AND t.endDate >= :currentDate " )
+    Optional<StudentTerm> findCurrentTerm(@Param("currentDate") LocalDate currentDate, @Param("schoolId") Long schoolId);
+
 }

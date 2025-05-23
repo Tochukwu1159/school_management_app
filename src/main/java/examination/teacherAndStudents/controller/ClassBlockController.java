@@ -20,12 +20,6 @@ public class ClassBlockController {
 
     private final ClassBlockService classBlockService;
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<ClassBlockResponse>> createClassBlock(@RequestBody ClassBlockRequest request) {
-        ClassBlockResponse response = classBlockService.createClassBlock(request);
-        return ResponseEntity.status(201).body(new ApiResponse<>("Class block created successfully", true, response));
-    }
-
     @GetMapping
     public ResponseEntity<ApiResponse<List<ClassBlockResponse>>> getAllClassBlocks(
             @RequestParam(required = false) Long classId,

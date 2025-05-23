@@ -11,5 +11,4 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ClassLevelResponse {
     private Long id;
-    private String className;
 }

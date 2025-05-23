@@ -30,21 +30,21 @@ public class AcademicScheduler {
 
 
 
-    // Runs every day at midnight to check if term resultReadyDate is reached
-    @Scheduled(cron = "0 0 0 * * ?")
-//    @Scheduled(cron = "0 */2 * * * ?")
-    @Transactional
-    public void updatePositionsForClass() {
-        List<StudentTerm> terms = studentTermRepository.findByResultReadyDateAndTermStatus(LocalDate.now(), TermStatus.ACTIVE);
-        for (StudentTerm term : terms) {
-            resultService.calculateAverageResultJob(term.getAcademicSession().getId(), term.getId());
-            positionService.updatePositionsForSessionForJob(term.getAcademicSession().getId(), term.getId());
-            term.setTermStatus(TermStatus.COMPLETED); // Mark as completed
-            studentTermRepository.save(term);
-
-//            positionService.generateReportCardSummaryJob(term.getAcademicSession().getId());
-        }
-    }
+//    // Runs every day at midnight to check if term resultReadyDate is reached
+//    @Scheduled(cron = "0 0 0 * * ?")
+////    @Scheduled(cron = "0 */2 * * * ?")
+//    @Transactional
+//    public void updatePositionsForClass() {
+//        List<StudentTerm> terms = studentTermRepository.findByResultReadyDateAndTermStatus(LocalDate.now(), TermStatus.ACTIVE);
+//        for (StudentTerm term : terms) {
+//            resultService.calculateAverageResultJob(term.getAcademicSession().getId(), term.getId());
+//            positionService.updatePositionForSessionClassForJob(term.getAcademicSession().getId(), term.getId());
+//            term.setTermStatus(TermStatus.COMPLETED); // Mark as completed
+//            studentTermRepository.save(term);
+//
+////            positionService.generateReportCardSummaryJob(term.getAcademicSession().getId());
+//        }
+//    }
 
     // Runs every day at midnight to check if session resultReadyDate is reached
     @Scheduled(cron = "0 0 0 * * ?")

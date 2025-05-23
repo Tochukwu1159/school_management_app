@@ -169,21 +169,14 @@ public class FeePaymentServiceImpl implements FeePaymentService {
         if (!student.getUser().getSchool().getId().equals(fee.getSchool().getId())) {
             return false;
         }
-
-        // Check session match
-        if (!student.getClassBlock().getClassLevel().getAcademicYear().getId().equals(fee.getSession().getId())) {
-            return false;
-        }
-
         // Check class level if specified in fee
         if (fee.getClassLevel() != null &&
-                !fee.getClassLevel().getId().equals(student.getClassBlock().getClassLevel().getId())) {
+                !fee.getClassLevel().getId().equals(student.getSessionClass().getClassBlock().getClassLevel().getId())) {
             return false;
         }
-
         // Check subclass if specified
         if (fee.getSubClass() != null &&
-                !fee.getSubClass().getId().equals(student.getClassBlock().getId())) {
+                !fee.getSubClass().getClassLevel().getId().equals(student.getSessionClass().getClassBlock().getClassLevel().getId())) {
             return false;
         }
 
@@ -201,7 +194,7 @@ public class FeePaymentServiceImpl implements FeePaymentService {
 
     private Transaction createTransactionForFeesWithoutIds(Profile profile, PaymentWithoutFeeIdRequest due) {
 
-        StudentTerm studentTerm  = studentTermRepository.findCurrentTerm(LocalDate.now())
+        StudentTerm studentTerm  = studentTermRepository.findCurrentTerm(LocalDate.now(), profile.getUser().getSchool().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student term not found"));
 
         return Transaction.builder()
@@ -211,7 +204,7 @@ public class FeePaymentServiceImpl implements FeePaymentService {
                 .amount(due.getAmount())
                 .studentTerm(studentTerm)
                 .session(studentTerm.getAcademicSession())
-                .classBlock(profile.getClassBlock())
+                .classBlock(profile.getSessionClass().getClassBlock())
                 .description(String.format("Payment for %s", due.getDescription()))
                 .build();
     }

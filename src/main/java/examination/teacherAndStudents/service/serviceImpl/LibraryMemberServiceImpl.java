@@ -77,6 +77,8 @@ public class LibraryMemberServiceImpl implements LibraryMemberService {
                         .action("CREATE_LIBRARY_MEMBER")
                         .performedBy(libraryMember.getStudent())
                         .timestamp(LocalDateTime.now())
+                        .school(admin
+                                .getSchool())
                         .details("Member ID: " + membershipId + ", Student: " + student.getUniqueRegistrationNumber())
                         .build()
         );

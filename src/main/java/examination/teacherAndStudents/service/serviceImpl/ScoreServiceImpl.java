@@ -50,6 +50,8 @@ public class ScoreServiceImpl implements ScoreService {
 
     @Autowired
     private Validator validator;
+    @Autowired
+    private SessionClassRepository sessionClassRepository;
 //    @Autowired
 //    private  ResultService resultService;
 
@@ -116,28 +118,25 @@ public class ScoreServiceImpl implements ScoreService {
         Profile studentProfile = profileRepository.findByUser(student.get())
                 .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
 
-        ClassBlock studentClass = classBlockRepository.findById(scoreRequest.getClassLevelId())
-                .orElseThrow(() -> new ResourceNotFoundException("Student class not found"));
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(scoreRequest.getSessionId(), scoreRequest.getClassBlockId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Subject not found"));
 
-        ClassSubject classSubject1 = classSubjectRepository.findByIdAndClassBlock(scoreRequest.getSubjectId(), studentClass)
+
+            ClassSubject classSubject1 = classSubjectRepository.findByIdAndClassBlock(scoreRequest.getSubjectId(), sessionClass.getClassBlock())
                 .orElseThrow(() -> new ResourceNotFoundException("Class Subject not found in the class")); //from the big subject
 
 
         Subject subject = classSubject1.getSubject();
 
-
-        AcademicSession academicSession = academicSessionRepository.findById(scoreRequest.getSessionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Subject not found"));
-
         StudentTerm studentTerm = studentTermRepository.findById(scoreRequest.getTermId())
                 .orElseThrow(() -> new ResourceNotFoundException("Student term not found"));
 
 
-        if (!studentTerm.getAcademicSession().equals(academicSession)) {
+        if (!studentTerm.getAcademicSession().equals(sessionClass.getAcademicSession())) {
             throw new IllegalStateException("The selected student term does not belong to the provided academic session.");
         }
 
-        List<String> classSubjects = studentProfile.getClassBlock()
+        List<String> classSubjects = studentProfile.getSessionClass().getClassBlock()
                 .getSubjects().stream()
                 .map(classSubject -> classSubject.getSubject().getName())
                 .toList();
@@ -155,7 +154,7 @@ public class ScoreServiceImpl implements ScoreService {
 
 
         // Check if a score already exists for the student and subject
-        Score existingScore = scoreRepository.findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndStudentTerm(studentProfile, scoreRequest.getClassLevelId(), subject.getName(),academicSession, studentTerm);
+        Score existingScore = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(studentProfile, scoreRequest.getClassLevelId(), subject.getName(),sessionClass.getAcademicSession(), studentTerm).orElseThrow(() -> new ResourceNotFoundException("Student not found"));
 
         if (existingScore != null) {
             // Update the existing score
@@ -163,7 +162,7 @@ public class ScoreServiceImpl implements ScoreService {
             existingScore.setAssessmentScore(scoreRequest.getAssessmentScore());
             existingScore.setStudentTerm(studentTerm);
             existingScore.setSubject(classSubject1);
-            existingScore.setClassBlock(studentClass);
+            existingScore.setSessionClass(sessionClass);
             scoreRepository.save(existingScore);
         } else {
             // Create a new Score object
@@ -171,9 +170,9 @@ public class ScoreServiceImpl implements ScoreService {
             score.setUserProfile(studentProfile);
             score.setSubjectName(subject.getName());
             score.setExamScore(scoreRequest.getExamScore());
-            score.setClassBlock(studentClass);
+            score.setSessionClass(sessionClass);
             score.setSubject(classSubject1);
-            score.setAcademicYear(academicSession);
+            score.setAcademicYear(sessionClass.getAcademicSession());
             score.setAssessmentScore(scoreRequest.getAssessmentScore());
             score.setStudentTerm(studentTerm);
             // Save the score

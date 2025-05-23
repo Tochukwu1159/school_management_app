@@ -19,7 +19,7 @@ public class AttendanceResponses {
     private Long studentId;
     private String studentName;
     private String studentRegistrationNumber; // Added student unique identifier
-    private Long classBlockId;
+    private Long classSessionId;
     private String classBlockName;
     private Long classLevelId; // Added class level information
     private String classLevelName;

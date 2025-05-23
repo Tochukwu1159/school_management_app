@@ -31,10 +31,8 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final CartRepository cartRepository;
     private final ProfileRepository profileRepository;
     private final WalletRepository walletRepository;
-    private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
-    private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
@@ -176,8 +174,4 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .orElseThrow(() -> new CustomNotFoundException("No active academic session found"));
     }
 
-    private StudentTerm getCurrentStudentTerm() {
-        return studentTermRepository.findCurrentTerm(LocalDate.now())
-                .orElseThrow(() -> new CustomNotFoundException("No active student term found"));
-    }
 }

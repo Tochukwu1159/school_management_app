@@ -11,6 +11,5 @@ import java.util.List;
 public class ClassLevelWithBlocksResponse {
     private Long id;
     private ClassNameResponse className;
-    private Long academicSessionId;
     private List<String> classBlocks;
 }

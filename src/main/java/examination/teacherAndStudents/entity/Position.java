@@ -39,8 +39,8 @@ public class Position {
     private int positionRank;
 
     @ManyToOne
-    @JoinColumn(name = "classblock_id", nullable = false)
-    private ClassBlock classBlock;
+    @JoinColumn(name = "session_class_id", nullable = false)
+    private SessionClass sessionClass;
 
     @ManyToOne
     @JoinColumn(name = "academic_year_id", nullable = false)

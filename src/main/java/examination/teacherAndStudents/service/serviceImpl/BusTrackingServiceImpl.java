@@ -36,7 +36,7 @@ public class BusTrackingServiceImpl implements BusTrackingService {
                 .orElseThrow(() -> new CustomNotFoundException("Student not found with ID: "));
 
         // Find current term based on current date
-        StudentTerm currentTerm = studentTermRepository.findCurrentTerm(LocalDate.now())
+        StudentTerm currentTerm = studentTermRepository.findCurrentTerm(LocalDate.now(), student.getUser().getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("No active term found for current date"));
 
         // Find transport allocation for the student and current term

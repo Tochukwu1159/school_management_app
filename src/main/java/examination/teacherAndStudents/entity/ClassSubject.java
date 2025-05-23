@@ -32,9 +32,14 @@ public class ClassSubject {
     @JoinColumn(name = "teacher_id")
     private Profile teacher;
 
-    @ManyToOne
-    @JoinColumn(name = "academic_year_id", nullable = false)
-    private AcademicSession academicYear;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id1")
+    private Profile teacher2;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id2")
+    private Profile teacher3;
+
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)

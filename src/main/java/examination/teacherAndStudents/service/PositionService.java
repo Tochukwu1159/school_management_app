@@ -13,7 +13,7 @@ public interface PositionService {
 
     void generateResultSummaryPdf(Long studentId, Long classLevelId, Long sessionId,Long term) throws IOException, DocumentException;
 
-    void updatePositionsForSessionForJob(Long sessionId, Long termId);
+    void updatePositionForSessionClassForJob(Long classBlockId, Long sessionId, Long termId);
 
     void generateReportCardSummaryJob(Long sessionId);
 }

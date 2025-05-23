@@ -40,6 +40,14 @@ public class Hostel {
     @JoinColumn(name = "warden_id")
     private Profile warden;
 
+    @ManyToOne
+    @JoinColumn(name = "warden_id2")
+    private Profile warden2;
+
+    @ManyToOne
+    @JoinColumn(name = "warden_id3")
+    private Profile warden3;
+
     @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "school_id", nullable = false)

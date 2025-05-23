@@ -88,7 +88,7 @@ public class HomeworkService {
         Homework homework = homeworkRepository.findById(request.homeworkId())
                 .orElseThrow(() -> new CustomNotFoundException("Homework not found with ID: " + request.homeworkId()));
 
-        if (!studentProfile.getClassBlock().getId().equals(homework.getClassBlock().getId())) {
+        if (!studentProfile.getSessionClass().getClassBlock().getId().equals(homework.getClassBlock().getId())) {
             logger.warn("Student {} attempted to submit homework for another class block", student.getEmail());
             throw new AuthenticationFailedException("Student cannot submit homework for another class block");
         }
@@ -152,7 +152,7 @@ public class HomeworkService {
                     .orElseThrow(() -> new CustomNotFoundException("Student profile not found for ID: " + user.getId()));
             homeworkPage = homeworkRepository.findBySubjectIdAndFiltersForStudent(
                     subjectId,
-                    classBlockId != null ? classBlockId : studentProfile.getClassBlock().getId(),
+                    classBlockId != null ? classBlockId : studentProfile.getSessionClass().getClassBlock().getId(),
                     termId,
                     submissionDate,
                     title,

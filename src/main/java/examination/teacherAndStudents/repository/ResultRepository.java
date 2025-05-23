@@ -2,16 +2,37 @@ package examination.teacherAndStudents.repository;
 
 import examination.teacherAndStudents.entity.*;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+
 @Repository
 public interface ResultRepository extends JpaRepository<Result, Long> {
 
-    List<Result> findAllByUserProfileAndClassBlockAndAcademicYearAndStudentTerm(Profile userProfile, ClassBlock userClass, AcademicSession academicYear,StudentTerm term);
+    @Query("SELECT r FROM Result r WHERE r.userProfile = :userProfile AND r.sessionClass = :sessionClass AND r.academicYear = :academicYear AND r.studentTerm = :studentTerm")
+    List<Result> findAllByUserProfileAndSessionClassAndAcademicYearAndStudentTerm(
+            @Param("userProfile") Profile userProfile,
+            @Param("sessionClass") SessionClass sessionClass,
+            @Param("academicYear") AcademicSession academicYear,
+            @Param("studentTerm") StudentTerm studentTerm
+    );
 
-    Result findByUserProfileAndClassBlockIdAndSubjectNameAndAcademicYearAndStudentTerm(Profile userProfile, Long classBlock_id, String subjectName, AcademicSession academicYear, StudentTerm term);
+    @Query("SELECT r FROM Result r WHERE r.userProfile = :userProfile AND r.sessionClass.id = :sessionClassId AND r.subjectName = :subjectName AND r.academicYear = :academicYear AND r.studentTerm = :studentTerm")
+    Optional<Result> findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(
+            @Param("userProfile") Profile userProfile,
+            @Param("sessionClassId") Long sessionClassId,
+            @Param("subjectName") String subjectName,
+            @Param("academicYear") AcademicSession academicYear,
+            @Param("studentTerm") StudentTerm studentTerm
+    );
 
-    List<Result> findAllByClassBlockAndAcademicYearAndStudentTerm(ClassBlock classBlock, AcademicSession academicYear, StudentTerm studentTerm);
+    @Query("SELECT r FROM Result r WHERE r.sessionClass = :sessionClass AND r.academicYear = :academicYear AND r.studentTerm = :studentTerm")
+    List<Result> findAllBySessionClassAndAcademicYearAndStudentTerm(
+            @Param("sessionClass") SessionClass sessionClass,
+            @Param("academicYear") AcademicSession academicYear,
+            @Param("studentTerm") StudentTerm studentTerm
+    );
 }

@@ -139,9 +139,6 @@ public class School {
     private PaymentAccount paymentAccount;
 
     @Column(nullable = false)
-    private Integer numberOfStudents = 0;
-
-    @Column(nullable = false)
     private Integer actualNumberOfStudents = 0;
 
     @Column(nullable = false)

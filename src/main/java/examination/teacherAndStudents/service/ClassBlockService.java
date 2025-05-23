@@ -8,7 +8,6 @@ import examination.teacherAndStudents.dto.UpdateFormTeacherRequest;
 import java.util.List;
 
 public interface ClassBlockService {
-    ClassBlockResponse createClassBlock(ClassBlockRequest request);
     ClassBlockResponse getClassBlockById(Long id);
     List<ClassBlockResponse> getAllClassBlocks(
             Long classId,

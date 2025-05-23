@@ -23,7 +23,7 @@ public interface ExamScheduleRepository extends JpaRepository<ExamSchedule, Long
             Pageable pageable);
 
     @Query("SELECT CASE WHEN COUNT(s) > 0 THEN TRUE ELSE FALSE END FROM ExamSchedule s " +
-            "WHERE s.classBlock.id = :classBlockId AND s.examDate = :examDate " +
+            "WHERE s.sessionClass.id = :classBlockId AND s.examDate = :examDate " +
             "AND ((s.startTime < :endTime AND s.endTime > :startTime))")
     boolean existsOverlappingSchedule(
             @Param("classBlockId") Long classBlockId,

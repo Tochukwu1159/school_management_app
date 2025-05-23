@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
+import org.hibernate.Session;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -39,8 +40,8 @@ public class Score {
     private Profile userProfile;
 
     @ManyToOne
-    @JoinColumn(name = "classblock_id", nullable = false)
-    private ClassBlock classBlock;
+    @JoinColumn(name = "sessionClass_id", nullable = false)
+    private SessionClass sessionClass;
 
     @ManyToOne
     @JoinColumn(name = "term_id", nullable = false)

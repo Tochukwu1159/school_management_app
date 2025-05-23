@@ -22,29 +22,28 @@ public class PromotionServiceImpl implements PromotionService {
     @Override
     public void promoteStudents(StudentPromotionRequest request) {
         try {
-            int promotedCount = 0;
-
-            for (StudentPromotionRequest.PromotionData data : request.getPromotion()) {
-
-                Profile studentProfile = profileRepository.findById(data.getStudentId())
-                        .orElseThrow(() -> new NotFoundException("Student not found with ID: " + data.getStudentId()));
-
-                ClassBlock promotedClassBlock = classBlockRepository.findById(data.getPromotedClassBlock())
-                        .orElseThrow(() -> new NotFoundException("Promoted class block not found with ID: " + data.getPromotedClassBlock()));
-
-                // Update student profile
-                studentProfile.setClassBlock(promotedClassBlock);
-                profileRepository.save(studentProfile);
-
-                // Update promoted class block's student count
-                promotedClassBlock.setNumberOfStudents(promotedClassBlock.getNumberOfStudents() + 1);
-                classBlockRepository.save(promotedClassBlock);
-
-                promotedCount++;
-            }
+//            int promotedCount = 0;
+//
+//            for (StudentPromotionRequest.PromotionData data : request.getPromotion()) {
+//
+//                Profile studentProfile = profileRepository.findById(data.getStudentId())
+//                        .orElseThrow(() -> new NotFoundException("Student not found with ID: " + data.getStudentId()));
+//
+//                ClassBlock promotedClassBlock = classBlockRepository.findById(data.getPromotedClassBlock())
+//                        .orElseThrow(() -> new NotFoundException("Promoted class block not found with ID: " + data.getPromotedClassBlock()));
+//
+//                // Update student profile
+//                studentProfile.setClassBlock(promotedClassBlock);
+//                profileRepository.save(studentProfile);
+//
+//                // Update promoted class block's student count
+////                promotedClassBlock.setNumberOfStudents(promotedClassBlock.getNumberOfStudents() + 1);
+//                classBlockRepository.save(promotedClassBlock);
+//
+//                promotedCount++;
+//            }
 
             // Optional: Log or return the count of promoted students
-            System.out.println("Total promoted students: " + promotedCount);
 
         } catch (NotFoundException e) {
             throw e;

@@ -123,9 +123,10 @@ public class FeeServiceImpl implements FeeService {
                 .orElseThrow(() -> new CustomNotFoundException("Student profile not found with ID: " + studentId));
 
         // Retrieve student's class and session details
-        ClassBlock classBlock = student.getClassBlock();
+        ClassBlock classBlock = student.getSessionClass().getClassBlock();
         ClassLevel classLevel = classBlock != null ? classBlock.getClassLevel() : null;
-        AcademicSession academicSession = classLevel != null ? classLevel.getAcademicYear() : null;
+//        AcademicSession academicSession = classLevel != null ? classLevel.getAcademicYear() : null;
+        AcademicSession academicSession = null;
         School school = academicSession != null ? academicSession.getSchool() : null;
 
         // Get current term for the student
@@ -192,13 +193,14 @@ public class FeeServiceImpl implements FeeService {
 
         StudentTerm currentTerm = getCurrentTerm(student);
 
-        List<Fee> applicableFees = feeRepository.findApplicableFees(
-                student.getUser().getSchool().getId(),
-                student.getClassBlock().getClassLevel().getAcademicYear().getId(),
-                student.getClassBlock().getClassLevel().getId(),
-                student.getClassBlock().getId(),
-                currentTerm != null ? currentTerm.getId() : null
-        );
+//        List<Fee> applicableFees = feeRepository.findApplicableFees(
+//                student.getUser().getSchool().getId(),
+//                student.getClassBlock().getClassLevel().getAcademicYear().getId(),
+//                student.getClassBlock().getClassLevel().getId(),
+//                student.getClassBlock().getId(),
+//                currentTerm != null ? currentTerm.getId() : null
+//        );
+        List<Fee> applicableFees = null;
 
         List<StudentFeeResponse> responses = applicableFees.stream()
                 .map(fee -> {
@@ -226,21 +228,22 @@ public class FeeServiceImpl implements FeeService {
     }
 
     private StudentTerm getCurrentTerm(Profile student) {
-        if (student.getClassBlock() == null ||
-                student.getClassBlock().getClassLevel() == null ||
-                student.getClassBlock().getClassLevel().getAcademicYear() == null) {
-            return null;
-        }
+//        if (student.getClassBlock() == null ||
+//                student.getClassBlock().getClassLevel() == null ||
+//                student.getClassBlock().getClassLevel().getAcademicYear() == null) {
+//            return null;
+//        }
+//
+//        List<StudentTerm> terms = studentTermRepository.findByAcademicSessionOrderByStartDateAsc(
+//                student.getClassBlock().getClassLevel().getAcademicYear()
+//        );
 
-        List<StudentTerm> terms = studentTermRepository.findByAcademicSessionOrderByStartDateAsc(
-                student.getClassBlock().getClassLevel().getAcademicYear()
-        );
-
-        return terms.stream()
-                .filter(term -> !term.getStartDate().isAfter(LocalDate.now()))
-                .filter(term -> !term.getEndDate().isBefore(LocalDate.now()))
-                .findFirst()
-                .orElse(null);
+//        return terms.stream()
+//                .filter(term -> !term.getStartDate().isAfter(LocalDate.now()))
+//                .filter(term -> !term.getEndDate().isBefore(LocalDate.now()))
+//                .findFirst()
+//                .orElse(null);
+        return null;
     }
 
     private BigDecimal getTotalPaymentsForFee(Profile student, Fee fee) {
