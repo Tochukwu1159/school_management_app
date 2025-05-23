@@ -41,4 +41,6 @@ public interface AcademicSessionRepository extends JpaRepository<AcademicSession
         Optional<AcademicSession> findCurrentSession(@Param("schoolId") Long schoolId);
 
     Optional<AcademicSession> findByStatusAndSchoolId(SessionStatus sessionStatus, Long id);
+
+    Optional<AcademicSession> findByIdAndSchoolId(Long id, Long id1);
 }

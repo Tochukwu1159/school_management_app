@@ -180,7 +180,7 @@ public class WalletServiceImpl implements WalletService {
                     .orElseGet(() -> createNewWallet(profile));
 
             // 4. Credit the wallet
-            wallet.credit(amount);
+            wallet.credit(amount, true);
             walletRepository.save(wallet);
 
             // 5. Record the transaction
@@ -322,7 +322,7 @@ public class WalletServiceImpl implements WalletService {
                 .orElseGet(() -> createNewWallet(profile));
 
         BigDecimal amountDecimal = BigDecimal.valueOf(amount);
-        wallet.credit(amountDecimal);
+        wallet.credit(amountDecimal, true);
         walletRepository.save(wallet);
 
         Transaction transaction = createTransaction(profile, amountDecimal, transactionResponse);

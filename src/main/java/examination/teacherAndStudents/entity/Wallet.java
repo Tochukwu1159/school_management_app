@@ -7,10 +7,8 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Size;
 import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
 
 @Getter
 @Setter
@@ -25,7 +23,7 @@ public class Wallet {
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @DecimalMin(value = "0.00", inclusive = true,  message = "Balance cannot be negative.") // Allow zero values
+    @DecimalMin(value = "0.00", inclusive = true, message = "Balance cannot be negative.")
     @Digits(integer = 9, fraction = 2, message = "Invalid balance format.")
     @Column(name = "balance", nullable = false, columnDefinition = "NUMERIC(11,2) DEFAULT 0.0")
     private BigDecimal balance;
@@ -45,19 +43,26 @@ public class Wallet {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_id")
-    private School school;;
-
+    private School school;
 
     @OneToOne
     @JoinColumn(name = "profile_id")
     private Profile userProfile;
 
-    /**
-     * Credits amount to the wallet with validation and audit trail
-     * @param amount Positive decimal amount to credit
-     * @throws IllegalArgumentException if amount is not positive
-     */
-    public synchronized void credit(BigDecimal amount) {
+    // Monnify-specific fields
+    @Column(name = "virtual_account_number", unique = true)
+    @Size(max = 20, message = "Virtual account number cannot exceed 20 characters")
+    private String virtualAccountNumber;
+
+    @Column(name = "virtual_bank_name")
+    @Size(max = 100, message = "Bank name cannot exceed 100 characters")
+    private String virtualBankName;
+
+    @Column(name = "virtual_account_reference", unique = true)
+    @Size(max = 50, message = "Virtual account reference cannot exceed 50 characters")
+    private String virtualAccountReference;
+
+    public synchronized void credit(BigDecimal amount, boolean isStudentFunding) {
         // Validation
         if (amount == null) {
             throw new IllegalArgumentException("Credit amount cannot be null");
@@ -72,14 +77,15 @@ public class Wallet {
         this.totalMoneyReceived = this.totalMoneyReceived.add(amount);
         this.lastTransactionTime = LocalDateTime.now();
 
+        // If this is a student funding their wallet, update the school's wallet
+        if (isStudentFunding && this.school != null) {
+            Wallet schoolWallet = this.school.getWallet();
+            if (schoolWallet != null) {
+                schoolWallet.credit(amount, false);
+            }
+        }
     }
 
-    /**
-     * Debits amount from the wallet with validation
-     * @param amount Positive decimal amount to debit
-     * @throws IllegalArgumentException if amount is not positive
-     * @throws InsufficientBalanceException if balance is insufficient
-     */
     public synchronized void debit(BigDecimal amount) {
         // Validation
         if (amount == null) {
@@ -101,14 +107,6 @@ public class Wallet {
         this.lastTransactionTime = LocalDateTime.now();
     }
 
-    // Additional business methods
-    /**
-     * Transfers money to another wallet within the same school
-     * @param recipientWallet The wallet to receive the funds
-     * @param amount The amount to transfer
-     * @throws IllegalArgumentException if wallets are not in the same school or invalid amount
-     * @throws InsufficientBalanceException if sender has insufficient funds
-     */
     public synchronized void transferTo(Wallet recipientWallet, BigDecimal amount) {
         // Basic validations
         if (recipientWallet == null) {
@@ -122,8 +120,8 @@ public class Wallet {
         }
 
         // Check if wallets belong to the same school
-        if (!this.userProfile.getUser().getSchool().getId()
-                .equals(recipientWallet.getUserProfile().getUser().getSchool().getId())) {
+        if (this.school == null || recipientWallet.getSchool() == null ||
+                !this.school.getId().equals(recipientWallet.getSchool().getId())) {
             throw new IllegalArgumentException("Can only transfer to wallets within the same school");
         }
 
@@ -134,6 +132,12 @@ public class Wallet {
 
         // Perform the transfer
         this.debit(amount);
-        recipientWallet.credit(amount);
+        recipientWallet.credit(amount, false);
+    }
+
+    public void setVirtualAccountDetails(String accountNumber, String bankName, String accountReference) {
+        this.virtualAccountNumber = accountNumber;
+        this.virtualBankName = bankName;
+        this.virtualAccountReference = accountReference;
     }
 }

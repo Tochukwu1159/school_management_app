@@ -18,7 +18,7 @@ public class ClassLevel {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "class_name_id", nullable = false, unique = true)
+    @JoinColumn(name = "class_name_id", nullable = false)
     private ClassName className;
 
     @Column(name = "created_at", nullable = false, updatable = false)

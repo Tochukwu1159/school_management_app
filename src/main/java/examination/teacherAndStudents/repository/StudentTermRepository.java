@@ -36,4 +36,5 @@ public interface StudentTermRepository extends JpaRepository<StudentTerm, Long> 
             "AND t.endDate >= :currentDate " )
     Optional<StudentTerm> findCurrentTerm(@Param("currentDate") LocalDate currentDate, @Param("schoolId") Long schoolId);
 
+    Optional<StudentTerm> findByIdAndAcademicSessionId(Long termId, Long id);
 }

@@ -140,6 +140,7 @@ public class UserServiceImpl implements UserService {
         // Build Profile
         Set<EmergencyContact> emergencyContacts = buildEmergencyContacts(userRequest.getEmergencyContacts());
         Set<Address> addresses = buildAddressesFromDto(userRequest.getAddresses());
+
         Profile userProfile = Profile.builder()
                 .gender(userRequest.getGender())
                 .religion(userRequest.getReligion())
@@ -212,10 +213,6 @@ public class UserServiceImpl implements UserService {
         School school = schoolRepository.findById(userRequest.getSchoolId())
                 .orElseThrow(() -> new BadRequestException("Invalid school ID"));
 
-        // Validate class exists
-        ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
-                .orElseThrow(() -> new BadRequestException("Invalid class ID"));
-
         SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(userRequest.getAcademicSessionId(), userRequest.getClassAssignedId())
                 .orElseThrow(() -> new BadRequestException("Invalid class ID"));
 
@@ -229,8 +226,8 @@ public class UserServiceImpl implements UserService {
         if (school.getIsApplicationFee()) {
             applicationFee = feeStructureService.getApplicationFee(
                     school.getId(),
-                    classBlock.getClassLevel().getId(),
-                    classBlock.getId()
+                    sessionClass.getClassBlock().getClassLevel().getId(),
+                    sessionClass.getClassBlock().getId()
             );
             applicationFeeApplied = true;
         }
@@ -309,7 +306,7 @@ public class UserServiceImpl implements UserService {
                 .name(savedUser.getFirstName() + "  " + savedUser.getLastName())
                 .status(ApplicationStatus.PENDING_REVIEW)
                 .session(academicSessionRepository.findCurrentSession(school.getId()).get())
-                .appliedClass(classBlock)
+                .appliedClass(sessionClass.getClassBlock())
                 .applicationFeeApplied(applicationFeeApplied)
                 .applicationDate(LocalDateTime.now())
                 .applicationFee(applicationFee)

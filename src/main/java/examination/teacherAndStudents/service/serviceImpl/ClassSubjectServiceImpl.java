@@ -45,11 +45,8 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
         School userSchool = validUser.getSchool();
 
         // Validate ClassBlock
-        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+        ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(request.getClassBlockId(), userSchool.getId())
                 .orElseThrow(() -> new NotFoundException("ClassBlock with id " + request.getClassBlockId() + " not found"));
-        if (!classBlock.getSchool().getId().equals(userSchool.getId())) {
-            throw new IllegalArgumentException("ClassBlock does not belong to the user's school");
-        }
 
         List<ClassSubject> classSubjectsToSave = new ArrayList<>();
         List<ClassSubjectResponse> responses = new ArrayList<>();

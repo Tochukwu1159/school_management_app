@@ -12,4 +12,6 @@ import java.util.Optional;
 public interface BusRouteRepository extends JpaRepository<BusRoute, Long> {
     @Query("SELECT r FROM BusRoute r LEFT JOIN FETCH r.stops WHERE r.id = :id")
     Optional<BusRoute> findByIdWithStops(@Param("id") Long id);
+
+    Optional<BusRoute> findByIdAndSchoolId(Long routeId, Long id);
 }

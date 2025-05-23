@@ -26,4 +26,6 @@ public interface ClassLevelRepository extends JpaRepository<ClassLevel, Long> {
     Optional<ClassLevel> findByClassNameId(Long classNameId);
 
     Optional<ClassLevel> findByClassNameIdAndSchoolId(Long id, Long id1);
+
+    Optional<ClassLevel> findByIdAndSchoolId(Long classLevelId, Long id);
 }

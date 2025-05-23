@@ -31,7 +31,7 @@ public class StudentManifestServiceImpl implements StudentManifestService {
     private final StudentManifestRepository manifestRepository;
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
-    private final BusRepository busRepository;
+    private final TransportRepository busRepository;
     private final StudentTransportAllocationRepository studentTransportAllocationRepository;
     private final BusRouteRepository busRouteRepository;
     private final StudentTermRepository studentTermRepository;

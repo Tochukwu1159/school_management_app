@@ -1,5 +1,6 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.AttendanceAlreadyTakenException;
@@ -9,6 +10,7 @@ import examination.teacherAndStudents.error_handler.EntityNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.AttendanceService;
 import examination.teacherAndStudents.utils.AttendanceStatus;
+import examination.teacherAndStudents.utils.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -51,16 +53,19 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     public void takeBulkAttendance(BulkAttendanceRequest request) {
         try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-          classLevelRepository.findById(request.getClassLevelId())
+          classLevelRepository.findByIdAndSchoolId(request.getClassLevelId(), admin.getSchool().getId())
                     .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
 
             // Validate the student term exists
-            StudentTerm studentTerm = studentTermRepository.findById(request.getStudentTermId())
+            StudentTerm studentTerm = studentTermRepository.findByIdAndAcademicSessionId(request.getStudentTermId(), request.getSessionId())
                     .orElseThrow(() -> new CustomNotFoundException("Student term not found"));
 
             SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(request.getSessionId(), request.getClassBlockId())
-                    .orElseThrow(() -> new CustomNotFoundException("SessionClass not found for Academic Session "));
+                    .orElseThrow(() -> new CustomNotFoundException("Session class not found for Academic Session "));
 
             // Validate the date is within the term period
             LocalDate attendanceDate = request.getDate().toLocalDate();

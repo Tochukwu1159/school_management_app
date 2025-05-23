@@ -28,7 +28,7 @@ public class BlogLikeServiceImpl implements BlogLikeService {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         Profile user = profileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("User not found"));
-        Blog blog = blogRepository.findById(blogId)
+        Blog blog = blogRepository.findByIdAndSchoolId(blogId, user.getUser().getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Blog not found"));
 
         Optional<BlogLike> existingLike = blogLikeRepository.findByBlogAndUser(blog, user);

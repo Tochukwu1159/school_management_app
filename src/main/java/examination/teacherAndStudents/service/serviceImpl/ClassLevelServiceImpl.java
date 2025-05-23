@@ -168,7 +168,7 @@ public class ClassLevelServiceImpl implements ClassLevelService {
         logger.info("Admin {} updating class level ID: {} with classNameId: {} and blocks: {}", admin.getEmail(), id,
                 classLevelRequest.getClassNameId(), classLevelRequest.getClassBlocks());
 
-        ClassLevel classLevel = classLevelRepository.findById(id)
+        ClassLevel classLevel = classLevelRepository.findByClassNameIdAndSchoolId(id, admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Class level not found with ID: " + id));
 
         if (!classLevel.getSchool().equals(admin.getSchool())) {

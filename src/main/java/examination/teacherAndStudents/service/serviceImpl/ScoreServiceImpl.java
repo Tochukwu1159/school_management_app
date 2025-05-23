@@ -122,7 +122,7 @@ public class ScoreServiceImpl implements ScoreService {
                     .orElseThrow(() -> new ResourceNotFoundException("Subject not found"));
 
 
-            ClassSubject classSubject1 = classSubjectRepository.findByIdAndClassBlock(scoreRequest.getSubjectId(), sessionClass.getClassBlock())
+            ClassSubject classSubject1 = classSubjectRepository.findByIdAndClassBlockId(scoreRequest.getSubjectId(), sessionClass.getClassBlock().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class Subject not found in the class")); //from the big subject
 
 

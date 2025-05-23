@@ -60,6 +60,8 @@ public class ApplicationServiceImpl implements ApplicationService {
     private AcademicSessionRepository academicSessionRepository;
     @Autowired
     private SessionClassRepository sessionClassRepository;
+    @Autowired
+    private EntityFetcher entityFetcher;
 
     @Transactional
     @Override
@@ -118,14 +120,11 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Transactional
     public ApplicationResponse reviewApplication(Long applicationId, ApplicationReviewDto review) {
+        String loggedEmail = entityFetcher.fetchLoggedInUser();
+        User admin = entityFetcher.fetchLoggedInAdmin(loggedEmail);
         // 1. Fetch and validate application
-        AdmissionApplication application = admissionApplicationRepository.findById(applicationId)
+        AdmissionApplication application = admissionApplicationRepository.findByIdAndSchoolId(applicationId, admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Application not found"));
-
-        // 2. Verify admin user
-        String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
-                .orElseThrow(() -> new RuntimeException("Unauthorized access - Admin privileges required"));
 
         // 3. Validate application state
         if (!isReviewableState(application.getStatus())) {

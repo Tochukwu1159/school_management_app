@@ -113,7 +113,7 @@ public class TimetableServiceImpl implements TimetableService {
             School school = admin.getSchool();
             validateTimetableInputs(dayOfWeek, subjectSchedules);
 
-            ClassBlock classBlock = classBlockRepository.findById(classBlockId)
+            ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(classBlockId, school.getId())
                     .orElseThrow(() -> new CustomNotFoundException("Class block not found with ID: " + classBlockId));
             if (classBlock.getClassLevel() == null) {
                 throw new CustomNotFoundException("Class level not found for class block ID: " + classBlockId);
@@ -121,11 +121,8 @@ public class TimetableServiceImpl implements TimetableService {
             classLevelRepository.findById(classBlock.getClassLevel().getId())
                     .orElseThrow(() -> new CustomNotFoundException("Class level not found with ID: " + classBlock.getClassLevel().getId()));
 
-            StudentTerm studentTerm = studentTermRepository.findById(termId)
+            StudentTerm studentTerm = studentTermRepository.findByIdAndAcademicSessionId(termId, school.getId())
                     .orElseThrow(() -> new CustomNotFoundException("Student term not found with ID: " + termId));
-
-            AcademicSession academicYear = academicSessionRepository.findById(sessionId)
-                    .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + sessionId));
 
             if (timetableRepository.existsByClassBlockIdAndTermIdAndDayOfWeek(classBlockId, termId, dayOfWeek)) {
                 throw new IllegalStateException(dayOfWeek + " already exists for this class block and term. Please update the existing timetable.");
@@ -138,14 +135,14 @@ public class TimetableServiceImpl implements TimetableService {
                     .classBlock(classBlock)
                     .dayOfWeek(dayOfWeek)
                     .term(studentTerm)
-                    .academicYear(academicYear)
+                    .academicYear(studentTerm.getAcademicSession())
                     .school(school)
                     .subjectSchedules(new ArrayList<>())
                     .build();
 
             timetable = timetableRepository.save(timetable);
 
-            List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek);
+            List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek, classBlock.getId() );
             timetable.getSubjectSchedules().clear();
             timetable.getSubjectSchedules().addAll(schedules);
 
@@ -205,7 +202,7 @@ public class TimetableServiceImpl implements TimetableService {
         }
     }
 
-    private List<SubjectSchedule> createSubjectSchedules(List<SubjectScheduleRequest> subjectSchedules, Timetable timetable, DayOfWeek dayOfWeek) {
+    private List<SubjectSchedule> createSubjectSchedules(List<SubjectScheduleRequest> subjectSchedules, Timetable timetable, DayOfWeek dayOfWeek, Long classBlockId) {
         List<SubjectSchedule> schedules = new ArrayList<>();
 
         for (SubjectScheduleRequest request : subjectSchedules) {
@@ -241,7 +238,7 @@ public class TimetableServiceImpl implements TimetableService {
                     throw new IllegalArgumentException("Break schedules must not include subject ID or teacher ID");
                 }
 
-                ClassSubject classSubject = classSubjectRepository.findById(request.getSubjectId())
+                ClassSubject classSubject = classSubjectRepository.findByIdAndClassBlockId(request.getSubjectId(), classBlockId)
                         .orElseThrow(() -> new CustomNotFoundException("Class subject not found with ID: " + request.getSubjectId()));
 
                 subjectRepository.findById(classSubject.getSubject().getId())
@@ -322,11 +319,9 @@ public class TimetableServiceImpl implements TimetableService {
             Timetable timetable = timetableRepository.findByIdAndSchoolId(timetableId, school.getId())
                     .orElseThrow(() -> new CustomNotFoundException("Timetable not found with ID: " + timetableId + " in school ID: " + school.getId()));
 
-            StudentTerm studentTerm = studentTermRepository.findById(termId)
+            StudentTerm studentTerm = studentTermRepository.findByIdAndAcademicSessionId(termId, sessionId)
                     .orElseThrow(() -> new CustomNotFoundException("Student term not found with ID: " + termId));
 
-            AcademicSession academicYear = academicSessionRepository.findById(sessionId)
-                    .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + sessionId));
 
             if (!timetable.getDayOfWeek().equals(dayOfWeek) &&
                     timetableRepository.existsByClassBlockIdAndTermIdAndDayOfWeek(timetable.getClassBlock().getId(), termId, dayOfWeek)) {
@@ -338,9 +333,9 @@ public class TimetableServiceImpl implements TimetableService {
 
             timetable.setDayOfWeek(dayOfWeek);
             timetable.setTerm(studentTerm);
-            timetable.setAcademicYear(academicYear);
+            timetable.setAcademicYear(studentTerm.getAcademicSession());
 
-            List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek);
+            List<SubjectSchedule> schedules = createSubjectSchedules(subjectSchedules, timetable, dayOfWeek, timetable.getClassBlock().getId());
             timetable.getSubjectSchedules().clear();
             timetable.getSubjectSchedules().addAll(schedules);
 

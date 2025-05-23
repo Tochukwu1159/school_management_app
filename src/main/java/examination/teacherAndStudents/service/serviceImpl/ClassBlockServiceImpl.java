@@ -6,12 +6,10 @@ import examination.teacherAndStudents.dto.ClassBlockResponse;
 import examination.teacherAndStudents.dto.FormTeacherAssignmentRequest;
 import examination.teacherAndStudents.dto.UpdateFormTeacherRequest;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.error_handler.EntityAlreadyExistException;
-import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
-import examination.teacherAndStudents.error_handler.UnauthorizedException;
+import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.ClassBlockService;
+import examination.teacherAndStudents.utils.EntityFetcher;
 import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,11 +32,17 @@ public class ClassBlockServiceImpl implements ClassBlockService {
     private final UserRepository userRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final SessionClassRepository sessionClassRepository;
+    private final EntityFetcher entityFetcher;
 
     public ClassBlockResponse getClassBlockById(Long id) {
         try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = entityFetcher.fetchLoggedInAdmin(email);
+            if (admin == null) {
+                throw new AuthenticationFailedException("Please login as an Admin");
+            }
             // Fetch the class block by ID
-            ClassBlock classBlock = classBlockRepository.findById(id)
+            ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(id, admin.getSchool().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Class Block not found with ID: " + id));
 
             // Map the entity to a response DTO and return
@@ -75,8 +79,13 @@ public class ClassBlockServiceImpl implements ClassBlockService {
 
     public ClassBlockResponse updateClassBlock(Long id, ClassBlockRequest request) {
         try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = entityFetcher.fetchLoggedInAdmin(email);
+            if (admin == null) {
+                throw new AuthenticationFailedException("Please login as an Admin");
+            }
             // Fetch the class block by ID
-            ClassBlock classBlock = classBlockRepository.findById(id)
+            ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(id, admin.getSchool().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Class Block not found"));
 
             // Update the class block details

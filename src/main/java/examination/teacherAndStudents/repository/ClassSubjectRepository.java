@@ -17,7 +17,7 @@ import java.util.Optional;
 public interface ClassSubjectRepository extends JpaRepository<ClassSubject, Long> {
 
 
-    Optional<ClassSubject> findByIdAndClassBlock(Long id, ClassBlock studentClass);
+    Optional<ClassSubject> findByIdAndClassBlockId(Long id, Long studentClassId);
 
     @Query("SELECT cs FROM ClassSubject cs WHERE " +
             "(:subjectId IS NULL OR cs.subject.id = :subjectId) AND " +

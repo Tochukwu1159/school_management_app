@@ -3,20 +3,31 @@ package examination.teacherAndStudents.error_handler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import examination.teacherAndStudents.dto.ApiResponse;
 import examination.teacherAndStudents.dto.ErrorResponse;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class ExceptionController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ExceptionController.class);
+
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse> handleValidationErrors(MethodArgumentNotValidException ex) {
@@ -26,6 +37,115 @@ public class ExceptionController {
                 .collect(Collectors.toList());
         return new ResponseEntity<>(new ApiResponse<>("Validation errors", false, errors), HttpStatus.BAD_REQUEST);
     }
+
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpRequestMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        String supportedMethods = ex.getSupportedHttpMethods() != null
+                ? ex.getSupportedHttpMethods().stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(", "))
+                : "None";
+        String message = String.format(
+                "Method %s not supported for %s. Supported methods: %s",
+                ex.getMethod(),
+                request.getRequestURI(),
+                supportedMethods
+        );
+        logger.warn("Invalid HTTP method: {}", message);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
+    }
+
+
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(
+            AccessDeniedException ex, HttpServletRequest request) {
+        String message = String.format(
+                "Access denied for %s: Insufficient permissions",
+                request.getRequestURI()
+        );
+        logger.warn("Unauthorized access attempt: {}", message);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler(JwtTokenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleJwtTokenException(
+            JwtTokenException ex, HttpServletRequest request) {
+        String message = String.format(
+                "Invalid or expired token for %s: %s. Please refresh your token or log in again.",
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+        logger.warn("Token validation failed: {}", message);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+
+
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleExpiredJwtException(
+            ExpiredJwtException ex, HttpServletRequest request) {
+        String message = String.format(
+                "Token expired for %s: %s",
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.<Void>builder()
+                        .message(message)
+                        .status(false)
+                        .timeCreated(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleJwtException(
+            JwtException ex, HttpServletRequest request) {
+        String message = String.format(
+                "Invalid or expired token for %s: %s",
+                request.getRequestURI(),
+                ex.getMessage()
+        );
+        logger.warn("Token validation failed: {}", message);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message(message)
+                .status(false)
+                .timeCreated(LocalDateTime.now())
+                .data(null)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+
 
     @ExceptionHandler(AuthenticationFailedException.class)
     public ResponseEntity<?> AuthenticationFailedException(AuthenticationFailedException ex) {

@@ -40,4 +40,5 @@ public interface StudentTransportTrackerRepository extends JpaRepository<Student
             @Param("status") AllocationStatus status,
             Pageable pageable);
 
+    Optional<StudentTransportAllocation> findByProfileAndSchoolIdAndTerm(Profile student, Long id, StudentTerm currentTerm);
 }

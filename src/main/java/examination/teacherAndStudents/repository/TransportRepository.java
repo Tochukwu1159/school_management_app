@@ -1,6 +1,7 @@
 package examination.teacherAndStudents.repository;
 
 import examination.teacherAndStudents.entity.Bus;
+import examination.teacherAndStudents.entity.Profile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,4 +31,10 @@ public interface TransportRepository extends JpaRepository<Bus, Long> {
             Pageable pageable);
 
     Optional<Bus> findByBusIdAndSchoolId(Long transportId, Long id);
+
+    Optional<Bus> findByDriver(Profile driver);
+
+    boolean existsByVehicleNumber(String vehicleNumber);
+    boolean existsByLicenceNumber(String licenceNumber);
+
 }
