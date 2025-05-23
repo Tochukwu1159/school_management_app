@@ -58,6 +58,12 @@ public class SchoolController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/balance")
+    public ResponseEntity<ApiResponse<WalletResponse>> walletBalance() {
+        ApiResponse<WalletResponse> response = new ApiResponse<>("School  wallet retrieved successfully", true, schoolService.walletBalance());
+        return ResponseEntity.ok(response);    }
+
+    
     @PostMapping("/deactivate-expired")
     public ResponseEntity<ApiResponse<String>> deactivateExpiredSubscriptions() {
         schoolService.deactivateExpiredSubscriptions();

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface FeeRepository extends JpaRepository<Fee, Long> {
 
@@ -48,18 +49,7 @@ public interface FeeRepository extends JpaRepository<Fee, Long> {
                                                @Param("termId") Long termId);
 
 
-
-//    @Query("SELECT f FROM Fee f WHERE " +
-//            "(:schoolId IS NULL OR f.school.id = :schoolId) AND " +
-//            "(:sessionId IS NULL OR f.session.id = :sessionId) AND " +
-//            "(:classLevelId IS NULL OR f.classLevel.id = :classLevelId) AND " +
-//            "(:subClassId IS NULL OR f.subClass.id = :subClassId) AND " +
-//            "(:termId IS NULL OR f.term.id = :termId)")
-//    List<Fee> findApplicableFees(@Param("schoolId") Long schoolId,
-//                                 @Param("sessionId") Long sessionId,
-//                                 @Param("classLevelId") Long classLevelId,
-//                                 @Param("subClassId") Long subClassId,
-//                                 @Param("termId") Long termId);
-
     boolean existsByCategoryId(Long id);
+
+    Optional<Fee> findByIdAndSchoolId(Long feeId, Long id);
 }

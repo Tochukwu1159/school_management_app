@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +30,7 @@ public class StudentManifestServiceImpl implements StudentManifestService {
     private final StudentManifestRepository manifestRepository;
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
-    private final BusRepository busRepository;
+    private final TransportRepository busRepository;
     private final StudentTransportAllocationRepository studentTransportAllocationRepository;
     private final BusRouteRepository busRouteRepository;
     private final StudentTermRepository studentTermRepository;
@@ -44,7 +43,6 @@ public class StudentManifestServiceImpl implements StudentManifestService {
 
         Profile driver = profileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("driver not found "));
-
         Bus bus = busRepository.findByDriver(driver)
                 .orElseThrow(() -> new CustomNotFoundException("Bus not found "));
 
@@ -59,7 +57,6 @@ public class StudentManifestServiceImpl implements StudentManifestService {
 
         StudentTransportAllocation transportAllocation = studentTransportAllocationRepository.findByProfileIdAndTransportBusId(student.getId(), bus.getBusId())
                 .orElseThrow(() -> new CustomNotFoundException("Student not allocated to this bus"));
-        Long id = transportAllocation.getSchool().getId();
         LocalDate date = LocalDate.now();
 
         StudentTerm studentTerm = studentTermRepository.findCurrentTerm(date,transportAllocation.getSchool().getId()).orElseThrow(() -> new CustomNotFoundException("Student term not found"));

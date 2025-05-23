@@ -32,4 +32,6 @@ public interface BlogRepository extends JpaRepository<Blog, Long> {
             @Param("createdAtEnd") LocalDateTime createdAtEnd,
             @Param("id") Long id,
             Pageable pageable);
+
+    Optional<Blog> findByIdAndSchoolId(Long blogId, Long id);
 }

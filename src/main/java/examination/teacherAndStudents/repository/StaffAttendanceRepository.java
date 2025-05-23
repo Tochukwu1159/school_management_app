@@ -1,9 +1,6 @@
 package examination.teacherAndStudents.repository;
 
-import examination.teacherAndStudents.entity.Profile;
-import examination.teacherAndStudents.entity.StaffAttendance;
-import examination.teacherAndStudents.entity.User;
-import examination.teacherAndStudents.utils.AttendanceStatus;
+import examination.teacherAndStudents.entity.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,14 +9,21 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+
 @Repository
 public interface StaffAttendanceRepository extends JpaRepository<StaffAttendance, Long> {
 
-    List<StaffAttendance> findAllByStaffUniqueRegistrationNumberAndAndCheckInTimeBetween(String staffUniqueNumber, LocalDateTime startDate, LocalDateTime endDate);
+    boolean existsByStaffAndDateAndAcademicYearAndStudentTerm(Profile staff, LocalDateTime date, AcademicSession academicYear, StudentTerm studentTerm);
 
-    Page<StaffAttendance> findAllByCheckInTimeBetween(LocalDateTime startDateTime, LocalDateTime endDateTime, Pageable pageable);
+    List<StaffAttendance> findByStaffAndAcademicYearAndStudentTerm(Profile staff, AcademicSession academicYear, StudentTerm studentTerm);
 
-    Optional<StaffAttendance> findFirstByStaffAndCheckOutTimeIsNullOrderByCheckInTimeDesc(Profile user);
+    List<StaffAttendance> findByStaffAndDateBetween(Profile staff, LocalDateTime startDate, LocalDateTime endDate);
 
-    boolean existsByStaffAndCheckOutTimeIsNull(Profile staff);
+    List<StaffAttendance> findByDateBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    Page<StaffAttendance> findByDateBetween(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+
+    List<StaffAttendance> findByStaffUniqueRegistrationNumberAndDateBetween(String uniqueRegistrationNumber, LocalDateTime startDate, LocalDateTime endDate);
+
+    Optional<TeacherAttendancePercent> findByStaffAndStudentTerm(Profile teacherProfile, StudentTerm studentTerm);
 }

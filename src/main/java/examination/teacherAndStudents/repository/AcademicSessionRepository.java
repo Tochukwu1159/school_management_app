@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.util.Optional;
 
 @Repository
@@ -41,4 +40,6 @@ public interface AcademicSessionRepository extends JpaRepository<AcademicSession
         Optional<AcademicSession> findCurrentSession(@Param("schoolId") Long schoolId);
 
     Optional<AcademicSession> findByStatusAndSchoolId(SessionStatus sessionStatus, Long id);
+
+    Optional<AcademicSession> findByIdAndSchoolId(Long id, Long id1);
 }

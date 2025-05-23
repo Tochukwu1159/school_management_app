@@ -29,7 +29,7 @@ public class LibraryController {
             return ResponseEntity.ok(new ApiResponse<>("Book added successfully", true, addedBook));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error adding book: " + e.getMessage(), false));
+                    .body(new ApiResponse<>(e.getMessage(), false));
         }
     }
 
@@ -40,7 +40,7 @@ public class LibraryController {
             return ResponseEntity.ok(new ApiResponse<>("Book updated successfully", true, editedBook));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error updating book: " + e.getMessage(), false));
+                    .body(new ApiResponse<>( e.getMessage(), false));
         }
     }
 
@@ -51,7 +51,7 @@ public class LibraryController {
             return ResponseEntity.ok(new ApiResponse<>("Book deleted successfully", true, "Book ID: " + bookId));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error deleting book: " + e.getMessage(), false));
+                    .body(new ApiResponse<>( e.getMessage(), false));
         }
     }
 
@@ -81,10 +81,10 @@ public class LibraryController {
             return ResponseEntity.ok(new ApiResponse<>("Books retrieved successfully", true, response));
         } catch (CustomNotFoundException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ApiResponse<>("Unauthorized: " + e.getMessage(), false));
+                    .body(new ApiResponse<>(  e.getMessage(), false));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error retrieving books: " + e.getMessage(), false));
+                    .body(new ApiResponse<>( e.getMessage(), false));
         }
     }
 
@@ -95,7 +95,7 @@ public class LibraryController {
             return ResponseEntity.ok(new ApiResponse<>("Book borrowed successfully", true, borrowing));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error borrowing book: " + e.getMessage(), false));
+                    .body(new ApiResponse<>(e.getMessage(), false));
         }
     }
 
@@ -106,7 +106,7 @@ public class LibraryController {
             return ResponseEntity.ok(new ApiResponse<>("Book returned successfully", true, returnedBook));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error returning book: " + e.getMessage(), false));
+                    .body(new ApiResponse<>( e.getMessage(), false));
         }
     }
 
@@ -119,7 +119,7 @@ public class LibraryController {
             return ResponseEntity.ok(new ApiResponse<>("Book quantity updated successfully", true, updatedBook));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error updating book quantity: " + e.getMessage(), false));
+                    .body(new ApiResponse<>( e.getMessage(), false));
         }
     }
 }

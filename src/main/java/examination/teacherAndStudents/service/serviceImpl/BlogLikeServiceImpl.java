@@ -8,7 +8,6 @@ import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.BlogLikeRepository;
 import examination.teacherAndStudents.repository.BlogRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
-import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.BlogLikeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,7 +27,7 @@ public class BlogLikeServiceImpl implements BlogLikeService {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         Profile user = profileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("User not found"));
-        Blog blog = blogRepository.findById(blogId)
+        Blog blog = blogRepository.findByIdAndSchoolId(blogId, user.getUser().getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Blog not found"));
 
         Optional<BlogLike> existingLike = blogLikeRepository.findByBlogAndUser(blog, user);

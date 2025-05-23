@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.repository;
 
-import examination.teacherAndStudents.entity.AcademicSession;
 import examination.teacherAndStudents.entity.ClassBlock;
 import examination.teacherAndStudents.entity.ClassSubject;
 import examination.teacherAndStudents.entity.Subject;
@@ -17,7 +16,7 @@ import java.util.Optional;
 public interface ClassSubjectRepository extends JpaRepository<ClassSubject, Long> {
 
 
-    Optional<ClassSubject> findByIdAndClassBlock(Long id, ClassBlock studentClass);
+    Optional<ClassSubject> findByIdAndClassBlockId(Long id, Long studentClassId);
 
     @Query("SELECT cs FROM ClassSubject cs WHERE " +
             "(:subjectId IS NULL OR cs.subject.id = :subjectId) AND " +
@@ -33,4 +32,6 @@ public interface ClassSubjectRepository extends JpaRepository<ClassSubject, Long
             Pageable pageable);
 
     boolean existsBySubjectAndClassBlock(Subject subject, ClassBlock classBlock);
+
+    Optional<ClassSubject> findByIdAndClassBlockIdAndSchoolId(Long subjectId, Long classBlockId, Long schoolId);
 }

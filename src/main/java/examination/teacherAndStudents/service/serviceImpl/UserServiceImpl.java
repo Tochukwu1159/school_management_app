@@ -37,7 +37,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -93,7 +92,7 @@ public class UserServiceImpl implements UserService {
         // Validate class assignment (optional)
         SessionClass sessionClass = null;
         if (userRequest.getClassAssignedId() != null) {
-            ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
+            ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(userRequest.getClassAssignedId(), admin.getSchool().getId())
                     .orElseThrow(() -> new BadRequestException("Class block not found with ID: " + userRequest.getClassAssignedId()));
 
             // Find the current active AcademicSession
@@ -140,6 +139,7 @@ public class UserServiceImpl implements UserService {
         // Build Profile
         Set<EmergencyContact> emergencyContacts = buildEmergencyContacts(userRequest.getEmergencyContacts());
         Set<Address> addresses = buildAddressesFromDto(userRequest.getAddresses());
+
         Profile userProfile = Profile.builder()
                 .gender(userRequest.getGender())
                 .religion(userRequest.getReligion())
@@ -212,10 +212,6 @@ public class UserServiceImpl implements UserService {
         School school = schoolRepository.findById(userRequest.getSchoolId())
                 .orElseThrow(() -> new BadRequestException("Invalid school ID"));
 
-        // Validate class exists
-        ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassAssignedId())
-                .orElseThrow(() -> new BadRequestException("Invalid class ID"));
-
         SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(userRequest.getAcademicSessionId(), userRequest.getClassAssignedId())
                 .orElseThrow(() -> new BadRequestException("Invalid class ID"));
 
@@ -229,8 +225,8 @@ public class UserServiceImpl implements UserService {
         if (school.getIsApplicationFee()) {
             applicationFee = feeStructureService.getApplicationFee(
                     school.getId(),
-                    classBlock.getClassLevel().getId(),
-                    classBlock.getId()
+                    sessionClass.getClassBlock().getClassLevel().getId(),
+                    sessionClass.getClassBlock().getId()
             );
             applicationFeeApplied = true;
         }
@@ -309,7 +305,7 @@ public class UserServiceImpl implements UserService {
                 .name(savedUser.getFirstName() + "  " + savedUser.getLastName())
                 .status(ApplicationStatus.PENDING_REVIEW)
                 .session(academicSessionRepository.findCurrentSession(school.getId()).get())
-                .appliedClass(classBlock)
+                .appliedClass(sessionClass.getClassBlock())
                 .applicationFeeApplied(applicationFeeApplied)
                 .applicationDate(LocalDateTime.now())
                 .applicationFee(applicationFee)
@@ -373,7 +369,7 @@ public class UserServiceImpl implements UserService {
                 //                .profilePicture(imageUrl)
                 .phoneNumber(userRequest.getPhoneNumber())
                 .build();
-        Profile saveUserProfile = profileRepository.save(userProfile);
+       profileRepository.save(userProfile);
 
 
         //create wallet
@@ -389,9 +385,11 @@ public class UserServiceImpl implements UserService {
     public UserResponse createStaff(UserRequestDto userRequest) throws MessagingException {
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
+
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
-        StaffLevel staffLevel = staffLevelRepository.findById(userRequest.getStaffLevelId())
+
+        StaffLevel staffLevel = staffLevelRepository.findByIdAndSchoolId(userRequest.getStaffLevelId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Staff level not found"));
 
          School school = admin.getSchool();
@@ -1065,7 +1063,7 @@ public class UserServiceImpl implements UserService {
                 .user(savedUser);
 
         if (userRequest.getClassFormTeacherId() != null) {
-            ClassBlock classBlock = classBlockRepository.findById(userRequest.getClassFormTeacherId())
+            ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(userRequest.getClassFormTeacherId(), savedUser.getSchool().getId())
                     .orElseThrow(() -> new NotFoundException("Class not found with ID: " + userRequest.getClassFormTeacherId()));
             profileBuilder.classFormTeacher(classBlock);
         }

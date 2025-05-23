@@ -1,27 +1,24 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.AttendanceAlreadyTakenException;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.error_handler.EntityNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.AttendanceService;
 import examination.teacherAndStudents.utils.AttendanceStatus;
+import examination.teacherAndStudents.utils.Roles;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,34 +30,34 @@ public class AttendanceServiceImpl implements AttendanceService {
 
     @Autowired
     private AttendanceRepository attendanceRepository;
-    @Autowired
-    private ClassLevelRepository classLevelRepository;
+
     @Autowired
     private AttendancePercentRepository attendancePercentRepository;
-    @Autowired
-    private ClassBlockRepository classBlockRepository;
     @Autowired
     private ProfileRepository profileRepository;
     @Autowired
     private StudentTermRepository studentTermRepository;
     @Autowired
-    private AcademicSessionRepository academicSessionRepository;
-    @Autowired
     private SessionClassRepository sessionClassRepository;
+    @Autowired
+    private ClassBlockRepository classBlockRepository;
 
 
     public void takeBulkAttendance(BulkAttendanceRequest request) {
         try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                    .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-          classLevelRepository.findById(request.getClassLevelId())
+          classBlockRepository.findByIdAndClassLevelIdAndSchoolId(request.getClassBlockId(),request.getClassLevelId(), admin.getSchool().getId())
                     .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
 
             // Validate the student term exists
-            StudentTerm studentTerm = studentTermRepository.findById(request.getStudentTermId())
+            StudentTerm studentTerm = studentTermRepository.findByIdAndAcademicSessionId(request.getStudentTermId(), request.getSessionId())
                     .orElseThrow(() -> new CustomNotFoundException("Student term not found"));
 
             SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(request.getSessionId(), request.getClassBlockId())
-                    .orElseThrow(() -> new CustomNotFoundException("SessionClass not found for Academic Session "));
+                    .orElseThrow(() -> new CustomNotFoundException("Session class not found for Academic Session "));
 
             // Validate the date is within the term period
             LocalDate attendanceDate = request.getDate().toLocalDate();
@@ -110,7 +107,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         } catch (CustomNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            throw new CustomInternalServerException("Error taking attendance: " + e.getMessage());
+            throw new CustomInternalServerException( e.getMessage());
         }
     }
 
@@ -261,7 +258,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         }
     }
 
-    public StudentAttendanceResponse calculateAttendancePercentage(Long userId, Long classLevelId, Long sessionId, Long studentTermId) {
+    public StudentAttendanceResponse calculateAttendancePercentage(Long userId, Long classBlockId, Long sessionId, Long studentTermId) {
         try {
             Optional<User> optionalStudent = userRepository.findById(userId);
             if (optionalStudent.isEmpty()) {
@@ -274,8 +271,8 @@ public class AttendanceServiceImpl implements AttendanceService {
                 throw new CustomNotFoundException("Profile not found for student with ID: " + userId);
             }
 
-            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classLevelId)
-                    .orElseThrow(() -> new CustomNotFoundException("Class Level not found with ID: " + classLevelId));
+            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classBlockId)
+                    .orElseThrow(() -> new CustomNotFoundException("Section class not found"));
 
             Optional<examination.teacherAndStudents.entity.StudentTerm> studentTerm = studentTermRepository.findById(studentTermId);
             if (studentTerm.isEmpty()) {

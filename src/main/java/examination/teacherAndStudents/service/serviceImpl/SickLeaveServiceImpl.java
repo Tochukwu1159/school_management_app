@@ -35,10 +35,9 @@ public class SickLeaveServiceImpl implements SickLeaveService {
 
         String email = getAuthenticatedUserEmail();
         Profile profile = getProfileByEmail(email);
-        AcademicSession academicSession = getAcademicSession(request.getSessionId());
-        StudentTerm studentTerm = getStudentTerm(request.getTermId());
+        StudentTerm studentTerm = getStudentTerm(request.getTermId(), request.getSessionId());
 
-        Leave sickLeave = buildSickLeaveEntity(request, profile, academicSession, studentTerm);
+        Leave sickLeave = buildSickLeaveEntity(request, profile, studentTerm.getAcademicSession(), studentTerm);
         sickLeaveRepository.save(sickLeave);
 
         log.info("Sick leave applied successfully [leaveId={}, email={}, startDate={}, endDate={}]",
@@ -59,12 +58,12 @@ public class SickLeaveServiceImpl implements SickLeaveService {
         validateProcessRequest(requestDto);
 
         String email = getAuthenticatedUserEmail();
-        Profile approver = getProfileByEmail(email);
+        Profile approvedBy = getProfileByEmail(email);
         Leave sickLeave = getSickLeaveById(sickLeaveId);
 
         validateSickLeaveForProcessing(sickLeave);
 
-        updateSickLeaveStatus(sickLeave, requestDto, approver);
+        updateSickLeaveStatus(sickLeave, requestDto, approvedBy);
         sickLeaveRepository.save(sickLeave);
 
         log.info("Sick leave processed [leaveId={}, action={}, email={}]",
@@ -133,13 +132,9 @@ public class SickLeaveServiceImpl implements SickLeaveService {
                 .orElseThrow(() -> new NotFoundException("Profile not found for user: " + email));
     }
 
-    private AcademicSession getAcademicSession(Long sessionId) {
-        return academicSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new NotFoundException("Academic session not found with ID: " + sessionId));
-    }
 
-    private StudentTerm getStudentTerm(Long termId) {
-        return studentTermRepository.findById(termId)
+    private StudentTerm getStudentTerm(Long termId, Long sessionId) {
+        return studentTermRepository.findByIdAndAcademicSessionId(termId, sessionId)
                 .orElseThrow(() -> new NotFoundException("Student term not found with ID: " + termId));
     }
 

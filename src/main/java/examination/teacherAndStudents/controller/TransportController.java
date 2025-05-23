@@ -32,6 +32,13 @@ public class TransportController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @PostMapping("/add-bus")
+    public ResponseEntity<ApiResponse<TransportResponse>> addBusToRoute(@RequestBody AddBusToRouteRequest request) {
+        TransportResponse createdTransport = transportService.addBusToRoute(request);
+        ApiResponse<TransportResponse> response = new ApiResponse<>("Bus added to route successfully", true, createdTransport);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
     @PostMapping("/pay")
     public ResponseEntity<ApiResponse<TransportAllocationResponse>> payForTransport(@RequestBody TransportPaymentRequest transportPaymentRequest) {
         TransportAllocationResponse response = transportService.payForTransport(transportPaymentRequest);
@@ -104,15 +111,13 @@ public class TransportController {
     }
 
     @PostMapping("/location/update")
-//    @PreAuthorize("hasRole('ADMIN') or hasRole('DRIVER')")
     public ResponseEntity<ApiResponse<String>> updateBusLocation(@RequestBody BusLocationRequest request) {
-    String response =    busLocationService.updateBusLocation(request);
-    ApiResponse<String> apiResponse = new ApiResponse<>("Bus location updated successfully", true, response);
+        String response = busLocationService.updateBusLocation(request);
+        ApiResponse<String> apiResponse = new ApiResponse<>("Bus location updated successfully", true, response);
         return new ResponseEntity<>(apiResponse, HttpStatus.OK);
     }
 
     @GetMapping("/location/{busId}")
-//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BusLocation> getBusLocation(@PathVariable Long busId) {
         BusLocation location = busLocationService.getBusLocation(busId);
         return ResponseEntity.ok(location);
@@ -127,8 +132,15 @@ public class TransportController {
             @RequestParam(defaultValue = "ASC") String sortDirection) {
         Page<TransportAllocationResponse> allocations = transportService.getAllocatedStudentsForDriver(
                 driverId, page, size, sortBy, sortDirection);
-        ApiResponse<Page<TransportAllocationResponse>> apiResponse = new ApiResponse<>("Bus location updated successfully", true, allocations);
-
+        ApiResponse<Page<TransportAllocationResponse>> apiResponse = new ApiResponse<>("Allocated students fetched successfully", true, allocations);
         return ResponseEntity.ok(apiResponse);
+    }
+
+    @PutMapping("/{busId}/assign-driver")
+    public ResponseEntity<ApiResponse<TransportResponse>> assignDriverToBus(@PathVariable Long busId,
+                                                                            @RequestBody AssignDriverRequest request) {
+        TransportResponse updatedTransport = transportService.assignDriverToBus(busId, request.getDriverId());
+        ApiResponse<TransportResponse> response = new ApiResponse<>("Driver assigned to bus successfully", true, updatedTransport);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -65,7 +64,7 @@ public class WalletServiceImpl implements WalletService {
                 .orElseThrow(() -> new ResourceNotFoundException("Wallet not found or phone number missing"));
 
 
-        return new WalletResponse(wallet.getBalance(), wallet.getTotalMoneySent());
+        return new WalletResponse(wallet.getId(),wallet.getBalance(), wallet.getTotalMoneySent(), wallet.getWalletStatus());
 
     }
 
@@ -75,8 +74,6 @@ public class WalletServiceImpl implements WalletService {
 
         Wallet studentWallet = walletRepository.findWalletByUserProfile(profile)
                 .orElseThrow(() -> new NotFoundException("Wallet not found"));
-        School studentSchool = studentWallet.getSchool();
-
         studentWallet.setBalance(studentWallet.getBalance().add(amount));
 //        studentSchool.getWallet().setBalance(amount);
         walletRepository.save(studentWallet);
@@ -180,7 +177,7 @@ public class WalletServiceImpl implements WalletService {
                     .orElseGet(() -> createNewWallet(profile));
 
             // 4. Credit the wallet
-            wallet.credit(amount);
+            wallet.credit(amount, true);
             walletRepository.save(wallet);
 
             // 5. Record the transaction
@@ -202,7 +199,7 @@ public class WalletServiceImpl implements WalletService {
 
         } catch (Exception e) {
             logger.error("Failed to credit wallet via webhook. Reference: {}, Error: {}", reference, e.getMessage());
-            throw new PaymentProcessingException("Failed to process webhook credit "+e);
+            throw new PaymentProcessingException(e.getMessage());
         }
     }
 
@@ -322,7 +319,7 @@ public class WalletServiceImpl implements WalletService {
                 .orElseGet(() -> createNewWallet(profile));
 
         BigDecimal amountDecimal = BigDecimal.valueOf(amount);
-        wallet.credit(amountDecimal);
+        wallet.credit(amountDecimal, true);
         walletRepository.save(wallet);
 
         Transaction transaction = createTransaction(profile, amountDecimal, transactionResponse);

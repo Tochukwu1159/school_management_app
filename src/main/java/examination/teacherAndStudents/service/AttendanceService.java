@@ -27,7 +27,7 @@ public interface AttendanceService {
             String sortBy,
             String sortDirection);
         List<Attendance> getStudentAttendanceByClass(Long classId, LocalDateTime startDate, LocalDateTime endDate);
-    StudentAttendanceResponse calculateAttendancePercentage(Long userId, Long classLevelId, Long sessionId, Long studentTermId);
+    StudentAttendanceResponse calculateAttendancePercentage(Long userId, Long classBlockId, Long sessionId, Long studentTermId);
     List<StudentAttendanceResponse> calculateClassAttendancePercentage(Long classLevelId,Long sessionId, Long termId);
     Page<AttendanceResponses> getAllStudentsAttendance(
             Long studentId,

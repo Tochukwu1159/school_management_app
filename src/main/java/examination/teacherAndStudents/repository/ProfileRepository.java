@@ -20,14 +20,19 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
 
 
     Optional<Profile> findByUser(User user);
+
     List<Profile> findBySessionClassId(Long classId);
+
     Optional<Profile> findByUniqueRegistrationNumber(String uniqueRegistrationNumber);
+
     Optional<Profile> findByUserId(Long studentId);
+
     Boolean existsByUniqueRegistrationNumber(String studentReg);
 
 
     @Query("""
-           SELECT p
+
+            SELECT p
            FROM Profile p
            JOIN p.user u
            WHERE u.roles = :role AND p.profileStatus = :status
@@ -70,4 +75,8 @@ public interface ProfileRepository extends JpaRepository<Profile, Long> {
     Optional<Profile> findByReferralCode(String referralCode);
 
     List<Profile> findByUserIn(List<User> activeUsers);
-}
+
+    @Query("SELECT p FROM Profile p JOIN p.user u WHERE p.id = :teacherId AND u.school.id = :schoolId")
+    Optional<Profile> findByIdAndSchoolId(@Param("teacherId") Long teacherId, @Param("schoolId") Long schoolId);
+
+        }

@@ -1,11 +1,13 @@
 package examination.teacherAndStudents.service.serviceImpl;
 
+import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.BulkExamScheduleRequest;
 import examination.teacherAndStudents.dto.ExamScheduleRequest;
 import examination.teacherAndStudents.dto.ExamScheduleResponse;
 import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomInternalServerException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
+import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.ExamScheduleService;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +28,9 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     private final SubjectRepository subjectRepository;
     private final UserRepository userRepository;
     private final ClassBlockRepository classBlockRepository;
-    private final AcademicSessionRepository academicSessionRepository;
     private final StudentTermRepository studentTermRepository;
     private final SessionClassRepository sessionClassRepository;
+    private final ClassSubjectRepository classSubjectRepository;
 
     @Override
     @Transactional
@@ -41,6 +43,10 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     @Transactional
     public List<ExamScheduleResponse> createBulkExamSchedules(BulkExamScheduleRequest request) {
         // Validate shared fields
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Creator's profile not found"));
+
         if (request.getTermId() == null || request.getYearId() == null || request.getClassBlockId() == null) {
             throw new CustomInternalServerException("Term ID, Year ID, and Class Block ID are required");
         }
@@ -49,12 +55,11 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         }
 
         // Fetch shared entities
-           classBlockRepository.findById(request.getClassBlockId())
+           classBlockRepository.findByIdAndSchoolId(request.getClassBlockId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Class block not found with ID: " + request.getClassBlockId()));
-        AcademicSession session = academicSessionRepository.findById(request.getYearId())
-                .orElseThrow(() -> new CustomNotFoundException("Academic session not found with ID: " + request.getYearId()));
-        StudentTerm term = studentTermRepository.findById(request.getTermId())
-                .orElseThrow(() -> new CustomNotFoundException("Term not found with ID: " + request.getTermId()));
+
+        StudentTerm term = studentTermRepository.findByIdAndAcademicSessionId(request.getTermId(), request.getYearId())
+                .orElseThrow(() -> new CustomNotFoundException("Term not found"));
 
         SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(request.getYearId(), request.getClassBlockId())
                 .orElseThrow(() -> new CustomNotFoundException("SessionClass not found for Academic Session "));
@@ -66,7 +71,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
                     validateRequest(scheduleRequest, sessionClass.getId());
 
                     // Build ExamSchedule entity
-                    Subject subject = subjectRepository.findById(scheduleRequest.getSubjectId())
+                    ClassSubject subject = classSubjectRepository.findByIdAndClassBlockId(scheduleRequest.getSubjectId(), sessionClass.getClassBlock().getId())
                             .orElseThrow(() -> new CustomNotFoundException("Subject not found with ID: " ));
                     User teacher = userRepository.findById(scheduleRequest.getTeacherId())
                             .orElseThrow(() -> new CustomNotFoundException("Teacher not found with ID: " + scheduleRequest.getTeacherId()));
@@ -75,7 +80,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
                             .subject(subject)
                             .teacher(teacher)
                             .sessionClass(sessionClass)
-                            .academicSession(session)
+                            .academicSession(term.getAcademicSession())
                             .studentTerm(term)
                             .examDate(scheduleRequest.getExamDate())
                             .startTime(scheduleRequest.getStartTime())
@@ -133,7 +138,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
     }
 
     private void updateScheduleFromRequest(ExamSchedule schedule, ExamScheduleRequest request) {
-        Subject subject = subjectRepository.findById(request.getSubjectId())
+        ClassSubject subject = classSubjectRepository.findById(request.getSubjectId())
                 .orElseThrow(() -> new CustomNotFoundException("Subject not found with ID: " + request.getSubjectId()));
         User teacher = userRepository.findById(request.getTeacherId())
                 .orElseThrow(() -> new CustomNotFoundException("Teacher not found with ID: " + request.getTeacherId()));
@@ -149,7 +154,7 @@ public class ExamScheduleServiceImpl implements ExamScheduleService {
         ExamScheduleResponse response = new ExamScheduleResponse();
         response.setId(schedule.getId());
         response.setSubjectId(schedule.getSubject().getId());
-        response.setSubjectName(schedule.getSubject().getName());
+        response.setSubjectName(schedule.getSubject().getSubject().getName());
         response.setTeacherId(schedule.getTeacher().getId());
         response.setTeacherName(schedule.getTeacher().getFirstName() + " " + schedule.getTeacher().getLastName());
         response.setSessionClassId(schedule.getSessionClass().getId());

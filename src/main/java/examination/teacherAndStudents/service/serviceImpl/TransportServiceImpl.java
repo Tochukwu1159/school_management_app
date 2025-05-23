@@ -15,6 +15,7 @@ import examination.teacherAndStudents.utils.Roles;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +28,7 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TransportServiceImpl implements TransportService {
 
     private final TransportRepository transportRepository;
@@ -47,11 +49,12 @@ public class TransportServiceImpl implements TransportService {
     @Transactional
     public TransportResponse createTransport(TransportRequest transportRequest) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+    User admin =    userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
+        checkForDuplicateBus(transportRequest.getVehicleNumber(),transportRequest.getLicenceNumber());
 
         // Validate route
-        BusRoute busRoute = busRouteRepository.findById(transportRequest.getBusRouteId())
+        BusRoute busRoute = busRouteRepository.findByIdAndSchoolId(transportRequest.getBusRouteId(), admin.getSchool().getId() )
                 .orElseThrow(() -> new CustomNotFoundException("BusRoute not found with ID: " + transportRequest.getBusRouteId()));
 
         Profile driver = null;
@@ -99,7 +102,7 @@ public class TransportServiceImpl implements TransportService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        Bus transport = transportRepository.findById(transportId)
+        Bus transport = transportRepository.findByBusIdAndSchoolId(transportId, admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
 
         if (updatedTransport.getVehicleNumber() != null) {
@@ -155,7 +158,7 @@ public class TransportServiceImpl implements TransportService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        Bus transport = transportRepository.findById(transportId)
+        Bus transport = transportRepository.findByBusIdAndSchoolId(transportId, admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
 
         if (studentTransportTrackerRepository.existsByTransport(transport)) {
@@ -229,16 +232,11 @@ public class TransportServiceImpl implements TransportService {
         User student = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as a Student"));
 
-        AcademicSession academicSession = academicSessionRepository.findById(request.getSessionId())
-                .orElseThrow(() -> new CustomNotFoundException("Academic session not found"));
-
-        StudentTerm term = studentTermRepository.findById(request.getTermId())
+        StudentTerm term = studentTermRepository.findByIdAndAcademicSessionId(request.getTermId(), request.getSessionId())
                 .orElseThrow(() -> new CustomNotFoundException("Term not found"));
 
         BusRoute route = busRouteRepository.findById(request.getRouteId())
                 .orElseThrow(() -> new CustomNotFoundException("Route not found"));
-
-
 
         Profile profile = profileRepository.findByUser(student)
                 .orElseThrow(() -> new CustomNotFoundException("User profile not found"));
@@ -246,7 +244,7 @@ public class TransportServiceImpl implements TransportService {
         Fee fee = feeRepository.findById(request.getFeeId())
                 .orElseThrow(() -> new CustomNotFoundException("Fee not found"));
 
-        if (paymentRepository.existsByStudentFeeAndProfileAndAcademicSessionAndStudentTerm(fee, profile, academicSession, term)) {
+        if (paymentRepository.existsByStudentFeeAndProfileAndAcademicSessionAndStudentTerm(fee, profile, term.getAcademicSession(), term)) {
             throw new EntityAlreadyExistException("Transport payment already made for this term");
         }
 
@@ -260,8 +258,6 @@ public class TransportServiceImpl implements TransportService {
 
         stopRepository.save(stop);
 
-
-
         PaymentRequest paymentRequest = PaymentRequest.builder()
                 .feeId(request.getFeeId())
                 .amount(fee.getAmount())
@@ -269,7 +265,7 @@ public class TransportServiceImpl implements TransportService {
 
             paymentService.processPayment(paymentRequest);
 
-        Payment payment = paymentRepository.findPaymentsForSessionAndTerm(fee.getId(), academicSession,profile, term)
+        Payment payment = paymentRepository.findPaymentsForSessionAndTerm(fee.getId(), term.getAcademicSession(),profile, term)
                 .orElseThrow(() -> new CustomInternalServerException("Payment record not created"));
 
         StudentTransportAllocation allocation = StudentTransportAllocation.builder()
@@ -279,7 +275,7 @@ public class TransportServiceImpl implements TransportService {
                 .route(route)
                 .stop(stop)
                 .sessionClass(profile.getSessionClass())
-                .academicSession(academicSession)
+                .academicSession(term.getAcademicSession())
                 .school(student.getSchool())
                 .term(term)
                 .status(AllocationStatus.PENDING)
@@ -297,7 +293,7 @@ public class TransportServiceImpl implements TransportService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        StudentTransportAllocation allocation = studentTransportTrackerRepository.findById(request.getTransportAllocationId())
+        StudentTransportAllocation allocation = studentTransportTrackerRepository.findByIdAndSchoolId(request.getTransportAllocationId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Transport allocation not found with ID: " + request.getTransportAllocationId()));
 
         if (allocation.getStatus() == AllocationStatus.SUCCESS) {
@@ -346,8 +342,8 @@ public class TransportServiceImpl implements TransportService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        Bus transport = transportRepository.findById(transportId)
-                .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
+        Bus transport = transportRepository.findByBusIdAndSchoolId(transportId, admin.getSchool().getId())
+                .orElseThrow(() -> new CustomNotFoundException("Transport not found"));
 
         TransportTracker tracker = transportTrackerRepository.findByBusAndSessionAndTerm(
                         transport,
@@ -414,7 +410,7 @@ public class TransportServiceImpl implements TransportService {
         User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
-        Bus transport = transportRepository.findById(transportId)
+        Bus transport = transportRepository.findByBusIdAndSchoolId(transportId, admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Transport not found with ID: " + transportId));
 
         Profile student = profileRepository.findById(studentId)
@@ -449,7 +445,7 @@ public class TransportServiceImpl implements TransportService {
                 .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
 
         // Validate route
-        BusRoute busRoute = busRouteRepository.findById(request.getRouteId())
+        BusRoute busRoute = busRouteRepository.findByIdAndSchoolId(request.getRouteId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("BusRoute not found with ID: " + request.getRouteId()));
 
         // Validate driver
@@ -536,6 +532,33 @@ public class TransportServiceImpl implements TransportService {
         return allocations.map(this::mapToAllocationResponse);
     }
 
+    @Override
+    @Transactional
+    public TransportResponse assignDriverToBus(Long busId, Long driverId) {
+        String email = SecurityConfig.getAuthenticatedUserEmail();
+        User admin = userRepository.findByEmailAndRole(email, Roles.ADMIN)
+                .orElseThrow(() -> new CustomNotFoundException("Please login as an Admin"));
+
+        // Find the bus
+        Bus bus = transportRepository.findByBusIdAndSchoolId(busId, admin.getSchool().getId())
+                .orElseThrow(() -> new CustomNotFoundException("Bus not found with ID: " + busId));
+
+        // Find the driver
+        Profile driver = profileRepository.findById(driverId)
+                .orElseThrow(() -> new CustomNotFoundException("Driver not found with ID: " + driverId));
+
+        // Ensure driver belongs to the same school
+        if (!driver.getUser().getSchool().getId().equals(admin.getSchool().getId())) {
+            throw new CustomInternalServerException("Driver does not belong to the same school as the bus");
+        }
+
+        // Assign driver to bus
+        bus.setDriver(driver);
+        transportRepository.save(bus);
+
+        return mapToTransportResponse(bus);
+    }
+
 
         public void sendEmailToStudents(String busRoute, Set<User> students) throws MessagingException {
         for (User student : students) {
@@ -580,5 +603,16 @@ public class TransportServiceImpl implements TransportService {
                 .allocationStatus(allocation.getStatus())
                 .createdDate(allocation.getCreatedDate())
                 .build();
+    }
+
+    private void checkForDuplicateBus(String vehicleNumber, String licenceNumber) {
+        if (transportRepository.existsByVehicleNumber(vehicleNumber)) {
+            log.warn("Bus with vehicle number {} already exists", vehicleNumber);
+            throw new EntityAlreadyExistException("Vehicle number already exists");
+        }
+        if (transportRepository.existsByLicenceNumber(licenceNumber)) {
+            log.warn("Bus with licence number {} already exists", licenceNumber);
+            throw new EntityAlreadyExistException("Licence number  already exists");
+        }
     }
 }

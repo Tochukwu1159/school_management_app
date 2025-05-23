@@ -6,10 +6,12 @@ import examination.teacherAndStudents.dto.BlogCommentResponse;
 import examination.teacherAndStudents.entity.Blog;
 import examination.teacherAndStudents.entity.BlogComment;
 import examination.teacherAndStudents.entity.Profile;
+import examination.teacherAndStudents.entity.User;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.BlogCommentRepository;
 import examination.teacherAndStudents.repository.BlogRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
+import examination.teacherAndStudents.repository.UserRepository;
 import examination.teacherAndStudents.service.BlogCommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,14 +25,15 @@ public class BlogCommentServiceImpl implements BlogCommentService {
     private final BlogRepository blogRepository;
     private final ProfileRepository profileRepository;
     private final BlogCommentRepository blogCommentRepository;
+    private final UserRepository userRepository;
 
     // ===== ADD COMMENT (already done) =====
     public BlogCommentResponse addComment(Long blogId, BlogCommentRequest request) {
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        Profile user = profileRepository.findByUserEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("User not found"));
 
-        Blog blog = blogRepository.findById(blogId)
+        Blog blog = blogRepository.findByIdAndSchoolId(blogId,  user.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Blog not found"));
 
         BlogComment parentComment = null;
@@ -41,7 +44,7 @@ public class BlogCommentServiceImpl implements BlogCommentService {
 
         BlogComment comment = BlogComment.builder()
                 .blog(blog)
-                .user(user)
+                .user(user.getUserProfile())
                 .content(request.getContent())
                 .parentComment(parentComment)
                 .build();

@@ -79,7 +79,7 @@ public class ReferralServiceImpl implements ReferralService {
         userPointsRepository.save(userPoints);
 
         //  Process payment to user's account
-        wallet.credit(redemptionAmount);
+        wallet.credit(redemptionAmount, false);
         walletRepository.save(wallet);
 
 

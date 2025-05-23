@@ -6,12 +6,10 @@ import examination.teacherAndStudents.dto.ClassBlockResponse;
 import examination.teacherAndStudents.dto.FormTeacherAssignmentRequest;
 import examination.teacherAndStudents.dto.UpdateFormTeacherRequest;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.error_handler.EntityAlreadyExistException;
-import examination.teacherAndStudents.error_handler.ResourceNotFoundException;
-import examination.teacherAndStudents.error_handler.UnauthorizedException;
+import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.ClassBlockService;
+import examination.teacherAndStudents.utils.EntityFetcher;
 import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,11 +32,17 @@ public class ClassBlockServiceImpl implements ClassBlockService {
     private final UserRepository userRepository;
     private final AcademicSessionRepository academicSessionRepository;
     private final SessionClassRepository sessionClassRepository;
+    private final EntityFetcher entityFetcher;
 
     public ClassBlockResponse getClassBlockById(Long id) {
         try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = entityFetcher.fetchLoggedInAdmin(email);
+            if (admin == null) {
+                throw new AuthenticationFailedException("Please login as an Admin");
+            }
             // Fetch the class block by ID
-            ClassBlock classBlock = classBlockRepository.findById(id)
+            ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(id, admin.getSchool().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Class Block not found with ID: " + id));
 
             // Map the entity to a response DTO and return
@@ -48,7 +52,7 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             throw e;
         } catch (Exception e) {
             // Handle unexpected exceptions
-            throw new RuntimeException("An error occurred while retrieving the class block: " + e.getMessage());
+            throw new RuntimeException(  e.getMessage());
         }
     }
 
@@ -75,8 +79,13 @@ public class ClassBlockServiceImpl implements ClassBlockService {
 
     public ClassBlockResponse updateClassBlock(Long id, ClassBlockRequest request) {
         try {
+            String email = SecurityConfig.getAuthenticatedUserEmail();
+            User admin = entityFetcher.fetchLoggedInAdmin(email);
+            if (admin == null) {
+                throw new AuthenticationFailedException("Please login as an Admin");
+            }
             // Fetch the class block by ID
-            ClassBlock classBlock = classBlockRepository.findById(id)
+            ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(id, admin.getSchool().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Class Block not found"));
 
             // Update the class block details
@@ -89,10 +98,10 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             return mapToResponse(classBlock);
         } catch (ResourceNotFoundException e) {
             // Handle the specific exception if the class block is not found
-            throw new RuntimeException("Resource not found: " + e.getMessage());
+            throw new RuntimeException( e.getMessage());
         } catch (Exception e) {
             // Handle other unexpected exceptions
-            throw new RuntimeException("An unexpected error occurred while updating the class block: " + e.getMessage());
+            throw new RuntimeException(e.getMessage());
         }
     }
 
@@ -108,17 +117,17 @@ public class ClassBlockServiceImpl implements ClassBlockService {
             classBlockRepository.delete(classBlock);
         } catch (ResourceNotFoundException e) {
             // Handle not found exceptions
-            throw new RuntimeException("Resource not found: " + e.getMessage());
+            throw new RuntimeException( e.getMessage());
         } catch (Exception e) {
             // Handle other unexpected exceptions
-            throw new RuntimeException("An unexpected error occurred while deleting the class block: " + e.getMessage());
+            throw new RuntimeException(  e.getMessage());
         }
     }
 
 
     public ClassBlockResponse updateFormTeacher(UpdateFormTeacherRequest request) {
         try {
-            AcademicSession session = academicSessionRepository.findById(request.getSessionId())
+            academicSessionRepository.findById(request.getSessionId())
                     .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
             // Fetch the class block
             ClassBlock classBlock = classBlockRepository.findByIdAndClassLevelId(request.getSubclassId(),request.getClassLevelId())
@@ -256,12 +265,8 @@ public class ClassBlockServiceImpl implements ClassBlockService {
 
             // Return the response
             return mapToResponse(newSessionClass.getClassBlock());
-        } catch (ResourceNotFoundException e) {
-            throw new RuntimeException("Resource not found: " + e.getMessage(), e);
-        } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Validation error: " + e.getMessage(), e);
         } catch (Exception e) {
-            throw new RuntimeException("An unexpected error occurred: " + e.getMessage(), e);
+            throw new RuntimeException( e.getMessage());
         }
     }
 

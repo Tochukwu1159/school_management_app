@@ -2,11 +2,13 @@ package examination.teacherAndStudents.entity;
 
 import examination.teacherAndStudents.utils.AttendanceStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -20,57 +22,30 @@ public class StaffAttendance {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "staff_unique_reg_number", nullable = false)
-    private String staffUniqueRegNumber;
+    @ManyToOne
+    @JoinColumn(name = "teacher_id")
+    @NotNull(message = "Teacher must not be null")
+        private Profile staff;
 
-    @Column(name = "check_in_time", nullable = false)
-    private LocalDateTime checkInTime;
+    @Column(name = "attendance_date")
+    @NotNull(message = "Attendance date must not be null") // Ensure date is not null
+    @PastOrPresent(message = "Attendance date must be in the past or present")
+    private LocalDateTime date;
 
-    @Column(name = "check_out_time")
-    private LocalDateTime checkOutTime;
-
-    @Column(name = "check_in_thumbprint_hash")
-    private String checkInThumbprintHash;
-
-    @Column(name = "check_out_thumbprint_hash")
-    private String checkOutThumbprintHash;
-
-    @Column(name = "biometric_device_id")
-    private String biometricDeviceId;
-    @Column(name = "checkOut_biometric_deviceId")
-    private String checkOutBiometricDeviceId;
-
-    @Column(name = "check_out_verification_score")
-    private double checkOutVerificationScore;
-
-    @Column(name = "verification_score")
-    private Double verificationScore;
-
-    private String thumbprintHash;
 
     @Enumerated(EnumType.STRING)
-    private AttendanceStatus status;
+    @NotNull(message = "Attendance status must not be null")
+    private AttendanceStatus status; // Enum for present or absent
 
     @ManyToOne
-    @JoinColumn(name = "term_id")
+    @JoinColumn(name = "term_id", nullable = false)
     private StudentTerm studentTerm;
 
     @ManyToOne
-    @JoinColumn(name = "profile_id")
-    private Profile staff;
+    @JoinColumn(name = "academic_year_id", nullable = false)
+    private AcademicSession academicYear;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    // Constructors, getters, and setters
 
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    // Additional biometric metadata
-    @Column(name = "biometric_match_algorithm")
-    private String biometricMatchAlgorithm;
-
-    @Column(name = "biometric_sdk_version")
-    private String biometricSdkVersion;
 }
+

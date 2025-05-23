@@ -47,12 +47,12 @@ public class SessionClassServiceImpl implements SessionClassService {
     @Override
     @Transactional
     public SessionClassResponse addProfilesToSessionClass(SessionClassRequest request) {
-        verifyAdminAccess();
+      User admin =  verifyAdminAccess();
 
-        AcademicSession session = academicSessionRepository.findById(request.getSessionId())
+        AcademicSession session = academicSessionRepository.findByIdAndSchoolId(request.getSessionId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Academic Session not found with ID: " + request.getSessionId()));
 
-        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+        ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(request.getClassBlockId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Class Block not found with ID: " + request.getClassBlockId()));
 
         Set<Profile> profiles = request.getProfileIds().stream()
@@ -196,17 +196,21 @@ public class SessionClassServiceImpl implements SessionClassService {
                 .build();
     }
 
-    private void verifyAdminAccess() {
+    private User verifyAdminAccess() {
         String email = SecurityConfig.getAuthenticatedUserEmail();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("User not found with email: " + email));
+
         if (!user.getRoles().contains(Roles.ADMIN)) {
             log.warn("Unauthorized access attempt by user: {}", email);
             throw new UnauthorizedException("Access restricted to ADMIN role");
         }
+
         if (user.getSchool() == null) {
             log.warn("User {} not associated with a school", email);
             throw new CustomNotFoundException("User not associated with a school");
         }
+
+        return user;
     }
 }

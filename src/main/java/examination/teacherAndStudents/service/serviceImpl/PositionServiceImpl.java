@@ -294,7 +294,7 @@ public class PositionServiceImpl implements PositionService {
                 }
             }
         } catch (ResourceNotFoundException e) {
-            throw new RuntimeException("Error generating report: " + e.getMessage(), e);
+            throw new RuntimeException( e.getMessage());
         }
     }
 

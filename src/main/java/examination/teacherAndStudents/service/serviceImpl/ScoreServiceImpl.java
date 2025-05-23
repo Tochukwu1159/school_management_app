@@ -119,10 +119,10 @@ public class ScoreServiceImpl implements ScoreService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
 
             SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(scoreRequest.getSessionId(), scoreRequest.getClassBlockId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Subject not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Section class not found"));
 
 
-            ClassSubject classSubject1 = classSubjectRepository.findByIdAndClassBlock(scoreRequest.getSubjectId(), sessionClass.getClassBlock())
+            ClassSubject classSubject1 = classSubjectRepository.findByIdAndClassBlockId(scoreRequest.getSubjectId(), sessionClass.getClassBlock().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Class Subject not found in the class")); //from the big subject
 
 
@@ -132,9 +132,9 @@ public class ScoreServiceImpl implements ScoreService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student term not found"));
 
 
-        if (!studentTerm.getAcademicSession().equals(sessionClass.getAcademicSession())) {
-            throw new IllegalStateException("The selected student term does not belong to the provided academic session.");
-        }
+//        if (!studentTerm.getAcademicSession().equals(sessionClass.getAcademicSession())) {
+//            throw new IllegalStateException("The selected student term does not belong to the provided academic session.");
+//        }
 
         List<String> classSubjects = studentProfile.getSessionClass().getClassBlock()
                 .getSubjects().stream()
@@ -154,7 +154,7 @@ public class ScoreServiceImpl implements ScoreService {
 
 
         // Check if a score already exists for the student and subject
-        Score existingScore = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(studentProfile, scoreRequest.getClassLevelId(), subject.getName(),sessionClass.getAcademicSession(), studentTerm).orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+        Score existingScore = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(studentProfile, scoreRequest.getClassLevelId(), subject.getName(),sessionClass.getAcademicSession(), studentTerm);
 
         if (existingScore != null) {
             // Update the existing score
@@ -180,7 +180,7 @@ public class ScoreServiceImpl implements ScoreService {
         }
 
         // After saving the score, calculate the result using a separate service method
-        resultService.calculateResult(scoreRequest.getClassLevelId(), student.get().getId(), subject.getName(),scoreRequest.getSessionId(), studentTerm.getId());
+        resultService.calculateResult(scoreRequest.getClassLevelId(), student.get().getId(), subject.getName(),sessionClass.getId(), studentTerm.getId());
     }
 
 

@@ -1,6 +1,5 @@
 package examination.teacherAndStudents.repository;
 
-import examination.teacherAndStudents.entity.AcademicSession;
 import examination.teacherAndStudents.entity.ClassBlock;
 import examination.teacherAndStudents.entity.ClassLevel;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,4 +27,8 @@ public interface  ClassBlockRepository extends JpaRepository<ClassBlock, Long> {
     List<ClassBlock> findByClassLevel(ClassLevel classLevel);
 
     Optional<ClassBlock> findByIdAndClassLevelId(Long id, Long classLevelId);
-};
+
+    Optional<ClassBlock> findByIdAndSchoolId(Long classBlockId, Long id);
+
+    Optional<ClassBlock> findByIdAndClassLevelIdAndSchoolId(Long classBlockId, Long classLevelId, Long id);
+}

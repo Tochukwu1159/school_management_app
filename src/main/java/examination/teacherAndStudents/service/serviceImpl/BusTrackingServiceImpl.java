@@ -7,7 +7,6 @@ import examination.teacherAndStudents.entity.*;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.repository.*;
 import examination.teacherAndStudents.service.BusTrackingService;
-import examination.teacherAndStudents.utils.Roles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -40,7 +39,7 @@ public class BusTrackingServiceImpl implements BusTrackingService {
                 .orElseThrow(() -> new CustomNotFoundException("No active term found for current date"));
 
         // Find transport allocation for the student and current term
-        StudentTransportAllocation allocation = studentTransportTrackerRepository.findByProfileAndTerm(student, currentTerm)
+        StudentTransportAllocation allocation = studentTransportTrackerRepository.findByProfileAndSchoolIdAndTerm(student,student.getUser().getSchool().getId(), currentTerm)
                 .orElseThrow(() -> new CustomNotFoundException("No transport allocation found for student in current term"));
 
         Bus bus = allocation.getTransport();

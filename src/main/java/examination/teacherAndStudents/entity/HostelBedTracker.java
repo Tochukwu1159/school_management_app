@@ -24,6 +24,10 @@ public class HostelBedTracker {
     @JoinColumn(name = "academic_year_id", nullable = false)
     private AcademicSession academicYear;
 
+    @ManyToOne
+    @JoinColumn(name = "school_id", nullable = false)
+    private School school;
+
     @Column(name = "beds_allocated", nullable = false)
     private int bedsAllocated;
 

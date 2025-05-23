@@ -53,7 +53,7 @@ public class FeePaymentServiceImpl implements FeePaymentService {
         validatePayment(paymentDTO);
 
         // Get the fee
-        Fee fee = feeRepository.findById(paymentDTO.getFeeId())
+        Fee fee = feeRepository.findByIdAndSchoolId(paymentDTO.getFeeId(), student.getUser().getSchool().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Fee not found"));
 
         if (!isFeeApplicable(student, fee)) {

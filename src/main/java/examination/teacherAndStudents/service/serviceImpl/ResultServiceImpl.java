@@ -69,7 +69,7 @@ public class ResultServiceImpl implements ResultService {
             Profile userProfile = profileRepository.findByUser(student)
                     .orElseThrow(() -> new NotFoundException("Student profile not found"));
 
-            SessionClass sessionClass = sessionClassRepository.findBySessionIdAndClassBlockId(sessionId, classLevelId)
+            SessionClass sessionClass = sessionClassRepository.findById(sessionId)
                     .orElseThrow(() -> new NotFoundException("Student academic session not found"));
 
             StudentTerm studentTerm = studentTermRepository.findById(termId)
@@ -77,7 +77,7 @@ public class ResultServiceImpl implements ResultService {
 
 
             // Retrieve the score for the student and subject
-            Score score = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, sessionClass.getId(), subjectName, sessionClass.getAcademicSession(), studentTerm).orElseThrow(() -> new NotFoundException("Student score not found"));
+            Score score = scoreRepository.findByUserProfileAndSessionClassIdAndSubjectNameAndAcademicYearAndStudentTerm(userProfile, sessionClass.getId(), subjectName, sessionClass.getAcademicSession(), studentTerm);
 
             if (score == null) {
                 throw new NotFoundException("Score not found for the specified criteria");

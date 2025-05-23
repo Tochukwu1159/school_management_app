@@ -4,6 +4,7 @@ import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.ClassLevelRequest;
 import examination.teacherAndStudents.dto.ClassLevelRequestUrl;
 import examination.teacherAndStudents.entity.*;
+import examination.teacherAndStudents.error_handler.BadRequestException;
 import examination.teacherAndStudents.error_handler.CustomNotFoundException;
 import examination.teacherAndStudents.error_handler.SubscriptionExpiredException;
 import examination.teacherAndStudents.error_handler.UnauthorizedException;
@@ -29,6 +30,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -41,9 +43,7 @@ public class ClassLevelServiceImpl implements ClassLevelService {
 
     private final ClassLevelRepository classLevelRepository;
     private final UserRepository userRepository;
-    private final AcademicSessionRepository academicSessionRepository;
     private final ClassBlockRepository classBlockRepository;
-    private final ClassNameRepository classNameRepository;
     private final EntityFetcher entityFetcher;
 
     @Transactional(readOnly = true)
@@ -89,6 +89,13 @@ public class ClassLevelServiceImpl implements ClassLevelService {
                 admin.getEmail(), classLevelRequest.getClassNameId(), classLevelRequest.getClassBlocks());
 
         ClassName className = entityFetcher.fetchClassName(classLevelRequest.getClassNameId());
+
+
+        Optional<ClassLevel> existingClassLevel = classLevelRepository.findByClassNameIdAndSchoolId(className.getId(), admin.getSchool().getId());
+        if (existingClassLevel.isPresent()) {
+            throw new BadRequestException("Class level already exists in this school");
+        }
+
 
         ClassLevel classLevel = ClassLevel.builder()
                 .className(className)
@@ -159,7 +166,7 @@ public class ClassLevelServiceImpl implements ClassLevelService {
         logger.info("Admin {} updating class level ID: {} with classNameId: {} and blocks: {}", admin.getEmail(), id,
                 classLevelRequest.getClassNameId(), classLevelRequest.getClassBlocks());
 
-        ClassLevel classLevel = classLevelRepository.findById(id)
+        ClassLevel classLevel = classLevelRepository.findByClassNameIdAndSchoolId(id, admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Class level not found with ID: " + id));
 
         if (!classLevel.getSchool().equals(admin.getSchool())) {
@@ -237,12 +244,6 @@ public class ClassLevelServiceImpl implements ClassLevelService {
         logger.debug("Deleted class level ID: {}", id);
     }
 
-    private void validateSubscription(School school) {
-        if (school == null || !school.isSubscriptionValid()) {
-            logger.warn("Operation blocked for school due to expired subscription");
-            throw new SubscriptionExpiredException("Active school subscription required");
-        }
-    }
 
     private User verifyAdminAccess() {
         String email = SecurityConfig.getAuthenticatedUserEmail();

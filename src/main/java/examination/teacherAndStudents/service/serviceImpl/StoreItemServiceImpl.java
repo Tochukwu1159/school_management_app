@@ -39,7 +39,7 @@ public class StoreItemServiceImpl implements StoreItemService {
         request.validate(); // Validate sizes or quantity
         User admin = validateAdminUser();
         Profile profile = getAdminProfile(admin);
-        Store store = getStore(request.getStoreId());
+        Store store = getStore(request.getStoreId(), admin.getSchool().getId());
         Category category = getCategory(request.getCategoryId());
 
         validateStoreOwnership(admin, store);
@@ -70,7 +70,7 @@ public class StoreItemServiceImpl implements StoreItemService {
         request.validate(); // Validate sizes or quantity
         User admin = validateAdminUser();
         StoreItem storeItem = getStoreItemByIdAndSchool(itemId, admin.getSchool());
-        Store store = getStore(request.getStoreId());
+        Store store = getStore(request.getStoreId(),admin.getSchool().getId());
         Category category = getCategory(request.getCategoryId());
 
         validateStoreOwnership(admin, store);
@@ -151,8 +151,8 @@ public class StoreItemServiceImpl implements StoreItemService {
                 .orElseThrow(() -> new CustomNotFoundException("Profile not found for user: " + admin.getEmail()));
     }
 
-    private Store getStore(Long storeId) {
-        return storeRepository.findById(storeId)
+    private Store getStore(Long storeId, Long schoolId) {
+        return storeRepository.findByIdAndSchoolId(storeId, schoolId)
                 .orElseThrow(() -> new CustomNotFoundException("Store not found with ID: " + storeId));
     }
 

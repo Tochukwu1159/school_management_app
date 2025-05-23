@@ -45,11 +45,8 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
         School userSchool = validUser.getSchool();
 
         // Validate ClassBlock
-        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+        ClassBlock classBlock = classBlockRepository.findByIdAndSchoolId(request.getClassBlockId(), userSchool.getId())
                 .orElseThrow(() -> new NotFoundException("ClassBlock with id " + request.getClassBlockId() + " not found"));
-        if (!classBlock.getSchool().getId().equals(userSchool.getId())) {
-            throw new IllegalArgumentException("ClassBlock does not belong to the user's school");
-        }
 
         List<ClassSubject> classSubjectsToSave = new ArrayList<>();
         List<ClassSubjectResponse> responses = new ArrayList<>();
@@ -129,10 +126,10 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     public void assignClassSubjectToTeacher(TeacherAssignmentRequest request) {
         validateAdminUser();
 
-        ClassLevel classLevel = classLevelRepository.findById(request.getClassLevelId())
+       classLevelRepository.findById(request.getClassLevelId())
                 .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
 
-        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+       classBlockRepository.findById(request.getClassBlockId())
                 .orElseThrow(() -> new CustomNotFoundException("Student Class not found"));
 
         if (request.getAssignments() == null || request.getAssignments().isEmpty()) {
@@ -173,10 +170,10 @@ public class ClassSubjectServiceImpl implements ClassSubjectService {
     public void updateClassSubjectTeacherAssignment(TeacherAssignmentRequest request) {
         validateAdminUser();
 
-        ClassLevel classLevel = classLevelRepository.findById(request.getClassLevelId())
+       classLevelRepository.findById(request.getClassLevelId())
                 .orElseThrow(() -> new CustomNotFoundException("Class Level  not found"));
 
-        ClassBlock classBlock = classBlockRepository.findById(request.getClassBlockId())
+       classBlockRepository.findById(request.getClassBlockId())
                 .orElseThrow(() -> new CustomNotFoundException("Student Class not found"));
 
         if (request.getAssignments() == null || request.getAssignments().isEmpty()) {

@@ -20,7 +20,7 @@ public class ExamScheduleRequest {
     private Long teacherId;
 
     @NotNull(message = "Exam date is required")
-    @PastOrPresent(message = "Exam date cannot be in the future")
+//    @PastOrPresent(message = "Exam date cannot be in the future")
     private LocalDate examDate;
 
     @NotNull(message = "Start time is required")

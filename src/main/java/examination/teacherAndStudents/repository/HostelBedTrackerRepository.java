@@ -11,4 +11,6 @@ import java.util.Optional;
 @Repository
 public interface HostelBedTrackerRepository extends JpaRepository<HostelBedTracker, Long> {
     Optional<HostelBedTracker> findByHostelAndAcademicYear(Hostel hostel, AcademicSession academicYear);
+
+    Optional<HostelBedTracker> findByHostelAndSchoolIdAndAcademicYear(Hostel hostel, Long id, AcademicSession academicYear);
 }

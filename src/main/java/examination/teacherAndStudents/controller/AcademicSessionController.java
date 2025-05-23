@@ -28,7 +28,7 @@ public class AcademicSessionController {
                     .body(new ApiResponse<>("Academic session created successfully", true, response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error creating academic session: " + e.getMessage(), false));
+                    .body(new ApiResponse<>(e.getMessage(), false));
         }
     }
 
@@ -42,7 +42,7 @@ public class AcademicSessionController {
             return ResponseEntity.ok(new ApiResponse<>("Students graduated successfully", true));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error graduating students: " + e.getMessage(), false));
+                    .body(new ApiResponse<>(e.getMessage(), false));
         }
     }
 
@@ -53,7 +53,7 @@ public class AcademicSessionController {
             return ResponseEntity.ok(new ApiResponse<>("Academic session updated successfully", true, response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error updating academic session: " + e.getMessage(), false));
+                    .body(new ApiResponse<>( e.getMessage(), false));
         }
     }
 
@@ -64,7 +64,7 @@ public class AcademicSessionController {
             return ResponseEntity.ok(new ApiResponse<>("Academic session retrieved successfully", true, response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error retrieving academic session: " + e.getMessage(), false));
+                    .body(new ApiResponse<>( e.getMessage(), false));
         }
     }
 
@@ -85,7 +85,7 @@ public class AcademicSessionController {
             return ResponseEntity.ok(new ApiResponse<>("Academic sessions retrieved successfully", true, response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error retrieving academic sessions: " + e.getMessage(), false));
+                    .body(new ApiResponse<>( e.getMessage(), false));
         }
     }
 
@@ -96,7 +96,7 @@ public class AcademicSessionController {
             return ResponseEntity.ok(new ApiResponse<>("Academic session deleted successfully", true));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse<>("Error deleting academic session: " + e.getMessage(), false));
+                    .body(new ApiResponse<>( e.getMessage(), false));
         }
     }
 }

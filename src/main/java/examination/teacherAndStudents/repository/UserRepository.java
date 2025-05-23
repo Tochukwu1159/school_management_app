@@ -71,4 +71,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
             "(SELECT 1 FROM u.roles r WHERE r IN :roles)")
     Optional<User> findByEmailAndRolesIn(@Param("email") String email, @Param("roles") Set<Roles> roles);
 
+    Optional<User> findByIdAndSchoolId(Long staffId, Long id);
+
+    List<User> findBySchoolIdAndRoles(Long schoolId, Roles roleEnum);
+
+    List<User> findBySchoolIdAndRolesNotIn(Long schoolId, List<Roles> excludedRoles);
 }

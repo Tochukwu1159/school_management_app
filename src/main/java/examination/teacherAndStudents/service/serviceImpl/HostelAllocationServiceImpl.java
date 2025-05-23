@@ -51,8 +51,8 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
                 .orElseThrow(() -> new CustomNotFoundException("User profile not found for email: " + email));
 
         // Validate fee
-        Fee fee = feeRepository.findById(feeId)
-                .orElseThrow(() -> new CustomNotFoundException("Fee not found with ID: " + feeId));
+        Fee fee = feeRepository.findByIdAndSchoolId(feeId, student.getSchool().getId())
+                .orElseThrow(() -> new CustomNotFoundException("Fee not found"));
 
         // Check for existing allocation
         if (hostelAllocationRepository.existsByProfileAndAcademicYearAndFee(profile, academicSession, fee)) {
@@ -67,7 +67,7 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
         paymentService.processPayment(paymentRequest);
 
         // Verify payment
-        Payment payment = paymentRepository.findByStudentFeeAndProfileAndAcademicSession(fee, profile, academicSession)
+       paymentRepository.findByStudentFeeAndProfileAndAcademicSession(fee, profile, academicSession)
                 .orElseThrow(() -> new CustomInternalServerException("Payment processing failed"));
 
         // Create allocation
@@ -92,7 +92,7 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
                 .orElseThrow(() -> new AuthenticationFailedException("Please login as an Admin"));
 
         // Validate hostel
-        Hostel hostel = hostelRepository.findById(request.getHostelId())
+        Hostel hostel = hostelRepository.findByIdAndSchoolId(request.getHostelId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Hostel not found with ID: " + request.getHostelId()));
 
         // Validate allocation
@@ -108,7 +108,7 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
         }
 
         // Validate academic year
-        AcademicSession academicYear = academicSessionRepository.findById(allocation.getAcademicYear().getId())
+        AcademicSession academicYear = academicSessionRepository.findByIdAndSchoolId(allocation.getAcademicYear().getId(), admin.getSchool().getId())
                 .orElseThrow(() -> new CustomNotFoundException("Academic year not found"));
 
         // Check for existing allocation
@@ -126,11 +126,12 @@ public class HostelAllocationServiceImpl implements HostelAllocationService {
         }
 
         // Manage bed tracker
-        HostelBedTracker bedTracker = hostelBedTrackerRepository.findByHostelAndAcademicYear(hostel, academicYear)
+        HostelBedTracker bedTracker = hostelBedTrackerRepository.findByHostelAndSchoolIdAndAcademicYear(hostel,admin.getSchool().getId(), academicYear)
                 .orElseGet(() -> {
                     HostelBedTracker newTracker = HostelBedTracker.builder()
                             .hostel(hostel)
                             .academicYear(academicYear)
+                            .school(admin.getSchool())
                             .bedsAllocated(0)
                             .numberOfBedLeft(hostel.getNumberOfBed())
                             .build();
