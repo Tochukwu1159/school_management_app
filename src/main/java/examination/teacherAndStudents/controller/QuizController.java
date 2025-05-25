@@ -47,11 +47,12 @@ public class QuizController {
         }
     }
 
-    @GetMapping("/user/questions/{quizId}")
+    @GetMapping("/user/questions/{quizId}/{subjectId}")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApiResponse<QuizQuestionsResponse>> getQuizQuestions(
-            @PathVariable Long quizId) {
-        QuizQuestionsResponse response = quizService.getQuizQuestions(quizId);
+            @PathVariable Long quizId,
+            @PathVariable Long subjectId) {
+        QuizQuestionsResponse response = quizService.getQuizQuestions(quizId, subjectId);
         ApiResponse<QuizQuestionsResponse> apiResponse = new ApiResponse<>(
                 "Quiz questions fetched successfully", true, response
         );

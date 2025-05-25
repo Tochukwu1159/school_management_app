@@ -285,6 +285,11 @@ public class ExceptionController {
         return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.FORBIDDEN);
     }
 
+    public ResponseEntity<?> HandleIllegalArgumentException(IllegalArgumentException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.BAD_REQUEST);
+    }
+
+
     @ExceptionHandler(CustomInternalServerException.class)
     public ResponseEntity<?> CustomInternalServerException(CustomInternalServerException ex) {
         return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(), false), HttpStatus.INTERNAL_SERVER_ERROR);

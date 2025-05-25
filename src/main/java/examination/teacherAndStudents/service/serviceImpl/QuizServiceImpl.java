@@ -6,9 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import examination.teacherAndStudents.Security.SecurityConfig;
 import examination.teacherAndStudents.dto.*;
 import examination.teacherAndStudents.entity.*;
-import examination.teacherAndStudents.error_handler.BadRequestException;
-import examination.teacherAndStudents.error_handler.CustomNotFoundException;
-import examination.teacherAndStudents.error_handler.EntityAlreadyExistException;
+import examination.teacherAndStudents.error_handler.*;
 import examination.teacherAndStudents.repository.ClassSubjectRepository;
 import examination.teacherAndStudents.repository.ProfileRepository;
 import examination.teacherAndStudents.repository.QuizAttemptRepository;
@@ -158,6 +156,8 @@ public class QuizServiceImpl implements QuizService {
         }
     }
 
+
+
     private HttpEntity<String> getHttpEntity(QuizCreationRequest request, String text) {
         String prompt = String.format(
                 "Based on the content below, generate %d multiple-choice questions in the following JSON format:\n" +
@@ -181,15 +181,15 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     @Transactional
-    public QuizQuestionsResponse getQuizQuestions(Long quizId) {
+    public QuizQuestionsResponse getQuizQuestions(Long quizId, Long subjectId) {
         logger.info("Fetching quiz questions for quiz ID: {}", quizId);
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
         Profile student = profileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("Please login"));
 
-        Quiz quiz = quizRepository.findByIdAndSchoolId(quizId, student.getUser().getSchool().getId())
-                .orElseThrow(() -> new IllegalArgumentException("Quiz not found"));
+        Quiz quiz = quizRepository.findByIdAndSchoolIdAndSubjectId(quizId, student.getUser().getSchool().getId(), subjectId)
+                .orElseThrow(() -> new NotFoundException("Quiz not found"));
 
         // Check quiz availability
         if (quiz.getQuizTime() != null) {
@@ -214,7 +214,7 @@ public class QuizServiceImpl implements QuizService {
         if (attempt != null) {
             logger.info("Found existing quiz attempt for student {} and quiz {}", student.getId(), quizId);
             if (attempt.isCompleted()) {
-                throw new IllegalStateException("Quiz already completed");
+                throw new IllegalArgumentException("Quiz already completed");
             }
             // Use existing assigned questions
             selectedQuestions = attempt.getAssignedQuestions().stream()
@@ -386,7 +386,7 @@ public class QuizServiceImpl implements QuizService {
         logger.info("Fetching quiz results for quiz ID: {}", quizId);
 
         String email = SecurityConfig.getAuthenticatedUserEmail();
-        Profile teacher = profileRepository.findByUserEmail(email)
+     profileRepository.findByUserEmail(email)
                 .orElseThrow(() -> new CustomNotFoundException("Please login"));
 
         List<QuizResult> results = quizResultRepository.findByQuizId(quizId);
