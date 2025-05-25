@@ -47,6 +47,10 @@ public class Quiz {
     @Column
     private Integer duration;
 
+    @ManyToOne
+    @JoinColumn(name = "school_id")
+    private School school;
+
     public enum QuizStatus {
         UPLOADED, GENERATED, GENERATED_DIFFICULTY
     }
