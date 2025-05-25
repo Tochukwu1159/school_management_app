@@ -40,7 +40,7 @@ public class PositionController {
             ApiResponse<String> response = new ApiResponse<>("Result summary PDF generation initiated successfully.", true, null);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            ApiResponse<String> response = new ApiResponse<>("Error generating result summary PDF: " + e.getMessage(), false, null);
+            ApiResponse<String> response = new ApiResponse<>(e.getMessage(), false, null);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }

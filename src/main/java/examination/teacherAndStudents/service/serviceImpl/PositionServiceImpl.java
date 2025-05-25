@@ -218,7 +218,7 @@ public class PositionServiceImpl implements PositionService {
             String report = reportCardService.generateReportCard(schoolName, result);
             System.out.println(report); // Or save/return the report as needed
         } catch (ResourceNotFoundException e) {
-            throw new RuntimeException("Error generating report: " + e.getMessage(), e);
+            throw new RuntimeException( e.getMessage());
         }
     }
 

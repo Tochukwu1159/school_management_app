@@ -493,7 +493,6 @@ public class UserServiceImpl implements UserService {
                     .lastName(userDetails.get().getLastName())
                     .email(userDetails.get().getEmail())
                     .phoneNumber(user.getPhoneNumber())
-                    .classAssigned(user.getSessionClass().getClassBlock().getName())
                     .studentGuardianName(user.getStudentGuardianName())
                     .studentGuardianPhoneNumber(user.getStudentGuardianPhoneNumber())
                     .uniqueRegistrationNumber(user.getUniqueRegistrationNumber())
